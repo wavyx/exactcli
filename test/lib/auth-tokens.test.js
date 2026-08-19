@@ -158,11 +158,14 @@ describe('tokenRequest', () => {
     })
   })
 
-  it('sends the form content type and asks for JSON', async () => {
+  it('sends the form content type and asks for JSON, without Basic auth', async () => {
     const scope = mockApi()
       .post(TOKEN_PATH)
       .matchHeader('content-type', 'application/x-www-form-urlencoded')
       .matchHeader('accept', 'application/json')
+      // Exact reads the credentials from the body. A Basic header would be a
+      // second copy of the secret on the wire.
+      .matchHeader('authorization', (value) => value === undefined)
       .reply(200, { access_token: 'a', refresh_token: 'r', expires_in: '600' })
 
     await tokenRequest(HOST, { grant_type: 'refresh_token' })
