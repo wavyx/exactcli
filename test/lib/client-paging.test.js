@@ -98,6 +98,19 @@ describe('pageOData', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('fetches nothing when maxPages is zero', async () => {
+    mockApi()
+      .get(ACCOUNTS)
+      .reply(200, { d: { results: [{ ID: 'g1' }] } })
+
+    const api = client()
+    expect(await collect(api.pageOData(ACCOUNTS, {}, { maxPages: 0 }))).toEqual(
+      [],
+    )
+    expect(api.lastNext).toBeNull()
+    expect(nock.pendingMocks()).toHaveLength(1)
+  })
+
   it('refuses an off-host __next', async () => {
     mockApi()
       .get(ACCOUNTS)

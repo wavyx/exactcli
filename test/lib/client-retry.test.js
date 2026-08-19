@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import nock from 'nock'
+import createDebug from 'debug'
 import { createClient, timers } from '../../src/lib/client.js'
 import {
   ApiError,
+  CliError,
   RateLimitError,
   ServiceUnavailableError,
 } from '../../src/lib/errors.js'
@@ -14,6 +16,23 @@ const ME = '/api/v1/current/Me'
 
 /** Every sleep the client asked for, in order, in milliseconds. */
 let slept
+/** Fake wall clock. Every fake sleep moves it, like a real one would. */
+let clock
+
+/** A response object with only the parts transport() reads. */
+function stubResponse({ status = 200, body = '', headers = {}, brokenBody }) {
+  return {
+    status,
+    ok: status >= 200 && status < 300,
+    headers: new Headers(headers),
+    text: () =>
+      brokenBody
+        ? Promise.reject(
+            new DOMException('The operation was aborted', 'TimeoutError'),
+          )
+        : Promise.resolve(body),
+  }
+}
 
 function client(options = {}) {
   return createClient({ token: 'test-token', retry: true, ...options })
@@ -32,10 +51,12 @@ beforeEach(() => {
   nock.cleanAll()
   nock.disableNetConnect()
   slept = []
+  clock = NOW
   vi.spyOn(timers, 'sleep').mockImplementation(async (ms) => {
     slept.push(ms)
+    clock += ms
   })
-  vi.spyOn(timers, 'now').mockReturnValue(NOW)
+  vi.spyOn(timers, 'now').mockImplementation(() => clock)
   // Jitter is random by design; pin it so the sleep assertions are exact.
   vi.spyOn(Math, 'random').mockReturnValue(0)
 })
@@ -104,8 +125,10 @@ describe('429 handling', () => {
       .catch((e) => e)
     expect(err).toBeInstanceOf(RateLimitError)
     expect(err.exitCode).toBe(75)
-    expect(err.retryAfter).toBe(5)
-    expect(slept).toEqual([5000, 5000])
+    // The clock moved through the first wait, so the repeated reset instant
+    // is already past on the second one: it clamps to the one second floor.
+    expect(err.retryAfter).toBe(1)
+    expect(slept).toEqual([5000, 1000])
     expect(scope.isDone()).toBe(true)
   })
 
@@ -186,7 +209,7 @@ describe('429 handling', () => {
     )
   })
 
-  it('falls back to a two second reset when the header is absent', async () => {
+  it('says the reset time is unknown when the header is absent', async () => {
     mockApi()
       .get(ME)
       .reply(429, '', limits({ 'x-ratelimit-remaining': '0' }))
@@ -195,9 +218,46 @@ describe('429 handling', () => {
       .get(ME)
       .catch((e) => e)
     expect(err.retryAfter).toBe(2)
-    expect(err.message).toBe(
-      `Daily API limit reached. Resets at ${new Date(NOW + 2000).toISOString()}`,
-    )
+    expect(err.message).toBe('Daily API limit reached. Reset time unknown')
+  })
+
+  it('fails fast on a daily 429 that also drained the minute', async () => {
+    // The daily branch must throw before any wait: neither the 429 backoff nor
+    // the preemptive window wait may delay the report.
+    mockApi()
+      .get(ME)
+      .reply(429, '', {
+        'x-ratelimit-minutely-limit': '60',
+        'x-ratelimit-minutely-remaining': '0',
+        'x-ratelimit-remaining': '0',
+        'x-ratelimit-reset': String(NOW + 3_600_000),
+      })
+
+    const err = await client()
+      .get(ME)
+      .catch((e) => e)
+    expect(err).toBeInstanceOf(RateLimitError)
+    expect(err.exitCode).toBe(75)
+    expect(slept).toEqual([])
+  })
+
+  it('does not add a preemptive wait after a 429 sleep', async () => {
+    // A minutely 429 whose reset is the far daily instant: the 429 sleep and
+    // the preemptive wait target the same window and must not compound.
+    const scope = mockApi()
+      .get(ME)
+      .reply(429, '', {
+        'x-ratelimit-minutely-limit': '60',
+        'x-ratelimit-minutely-remaining': '0',
+        'x-ratelimit-remaining': '4999',
+        'x-ratelimit-reset': String(NOW + 3_600_000),
+      })
+      .get(ME)
+      .reply(200, { d: { results: [] } }, limits())
+
+    await client().get(ME)
+    expect(slept).toEqual([65_000])
+    expect(scope.isDone()).toBe(true)
   })
 })
 
@@ -538,6 +598,40 @@ describe('5xx and network failures', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('retries when the body read fails, then succeeds', async () => {
+    // A body that stalls or closes early rejects on res.text(), not on fetch.
+    // nock cannot produce that, so drive the transport with a stub response.
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(stubResponse({ brokenBody: true }))
+      .mockResolvedValueOnce(
+        stubResponse({
+          body: '{"d":{"results":[]}}',
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+
+    const result = await client().get(ME)
+    expect(result).toEqual({ d: { results: [] } })
+    expect(slept).toEqual([2000])
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('throws 69 when the body read keeps failing', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(stubResponse({ brokenBody: true }))
+
+    const err = await client()
+      .get(ME)
+      .catch((e) => e)
+    expect(err).toBeInstanceOf(ServiceUnavailableError)
+    expect(err.exitCode).toBe(69)
+    expect(err.message).toContain(`Cannot reach ${BASE}`)
+    expect(slept).toEqual([2000, 4000])
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+  })
+
   it('does not retry a network failure when retry is off', async () => {
     const refused = () =>
       Object.assign(new Error('connect ECONNREFUSED'), {
@@ -555,6 +649,80 @@ describe('5xx and network failures', () => {
     expect(err.exitCode).toBe(69)
     // The second interceptor is untouched: only one request went out.
     expect(nock.pendingMocks()).toHaveLength(1)
+    expect(slept).toEqual([])
+  })
+})
+
+describe('retried writes and secrecy', () => {
+  const ACCOUNTS = '/api/v1/123456/crm/Accounts'
+
+  it('re-serialises the body on every attempt', async () => {
+    const bodies = []
+    const record = (body) => {
+      bodies.push(body)
+      return true
+    }
+    const scope = mockApi()
+      .post(ACCOUNTS, record)
+      .reply(500, { error: { message: { value: 'boom' } } })
+      .post(ACCOUNTS, record)
+      .reply(201, { d: { ID: 'g1' } }, limits())
+
+    const result = await client().post(ACCOUNTS, { Name: 'Acme' })
+    expect(result).toEqual({ d: { ID: 'g1' } })
+    expect(bodies).toEqual([{ Name: 'Acme' }, { Name: 'Acme' }])
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('never writes the token into an error or the debug log', async () => {
+    const written = []
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      written.push(String(chunk))
+      return true
+    })
+    createDebug.enable('exact:client')
+    try {
+      mockApi()
+        .get(ME)
+        .reply(400, { error: { message: { value: 'Invalid $filter' } } })
+      const apiErr = await client()
+        .get(ME)
+        .catch((e) => e)
+
+      mockApi()
+        .get(ME)
+        .times(3)
+        .replyWithError(new Error('connect ECONNREFUSED'))
+      const netErr = await client()
+        .get(ME)
+        .catch((e) => e)
+
+      const log = written.join('')
+      // Proves the debug stream was really captured, so the check below bites.
+      expect(log).toContain('GET /api/v1/current/Me -> 400')
+      const haystack = [
+        apiErr.message,
+        netErr.message,
+        String(netErr.cause?.message),
+        log,
+      ].join('\n')
+      expect(haystack).not.toContain('test-token')
+    } finally {
+      createDebug.disable()
+    }
+  })
+
+  it('reports a broken JSON body without echoing it', async () => {
+    mockApi().get(ME).reply(200, '{"d":{"results":[{"Secret"', {
+      'content-type': 'application/json',
+    })
+
+    const err = await client()
+      .get(ME)
+      .catch((e) => e)
+    expect(err).toBeInstanceOf(CliError)
+    expect(err.exitCode).toBe(65)
+    expect(err.message).toBe(`Invalid JSON in response from ${ME}`)
     expect(slept).toEqual([])
   })
 })

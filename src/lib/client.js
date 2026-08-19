@@ -63,6 +63,13 @@ function resolveMockOrigin(rawUrl) {
   } catch {
     throw new ConfigError(`EXACTCLI_BASE_URL is not a valid URL: ${rawUrl}`)
   }
+  if (url.protocol !== 'http:') {
+    throw new ConfigError(
+      `EXACTCLI_BASE_URL must be a plain http:// localhost URL. Refusing ` +
+        `${rawUrl}. Only http://localhost, http://127.0.0.1 and http://[::1] ` +
+        `are accepted.`,
+    )
+  }
   // URL.hostname wraps IPv6 in brackets, so ::1 arrives as "[::1]".
   const host = url.hostname
   const isLocal =
@@ -208,12 +215,17 @@ export function createClient({
     let attempts = 0
     let lastWaitSeconds
     let refreshed = false
+    let waitedForRateLimit = false
 
     while (attempts < maxAttempts) {
       attempts++
-      await waitForRateLimitWindow()
+      // A 429 sleep already covered this window and left the snapshot stale.
+      // Waiting again on it would double the delay.
+      if (!waitedForRateLimit) await waitForRateLimitWindow()
+      waitedForRateLimit = false
 
       let res
+      let text = ''
       try {
         res = await fetch(url, {
           method,
@@ -224,10 +236,15 @@ export function createClient({
           // to the redirect target. We detect the 30x below and refuse.
           redirect: 'manual',
         })
+        // Read the body in the same guarded step: a stall or a premature close
+        // while the body streams is a reachability problem too. It also drains
+        // the socket before any retry sleep.
+        if (res.status !== 204) text = await res.text()
       } catch (cause) {
-        // fetch rejects on DNS failure, connection refused and timeout. That is
-        // a reachability problem (69), not an internal bug (70). Retry like a
-        // 5xx; on the last attempt surface the cause.
+        // fetch and the body read reject on DNS failure, connection refused,
+        // timeout and a broken stream. That is a reachability problem (69), not
+        // an internal bug (70). Retry like a 5xx; on the last attempt surface
+        // the cause.
         if (attempts < maxAttempts) {
           const delay = Math.min(1000 * 2 ** attempts, 30_000) + jitter()
           debug('fetch failed (%s), retrying in %dms', cause.name, delay)
@@ -264,16 +281,17 @@ export function createClient({
       if (res.status === 429) {
         const now = timers.now()
         const { reset } = api.lastRateLimit
-        const resetAt = Number.isFinite(reset) ? reset : now + DEFAULT_WAIT_MS
+        const hasReset = Number.isFinite(reset)
+        const resetAt = hasReset ? reset : now + DEFAULT_WAIT_MS
         // The daily budget resets hours from now: backoff would stall the CLI
         // until then. Fail fast with the reset time instead.
         if (res.headers.get('x-ratelimit-remaining') === '0') {
           const err = new RateLimitError(
             Math.max(1, Math.ceil((resetAt - now) / 1000)),
           )
-          err.message = `Daily API limit reached. Resets at ${new Date(
-            resetAt,
-          ).toISOString()}`
+          err.message = hasReset
+            ? `Daily API limit reached. Resets at ${new Date(reset).toISOString()}`
+            : 'Daily API limit reached. Reset time unknown'
           throw err
         }
         const waitMs = clamp(resetAt - now, MIN_WAIT_MS, MAX_WAIT_MS)
@@ -283,6 +301,7 @@ export function createClient({
         if (attempts >= maxAttempts) break
         debug('rate limited, waiting %dms', waitMs)
         await timers.sleep(waitMs + jitter())
+        waitedForRateLimit = true
         continue
       }
 
@@ -306,15 +325,21 @@ export function createClient({
       }
 
       if (res.status === 204) return null
-
-      const text = await res.text()
       if (!res.ok) throw ApiError.fromResponse(res.status, text, path)
+      if (!text) return null
+
+      // $metadata answers XML, and some endpoints answer plain text. Only a
+      // body that does not claim JSON passes through untouched.
+      const contentType = res.headers.get('content-type')
+      if (contentType != null && !contentType.includes('json')) return text
       try {
         return JSON.parse(text)
       } catch {
-        // $metadata answers XML, and an empty body parses as nothing. Both go
-        // back to the caller untouched.
-        return text
+        // A broken JSON body must not turn into a silent empty result. The
+        // body itself never reaches the message: it can carry data.
+        throw new CliError(`Invalid JSON in response from ${path}`, {
+          exitCode: 65,
+        })
       }
     }
 
@@ -333,20 +358,22 @@ export function createClient({
    * @returns {AsyncGenerator<object>}
    */
   async function* pageOData(path, query = {}, { maxPages = 100 } = {}) {
-    let body = await request('GET', path, { query })
-    let envelope = body?.d
-    yield* envelope?.results ?? []
-    api.lastNext = envelope?.__next ?? null
+    let next = null
+    let pages = 0
+    api.lastNext = null
 
-    let pages = 1
-    while (api.lastNext && pages < maxPages) {
-      body = await request('GET', api.lastNext)
+    while (pages < maxPages) {
+      const body = next
+        ? await request('GET', next)
+        : await request('GET', path, { query })
       pages++
-      envelope = body?.d
+      const envelope = body?.d
       yield* envelope?.results ?? []
+      next = envelope?.__next ?? null
       // Left set when maxPages stops the walk, so the caller can tell that
       // more data exists.
-      api.lastNext = envelope?.__next ?? null
+      api.lastNext = next
+      if (!next) break
     }
   }
 

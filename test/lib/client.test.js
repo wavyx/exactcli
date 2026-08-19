@@ -326,10 +326,37 @@ describe('response bodies', () => {
     expect(await client().get('/api/v1/123456/crm/$metadata')).toBe(xml)
   })
 
-  it('returns an empty body unchanged', async () => {
+  it('returns null for an empty body', async () => {
     mockApi().get('/api/v1/current/Me').reply(200, '')
 
-    expect(await client().get('/api/v1/current/Me')).toBe('')
+    expect(await client().get('/api/v1/current/Me')).toBeNull()
+  })
+
+  it('parses a JSON body that carries no content-type', async () => {
+    mockApi().get('/api/v1/current/Me').reply(200, '{"d":{"results":[]}}')
+
+    expect(await client().get('/api/v1/current/Me')).toEqual({
+      d: { results: [] },
+    })
+  })
+
+  it('refuses a broken body that claims JSON with exit 65', async () => {
+    mockApi()
+      .get('/api/v1/123456/crm/Accounts')
+      .reply(200, '{"d":{"results":[{"ID"', {
+        'content-type': 'application/json; charset=utf-8',
+      })
+
+    const err = await client()
+      .get('/api/v1/123456/crm/Accounts')
+      .catch((e) => e)
+    expect(err).toBeInstanceOf(CliError)
+    expect(err.exitCode).toBe(65)
+    expect(err.message).toBe(
+      'Invalid JSON in response from /api/v1/123456/crm/Accounts',
+    )
+    // The body can carry data: it never reaches the message.
+    expect(err.message).not.toContain('ID')
   })
 
   it('refuses to follow a redirect off the locked host', async () => {
@@ -417,8 +444,8 @@ describe('mock endpoint override (EXACTCLI_BASE_URL)', () => {
     expect(onRefresh).not.toHaveBeenCalled()
   })
 
-  it('refuses a non-local override with exit 78', () => {
-    process.env.EXACTCLI_BASE_URL = 'https://evil.example.com'
+  it('refuses an https override on localhost with exit 78', () => {
+    process.env.EXACTCLI_BASE_URL = 'https://localhost:4010'
     process.env.EXACTCLI_ACCESS_TOKEN = 'dummy'
 
     try {
@@ -426,7 +453,33 @@ describe('mock endpoint override (EXACTCLI_BASE_URL)', () => {
       expect.unreachable('should have thrown')
     } catch (err) {
       expect(err.exitCode).toBe(78)
-      expect(err.message).toMatch(/localhost|host-lock/i)
+      expect(err.message).toMatch(/plain http:\/\/ localhost URL/)
+    }
+  })
+
+  it('refuses an exotic scheme with exit 78', () => {
+    process.env.EXACTCLI_BASE_URL = 'foo://localhost:4010'
+    process.env.EXACTCLI_ACCESS_TOKEN = 'dummy'
+
+    try {
+      client()
+      expect.unreachable('should have thrown')
+    } catch (err) {
+      expect(err.exitCode).toBe(78)
+      expect(err.message).toMatch(/plain http:\/\/ localhost URL/)
+    }
+  })
+
+  it('refuses a non-local override with exit 78', () => {
+    process.env.EXACTCLI_BASE_URL = 'http://evil.example.com'
+    process.env.EXACTCLI_ACCESS_TOKEN = 'dummy'
+
+    try {
+      client()
+      expect.unreachable('should have thrown')
+    } catch (err) {
+      expect(err.exitCode).toBe(78)
+      expect(err.message).toMatch(/host-locked to localhost/)
     }
   })
 
