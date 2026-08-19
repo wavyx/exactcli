@@ -71,7 +71,10 @@ async function runWithWarnings(argv) {
   try {
     const stdout = await runCmd(LoginCommand, argv)
     // oclif wraps a warning over several lines and prefixes each one.
-    const warned = warnings.join(' ').replace(/ ›/g, '').replace(/\s+/g, ' ')
+    const warned = warnings
+      .join(' ')
+      .replace(/ \u203a/g, '')
+      .replace(/\s+/g, ' ')
     return { stdout, warnings: warned }
   } finally {
     spy.mockRestore()
@@ -313,6 +316,106 @@ describe('auth login --manual', () => {
       'Logged in, but the identity check failed: network down',
     )
     expect(mocks.setOAuthTokens).toHaveBeenCalled()
+  })
+
+  it('refuses an empty ngrok domain on the flag', async () => {
+    const err = await runCmd(LoginCommand, [
+      '--manual',
+      '--client-id',
+      'cid',
+      '--ngrok-domain',
+      '',
+    ]).catch((e) => e)
+
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(
+      /ngrok domain is required \(for example acme\.ngrok-free\.app\)/,
+    )
+    expect(mocks.setProfileConfig).not.toHaveBeenCalledWith(
+      'default',
+      'ngrok_domain',
+      expect.anything(),
+    )
+    expect(mocks.manualCodeFlow).not.toHaveBeenCalled()
+  })
+
+  it('asks again when the profile holds an empty ngrok domain', async () => {
+    profile({ ngrok_domain: '' })
+    mocks.input.mockResolvedValue(DOMAIN)
+
+    const stdout = await runCmd(LoginCommand, [
+      '--manual',
+      '--client-id',
+      'cid',
+    ])
+
+    expect(mocks.input).toHaveBeenCalled()
+    expect(mocks.setProfileConfig).toHaveBeenCalledWith(
+      'default',
+      'ngrok_domain',
+      DOMAIN,
+    )
+    expect(stdout).toContain(`Redirect URI: ${REDIRECT}`)
+  })
+
+  it('refuses an empty answer at the domain prompt', async () => {
+    profile({})
+    mocks.input.mockResolvedValue(DOMAIN)
+
+    await runCmd(LoginCommand, ['--manual', '--client-id', 'cid'])
+
+    const { validate } = mocks.input.mock.calls[0][0]
+    expect(validate('')).toBe('Enter your ngrok static domain')
+    expect(validate('  https://acme.ngrok-free.app/  ')).toBe(true)
+  })
+
+  it('prints the redirect URI before it asks for the secret', async () => {
+    delete process.env.EXACTCLI_CLIENT_SECRET
+    mocks.password.mockResolvedValue('prompt-secret')
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    let printedAt
+    try {
+      await LoginCommand.run(['--manual', '--client-id', 'cid'])
+      const index = spy.mock.calls.findIndex(([first]) =>
+        String(first).startsWith('Redirect URI:'),
+      )
+      printedAt = spy.mock.invocationCallOrder[index]
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect(printedAt).toBeLessThan(mocks.password.mock.invocationCallOrder[0])
+  })
+
+  it('keeps the tokens when Me comes back empty', async () => {
+    mocks.fetchMe.mockResolvedValue(null)
+
+    const { warnings } = await runWithWarnings([
+      '--manual',
+      '--client-id',
+      'cid',
+    ])
+
+    expect(warnings).toContain(
+      'Logged in, but the identity check failed: empty Me response',
+    )
+    expect(mocks.setOAuthTokens).toHaveBeenCalled()
+  })
+
+  it('reports a failed division write as itself', async () => {
+    profile({ host: 'start.exactonline.be', ngrok_domain: DOMAIN })
+    mocks.setProfileConfig.mockImplementation((_profile, key) => {
+      if (key === 'division') throw new Error('conf write failed')
+    })
+
+    const err = await runCmd(LoginCommand, [
+      '--manual',
+      '--client-id',
+      'cid',
+    ]).catch((e) => e)
+
+    expect(err.message).toMatch(/conf write failed/)
+    expect(err.message).not.toMatch(/identity check failed/)
   })
 })
 

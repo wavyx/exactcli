@@ -13,7 +13,7 @@ import {
 } from '../../lib/auth.js'
 import { HOST_RE, createClient } from '../../lib/client.js'
 import { getProfileConfig, setProfileConfig } from '../../lib/config.js'
-import { ConfigError } from '../../lib/errors.js'
+import { CliError, ConfigError } from '../../lib/errors.js'
 import { setOAuthTokens } from '../../lib/keychain.js'
 import { startTunnel } from '../../lib/ngrok.js'
 
@@ -132,14 +132,25 @@ export default class LoginCommand extends BaseCommand {
    * @returns {Promise<string>}
    */
   async #resolveDomain(flags, profile) {
-    const stored = getProfileConfig(profile, 'ngrok_domain')
+    // An empty stored value is a broken profile, not a choice: ask again.
+    const stored = getProfileConfig(profile, 'ngrok_domain') || undefined
     const domain = bareDomain(
       flags['ngrok-domain'] ??
         stored ??
         (await input({
           message: 'ngrok static domain (for example acme.ngrok-free.app):',
+          validate: (value) =>
+            bareDomain(value) !== '' || 'Enter your ngrok static domain',
         })),
     )
+    // Without a domain the redirect URI reads https:///callback, which the
+    // profile would keep for every later login.
+    if (!domain) {
+      throw new CliError(
+        'ngrok domain is required (for example acme.ngrok-free.app)',
+        { exitCode: 64 },
+      )
+    }
     if (domain !== stored) setProfileConfig(profile, 'ngrok_domain', domain)
     return domain
   }
@@ -218,8 +229,11 @@ export default class LoginCommand extends BaseCommand {
    * @param {{host: string, profile: string, token: string}} options
    */
   async #reportIdentity({ host, profile, token }) {
+    let me
+    // Only the read is best-effort. A failed division write is a real
+    // failure and must not hide behind the identity warning.
     try {
-      const me = await fetchMe(
+      me = await fetchMe(
         createClient({
           host,
           token,
@@ -227,13 +241,15 @@ export default class LoginCommand extends BaseCommand {
           userAgent: `exactcli/${this.config.version}`,
         }),
       )
-      this.log(
-        chalk.green(`Logged in to ${host} as ${me.FullName} (${me.Email})`),
-      )
-      this.log(`Division: ${this.#storeDivision(profile, me.CurrentDivision)}`)
+      if (!me) throw new Error('empty Me response')
     } catch (err) {
       this.warn(`Logged in, but the identity check failed: ${err.message}`)
+      return
     }
+    this.log(
+      chalk.green(`Logged in to ${host} as ${me.FullName} (${me.Email})`),
+    )
+    this.log(`Division: ${this.#storeDivision(profile, me.CurrentDivision)}`)
   }
 
   /**

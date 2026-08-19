@@ -119,6 +119,40 @@ describe('auth status', () => {
     )
   })
 
+  it.each([
+    [570_000, 'yes'],
+    [569_999, 'no'],
+  ])('reports an age of %d ms as refreshable %s', async (age, answer) => {
+    // Freeze the clock: the boundary sits one millisecond wide.
+    const now = Date.now()
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
+    try {
+      mocks.getOAuthTokens.mockResolvedValue({
+        accessToken: 'at-1',
+        refreshToken: 'rt-1',
+        obtainedAt: now - age,
+        expiresAt: now - age + 600_000,
+        clientId: 'cid',
+        clientSecret: 'csec',
+      })
+
+      const stdout = await runCmd(StatusCommand)
+
+      expect(stdout).toContain(`Refreshable now:    ${answer}`)
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
+  it('holds the idle warning at exactly 25 days', async () => {
+    mocks.getOAuthTokens.mockResolvedValue(blob(25 * DAY_MS))
+
+    const stdout = await runCmd(StatusCommand)
+
+    expect(stdout).toContain('Refresh token idle: 25 days')
+    expect(stdout).not.toContain('Refresh tokens expire after 30 days')
+  })
+
   it('stays quiet when the identity call fails', async () => {
     mocks.getOAuthTokens.mockResolvedValue(blob(10_000))
     mocks.fetchMe.mockRejectedValue(new Error('network down'))
