@@ -1,5 +1,6 @@
 import { Args, Flags } from '@oclif/core'
 import BaseCommand from '../base-command.js'
+import { CliError } from '../lib/errors.js'
 import {
   autoColumns,
   buildQuery,
@@ -11,6 +12,13 @@ import {
 
 const GUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * A plain Exact Online key: a number, a code, an enum value. The key travels
+ * unquoted inside the parentheses, so anything outside this set could close
+ * them and append its own OData. Refuse it before it reaches the wire.
+ */
+const PLAIN_KEY_RE = /^[A-Za-z0-9_.:-]+$/
 
 export default class GetCommand extends BaseCommand {
   static description = 'Read one record of any Exact Online resource'
@@ -45,7 +53,14 @@ export default class GetCommand extends BaseCommand {
 
     // Exact Online keys a GUID column as guid'...'; every other key type
     // (a number, an enum) goes into the parentheses as it is.
-    const key = GUID_RE.test(args.id) ? `(guid'${args.id}')` : `(${args.id})`
+    const isGuid = GUID_RE.test(args.id)
+    if (!isGuid && !PLAIN_KEY_RE.test(args.id)) {
+      throw new CliError(
+        'Record key must be a GUID or a plain key (letters, digits, _ . : -)',
+        { exitCode: 64 },
+      )
+    }
+    const key = isGuid ? `(guid'${args.id}')` : `(${args.id})`
     const path = divisionPath(
       this.resolveDivision(),
       `${args.resource}${key}`,
@@ -62,7 +77,15 @@ export default class GetCommand extends BaseCommand {
     }
 
     const data = unwrap(body)
-    const record = normalize(Array.isArray(data) ? data[0] : data)
+    const found = Array.isArray(data) ? data[0] : data
+    // An empty results envelope is a miss, not a record. Report it as a data
+    // error instead of printing an empty table.
+    if (found == null) {
+      throw new CliError(`No record found for ${args.resource} ${args.id}`, {
+        exitCode: 65,
+      })
+    }
+    const record = normalize(found)
     await this.outputResults(record, autoColumns([record]))
   }
 }

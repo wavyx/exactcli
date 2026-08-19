@@ -45,11 +45,13 @@ afterAll(() => {
 
 beforeEach(() => {
   nock.cleanAll()
+  nock.disableNetConnect()
   delete process.env.EXACTCLI_DIVISION
 })
 
 afterEach(() => {
   nock.cleanAll()
+  nock.enableNetConnect()
   delete process.env.EXACTCLI_DIVISION
 })
 
@@ -180,6 +182,52 @@ describe('get', () => {
     expect(stdout).toContain('Name')
     expect(stdout).toContain('Acme BE')
     expect(stdout).not.toContain('__metadata')
+  })
+
+  it('fails with exit 65 when the record is not there', async () => {
+    mockApi()
+      .get(GUID_PATH)
+      .reply(200, { d: { results: [] } })
+
+    const err = await GetCommand.run([
+      'crm/Accounts',
+      GUID,
+      '--division',
+      '123',
+    ]).catch((e) => e)
+
+    expect(err.exitCode ?? err.oclif?.exit).toBe(65)
+    expect(err.message).toBe(`No record found for crm/Accounts ${GUID}`)
+  })
+
+  it('rejects a key with unsafe characters with exit 64', async () => {
+    const err = await GetCommand.run([
+      'crm/Accounts',
+      "700') or 1 eq 1--",
+      '--division',
+      '123',
+    ]).catch((e) => e)
+
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(/Record key must be a GUID or a plain key/)
+    expect(nock.pendingMocks()).toEqual([])
+  })
+
+  it('accepts a plain key that carries a dot, a colon or a dash', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/financial/GLAccounts(7.0:0-1_2)')
+      .reply(200, { d: { ID: 1 } })
+
+    await runCmd(GetCommand, [
+      'financial/GLAccounts',
+      '7.0:0-1_2',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
   })
 
   it('fails with exit 78 when no division is configured', async () => {
