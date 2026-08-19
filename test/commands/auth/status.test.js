@@ -29,9 +29,15 @@ vi.mock('../../../src/lib/keychain.js', () => ({
   getOAuthTokens: mocks.getOAuthTokens,
   isKeychainAvailable: mocks.isKeychainAvailable,
 }))
+// The real client still runs; the spy only records what the probe built.
+vi.mock('../../../src/lib/client.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, createClient: vi.fn(actual.createClient) }
+})
 
 const { default: StatusCommand } =
   await import('../../../src/commands/auth/status.js')
+const { createClient } = await import('../../../src/lib/client.js')
 
 /** Drive getProfileConfig from a plain key/value map. */
 function profile(values = {}) {
@@ -61,6 +67,14 @@ beforeEach(() => {
 })
 
 describe('auth status', () => {
+  it('passes --timeout to the identity probe', async () => {
+    mocks.getOAuthTokens.mockResolvedValue(blob(1000))
+
+    await runCmd(StatusCommand, ['--timeout', '1234'])
+
+    expect(createClient.mock.calls[0][0].timeout).toBe(1234)
+  })
+
   it('reports a profile without credentials', async () => {
     const stdout = await runCmd(StatusCommand)
 

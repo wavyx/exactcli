@@ -52,11 +52,17 @@ vi.mock('@inquirer/prompts', () => ({
   input: mocks.input,
   password: mocks.password,
 }))
+// The real client still runs; the spy only records what the probe built.
+vi.mock('../../../src/lib/client.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, createClient: vi.fn(actual.createClient) }
+})
 vi.mock('open', () => ({ default: mocks.open }))
 vi.mock('ora', () => ({ default: mocks.ora }))
 
 const { default: LoginCommand } =
   await import('../../../src/commands/auth/login.js')
+const { createClient } = await import('../../../src/lib/client.js')
 
 /** Drive getProfileConfig from a plain key/value map. */
 function profile(values = {}) {
@@ -105,6 +111,18 @@ afterEach(() => {
 })
 
 describe('auth login --manual', () => {
+  it('passes --timeout to the identity probe', async () => {
+    await runCmd(LoginCommand, [
+      '--manual',
+      '--client-id',
+      'cid',
+      '--timeout',
+      '1234',
+    ])
+
+    expect(createClient.mock.calls[0][0].timeout).toBe(1234)
+  })
+
   it('stores the token blob and reports the identity', async () => {
     const before = Date.now()
 

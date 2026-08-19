@@ -227,6 +227,7 @@ export default class LoginCommand extends BaseCommand {
           host,
           token,
           retry: false,
+          timeout: this.flags.timeout,
           userAgent: `exactcli/${this.config.version}`,
         }),
       )

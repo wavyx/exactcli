@@ -186,22 +186,40 @@ describe('doctor', () => {
     expect((await runJson(['--offline'])).ngrok.status).toBe('ok')
   })
 
-  it('fails host, ngrok, jq, keychain and config when they are broken', async () => {
+  it('fails host, keychain and config when they are broken', async () => {
     profile({ ...FULL, host: 'evil.example' })
-    process.env.PATH = `${tmpdir()}${delimiter}`
-    process.env.JQ_PATH = '/nonexistent/jq'
     mocks.isKeychainAvailable.mockReturnValue(false)
     mocks.getConf.mockImplementation(() => {
       throw new Error('store locked')
     })
     const checks = await runJson(['--offline'])
     expect(checks.host.status).toBe('FAIL')
-    expect(checks.ngrok.status).toBe('FAIL')
-    expect(checks.jq.status).toBe('FAIL')
     expect(checks.keychain.status).toBe('FAIL')
     expect(checks.config).toEqual(
       expect.objectContaining({ status: 'FAIL', detail: 'store locked' }),
     )
+  })
+
+  it('warns instead of failing when ngrok and jq are missing', async () => {
+    profile(FULL)
+    mocks.getOAuthTokens.mockResolvedValue(blob(10_000))
+    process.env.PATH = `${tmpdir()}${delimiter}`
+    process.env.JQ_PATH = '/nonexistent/jq'
+    const checks = await runJson(['--offline'])
+    expect(checks.ngrok).toEqual(
+      expect.objectContaining({
+        status: 'warn',
+        detail: 'ngrok not on PATH (auth login --manual needs none)',
+      }),
+    )
+    expect(checks.jq).toEqual(
+      expect.objectContaining({
+        status: 'warn',
+        detail: 'jq binary not found (only --jq needs it)',
+      }),
+    )
+    // Neither one is required, so the run still succeeds.
+    expect(process.exitCode).toBeUndefined()
   })
 
   it('reports an API failure and an empty Me answer', async () => {

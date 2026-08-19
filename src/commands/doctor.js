@@ -79,15 +79,16 @@ export default class DoctorCommand extends BaseCommand {
     if (domain) add('ngrok-domain', true, String(domain))
     else warn('ngrok-domain', 'not set (auth login asks; --manual needs none)')
 
+    // ngrok and jq are optional: only auth login without --manual needs the
+    // one, only --jq needs the other. A missing binary is a warning.
     const ngrokBins =
       process.platform === 'win32' ? ['ngrok.exe', 'ngrok'] : ['ngrok']
-    add(
-      'ngrok',
-      ngrokBins.some((bin) => onPath(bin)),
-      'ngrok on PATH (or use auth login --manual)',
-    )
+    if (ngrokBins.some((bin) => onPath(bin)))
+      add('ngrok', true, 'ngrok on PATH')
+    else warn('ngrok', 'ngrok not on PATH (auth login --manual needs none)')
 
-    add('jq', jqBinaryExists(), jqBinaryPath())
+    if (jqBinaryExists()) add('jq', true, jqBinaryPath())
+    else warn('jq', 'jq binary not found (only --jq needs it)')
 
     // --division also reads EXACTCLI_DIVISION, and it wins over the profile.
     const division =

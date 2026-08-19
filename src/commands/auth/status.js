@@ -70,6 +70,7 @@ export default class StatusCommand extends BaseCommand {
           host,
           token,
           retry: false,
+          timeout: this.flags.timeout,
           userAgent: `exactcli/${this.config.version}`,
         }),
       )
