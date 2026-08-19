@@ -40,4 +40,22 @@ describe('config list', () => {
 
     expect(stdout).toContain('No config set')
   })
+
+  it('emits [{ key, value }] as json', async () => {
+    setProfileConfig('default', 'host', 'start.exactonline.be')
+    setProfileConfig('default', 'division', 123456)
+
+    const stdout = await runCmd(ConfigListCommand, ['--output', 'json'])
+
+    expect(JSON.parse(stdout)).toEqual([
+      { key: 'host', value: 'start.exactonline.be' },
+      { key: 'division', value: 123456 },
+    ])
+  })
+
+  it('emits an empty array as json when no config is set', async () => {
+    const stdout = await runCmd(ConfigListCommand, ['--output', 'json'])
+
+    expect(JSON.parse(stdout)).toEqual([])
+  })
 })

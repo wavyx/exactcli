@@ -80,7 +80,8 @@ export default class ConfigSetCommand extends BaseCommand {
     const value = normalizeValue(args.key, args.value)
 
     setProfileConfig(this.activeProfile, args.key, value)
-    this.log(
+    await this.outputAction(
+      { profile: this.activeProfile, key: args.key, value },
       `Set ${chalk.cyan(args.key)} = ${chalk.green(value)} for profile ${chalk.cyan(this.activeProfile)}`,
     )
   }

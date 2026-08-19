@@ -21,6 +21,11 @@ export default class ConfigGetCommand extends BaseCommand {
 
     const value = getProfileConfig(this.activeProfile, args.key)
 
-    this.log(value === undefined ? '' : String(value))
+    if (this.resolveFormat() === 'table') {
+      this.log(value === undefined ? '' : String(value))
+      return
+    }
+
+    await this.outputResults({ key: args.key, value }, {})
   }
 }

@@ -42,4 +42,34 @@ describe('config unset', () => {
 
     expect(stdout).toContain('not set')
   })
+
+  it('emits { profile, key, unset: true } as json when removed', async () => {
+    setProfileConfig('default', 'default_output', 'json')
+
+    const stdout = await runCmd(ConfigUnsetCommand, [
+      'default_output',
+      '--output',
+      'json',
+    ])
+
+    expect(JSON.parse(stdout)).toEqual({
+      profile: 'default',
+      key: 'default_output',
+      unset: true,
+    })
+  })
+
+  it('emits { profile, key, unset: false } as json when not set', async () => {
+    const stdout = await runCmd(ConfigUnsetCommand, [
+      'host',
+      '--output',
+      'json',
+    ])
+
+    expect(JSON.parse(stdout)).toEqual({
+      profile: 'default',
+      key: 'host',
+      unset: false,
+    })
+  })
 })

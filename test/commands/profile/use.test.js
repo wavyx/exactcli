@@ -54,4 +54,10 @@ describe('profile use', () => {
 
     expect(err.exitCode ?? err.oclif?.exit).toBe(64)
   })
+
+  it('emits { profile, active: true } as json', async () => {
+    const stdout = await runCmd(ProfileUseCommand, ['work', '--output', 'json'])
+
+    expect(JSON.parse(stdout)).toEqual({ profile: 'work', active: true })
+  })
 })

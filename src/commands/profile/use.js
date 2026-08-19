@@ -33,6 +33,9 @@ export default class ProfileUseCommand extends BaseCommand {
     }
 
     setActiveProfile(args.name)
-    this.log(`Switched to profile ${chalk.cyan(args.name)}`)
+    await this.outputAction(
+      { profile: args.name, active: true },
+      `Switched to profile ${chalk.cyan(args.name)}`,
+    )
   }
 }

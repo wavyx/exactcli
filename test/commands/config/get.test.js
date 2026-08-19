@@ -46,4 +46,25 @@ describe('config get', () => {
 
     expect(stdout).toBe('')
   })
+
+  it('emits { key, value } as json', async () => {
+    setProfileConfig('default', 'host', 'start.exactonline.be')
+
+    const stdout = await runCmd(ConfigGetCommand, ['host', '--output', 'json'])
+
+    expect(JSON.parse(stdout)).toEqual({
+      key: 'host',
+      value: 'start.exactonline.be',
+    })
+  })
+
+  it('emits { key } with no value as json for an unset key', async () => {
+    const stdout = await runCmd(ConfigGetCommand, [
+      'division',
+      '--output',
+      'json',
+    ])
+
+    expect(JSON.parse(stdout)).toEqual({ key: 'division' })
+  })
 })

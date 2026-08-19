@@ -18,14 +18,16 @@ export default class ConfigUnsetCommand extends BaseCommand {
     const { args } = await this.parse(ConfigUnsetCommand)
 
     if (getProfileConfig(this.activeProfile, args.key) === undefined) {
-      this.log(
+      await this.outputAction(
+        { profile: this.activeProfile, key: args.key, unset: false },
         `${chalk.cyan(args.key)} is not set for profile ${chalk.cyan(this.activeProfile)}`,
       )
       return
     }
 
     deleteProfileConfig(this.activeProfile, args.key)
-    this.log(
+    await this.outputAction(
+      { profile: this.activeProfile, key: args.key, unset: true },
       `Removed ${chalk.cyan(args.key)} from profile ${chalk.cyan(this.activeProfile)}`,
     )
   }

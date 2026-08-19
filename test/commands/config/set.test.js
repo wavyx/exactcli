@@ -35,6 +35,21 @@ describe('config set', () => {
     expect(getProfileConfig('default', 'bogus')).toBeUndefined()
   })
 
+  it('emits { profile, key, value } as json', async () => {
+    const stdout = await runCmd(ConfigSetCommand, [
+      'division',
+      '123456',
+      '--output',
+      'json',
+    ])
+
+    expect(JSON.parse(stdout)).toEqual({
+      profile: 'default',
+      key: 'division',
+      value: 123456,
+    })
+  })
+
   describe('host', () => {
     it('stores a valid Exact Online host', async () => {
       const stdout = await runCmd(ConfigSetCommand, [
