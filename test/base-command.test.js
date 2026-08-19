@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import nock from 'nock'
+import { join } from 'node:path'
 import { HOST, mockApi, runCmd } from './helpers.js'
 
 const { auth, config, jq } = vi.hoisted(() => ({
@@ -16,6 +17,14 @@ vi.mock('../src/lib/auth.js', async (importOriginal) => ({
 }))
 vi.mock('../src/lib/config.js', () => config)
 vi.mock('node-jq', () => jq)
+// Keep the real lookup, but let a test force a MISSING binary deterministically.
+vi.mock('../src/lib/jq.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    jqBinaryPath: vi.fn(actual.jqBinaryPath),
+    jqBinaryExists: vi.fn(actual.jqBinaryExists),
+  }
+})
 // The real client still runs; the spy only records the wiring init() built.
 vi.mock('../src/lib/client.js', async (importOriginal) => {
   const actual = await importOriginal()
@@ -24,6 +33,7 @@ vi.mock('../src/lib/client.js', async (importOriginal) => {
 
 const { default: BaseCommand } = await import('../src/base-command.js')
 const { createClient } = await import('../src/lib/client.js')
+const jqLib = await import('../src/lib/jq.js')
 
 const ME = '/api/v1/current/Me'
 const COLUMNS = {
@@ -518,17 +528,15 @@ describe('BaseCommand runJq guard', () => {
     expect(jq.run).not.toHaveBeenCalled()
   })
 
-  it('looks for the bundled binary when JQ_PATH is unset', async () => {
+  it('names the bundled binary when it is missing', async () => {
     delete process.env.JQ_PATH
-    jq.run.mockResolvedValue('1')
+    const bundled = join('node_modules', 'node-jq', 'bin', 'jq')
+    jqLib.jqBinaryExists.mockReturnValueOnce(false)
+    jqLib.jqBinaryPath.mockReturnValueOnce(bundled)
     const err = await RecordCmd.run(['--jq', '.id']).catch((e) => e)
-    // Either the bundled binary exists (run() answers) or the pre-check
-    // names its expected path; both prove the lookup happened.
-    if (err instanceof Error) {
-      expect(err.message).toMatch(/node-jq[\\/]bin[\\/]jq/)
-    } else {
-      expect(jq.run).toHaveBeenCalled()
-    }
+    expect(err.exitCode ?? err.oclif?.exit).toBe(69)
+    expect(err.message).toMatch(/node-jq[\\/]bin[\\/]jq/)
+    expect(jq.run).not.toHaveBeenCalled()
   })
 
   it('fails fast with exit 69 when jq never answers', async () => {
