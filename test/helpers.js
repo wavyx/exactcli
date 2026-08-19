@@ -14,12 +14,19 @@ export function mockApi(host = HOST) {
 
 /**
  * Mock the OAuth token endpoint. `expires_in` is a string in Exact's answer.
+ * `captured` fills with the decoded form body once the request arrives, so a
+ * test can assert the grant parameters.
  * @param {object} [reply] fields that override the default answer
  * @param {string} [host]
+ * @returns {{ scope: import('nock').Scope, captured: Record<string, string> }}
  */
 export function mockTokenExchange(reply = {}, host = HOST) {
-  return mockApi(host)
-    .post('/api/oauth2/token')
+  const captured = {}
+  const scope = mockApi(host)
+    .post('/api/oauth2/token', (body) => {
+      Object.assign(captured, Object.fromEntries(new URLSearchParams(body)))
+      return true
+    })
     .reply(200, {
       access_token: 'acc',
       token_type: 'Bearer',
@@ -27,6 +34,7 @@ export function mockTokenExchange(reply = {}, host = HOST) {
       refresh_token: 'ref',
       ...reply,
     })
+  return { scope, captured }
 }
 
 /**

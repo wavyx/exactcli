@@ -31,6 +31,9 @@ const TOKEN_PATH = '/api/oauth2/token'
  */
 export const STATE_REQUIRED = false
 
+/** The documented lifetime of an access token, in seconds. */
+const DEFAULT_EXPIRES_IN = 600
+
 /** The access token lives 600 s. Refresh it once it reaches this age. */
 export const REFRESH_AFTER_MS = 575_000
 /** Exact answers 401 "Access Token not expired" below this age. */
@@ -41,20 +44,25 @@ function profileHost(profile) {
   return getProfileConfig(profile, 'host') ?? DEFAULT_HOST
 }
 
+/** @returns {string} a fresh CSRF token */
+function newState() {
+  return randomBytes(16).toString('hex')
+}
+
 /**
  * Build the authorization URL the user opens in a browser.
  * @param {string} host Exact Online country host
  * @param {{ clientId: string, redirectUri: string, state?: string }} options
  * @returns {string}
  */
-export function authUrl(host, { clientId, redirectUri, state }) {
+export function authUrl(host, { clientId, redirectUri, state = newState() }) {
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     force_login: '0',
+    state,
   })
-  if (state) params.set('state', state)
   return `https://${host}${AUTH_PATH}?${params}`
 }
 
@@ -100,18 +108,38 @@ export async function tokenRequest(host, params) {
   if (!res.ok) throw ApiError.fromResponse(res.status, text, TOKEN_PATH)
 
   const body = JSON.parse(text)
+  // Exact answers with a string, for example "600". An absent or unreadable
+  // value must not become NaN: that would poison expiresAt in the keychain.
+  const expiresIn = Number(body.expires_in)
   return {
     accessToken: body.access_token,
     refreshToken: body.refresh_token,
-    // Exact answers with a string, for example "600".
-    expiresIn: Number(body.expires_in),
+    expiresIn: Number.isFinite(expiresIn) ? expiresIn : DEFAULT_EXPIRES_IN,
+  }
+}
+
+/**
+ * The code arrives percent-encoded ("%21" for "!") when the user copies the
+ * raw redirect target. A query parser already decoded it, so decoding twice
+ * would mangle a literal percent sign or throw.
+ * @param {string} value
+ * @returns {string}
+ */
+function decodeCode(value) {
+  if (!value.includes('%')) return value
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    // The value is a secret: name the problem, never echo the code.
+    throw new CliError('Invalid authorization code', { exitCode: 64 })
   }
 }
 
 /**
  * Trade an authorization code for a token set.
  * @param {{ host: string, code: string, clientId: string,
- *   clientSecret: string, redirectUri: string }} options
+ *   clientSecret: string, redirectUri: string, decode?: boolean }} options
+ *   `decode` is false when a query parser already decoded the code.
  * @returns {Promise<TokenSet>}
  */
 export async function exchangeCode({
@@ -120,12 +148,11 @@ export async function exchangeCode({
   clientId,
   clientSecret,
   redirectUri,
+  decode = true,
 }) {
   return tokenRequest(host, {
     grant_type: 'authorization_code',
-    // The code arrives percent-encoded ("%21" for "!") when the user pastes
-    // the raw redirect target instead of letting the callback decode it.
-    code: code.includes('%') ? decodeURIComponent(code) : code,
+    code: decode ? decodeCode(code) : code,
     redirect_uri: redirectUri,
     client_id: clientId,
     client_secret: clientSecret,
@@ -188,12 +215,15 @@ export async function getValidOAuthAccess(profile, { force = false } = {}) {
   }
 
   // The refresh token is single use. Take the cross-process lock, then read
-  // the keychain again: a sibling process may have spent it in the meantime.
+  // the keychain again: a sibling process may have spent it, rotated it, or
+  // logged out while this process waited. Everything below works on that
+  // re-read blob, never on the snapshot from before the lock.
   return withLock(`oauth-${profile}`, async () => {
-    const current = await getOAuthTokens(profile)
-    if (current?.obtainedAt > blob.obtainedAt) {
+    const base = await getOAuthTokens(profile)
+    if (!base) throw new AuthRequiredError()
+    if (base.obtainedAt > blob.obtainedAt) {
       debug('another process refreshed the token first')
-      return current
+      return base
     }
     if (!isKeychainAvailable()) {
       throw new ConfigError(
@@ -204,13 +234,13 @@ export async function getValidOAuthAccess(profile, { force = false } = {}) {
 
     const refreshed = await refreshAccessToken({
       host: profileHost(profile),
-      refreshToken: blob.refreshToken,
-      clientId: blob.clientId,
-      clientSecret: blob.clientSecret,
+      refreshToken: base.refreshToken,
+      clientId: base.clientId,
+      clientSecret: base.clientSecret,
     })
     const now = Date.now()
     const updated = {
-      ...blob,
+      ...base,
       accessToken: refreshed.accessToken,
       refreshToken: refreshed.refreshToken,
       obtainedAt: now,
@@ -370,6 +400,8 @@ export function authorizationCodeFlow({
           clientId,
           clientSecret,
           redirectUri,
+          // searchParams decoded the code already.
+          decode: false,
         })
         await respond(res, 200, PAGE.ok)
         shutdown()
@@ -377,13 +409,20 @@ export function authorizationCodeFlow({
       } catch (err) {
         await respond(res, 500, PAGE.exchange)
         shutdown()
-        reject(err)
+        reject(
+          new CliError(
+            `Authorization failed (${err.message}). Run: exactcli auth login`,
+            { exitCode: 77, cause: err },
+          ),
+        )
       }
     })
 
     server.on('error', (err) => {
-      // The server never opened, so it must not be closed here.
-      clearTimeout(timer)
+      // A listen failure never opened the server, and close() would emit a
+      // second error. An error after listen leaves a socket to close.
+      if (server.listening) shutdown()
+      else clearTimeout(timer)
       reject(
         new CliError(
           `Cannot start the local callback server on port ${port}: ${err.message}. ` +
@@ -418,12 +457,16 @@ async function defaultPrompt() {
   return input({ message: 'Paste the redirected URL or the code:' })
 }
 
-/** @param {string} answer @returns {string | null} */
-function codeFromAnswer(answer) {
+/**
+ * @param {string} answer
+ * @returns {{ code: string | null, decode: boolean }} `decode` is false for a
+ *   pasted URL, whose query parser already decoded the code.
+ */
+function parseAnswer(answer) {
   try {
-    return new URL(answer).searchParams.get('code')
+    return { code: new URL(answer).searchParams.get('code'), decode: false }
   } catch {
-    return answer
+    return { code: answer, decode: true }
   }
 }
 
@@ -445,11 +488,18 @@ export async function manualCodeFlow({
   prompt = defaultPrompt,
 }) {
   const answer = (await prompt()).trim()
-  const code = codeFromAnswer(answer)
+  const { code, decode } = parseAnswer(answer)
   if (!code) {
     throw new CliError('No authorization code provided', { exitCode: 64 })
   }
-  return exchangeCode({ host, code, clientId, clientSecret, redirectUri })
+  return exchangeCode({
+    host,
+    code,
+    decode,
+    clientId,
+    clientSecret,
+    redirectUri,
+  })
 }
 
 /**

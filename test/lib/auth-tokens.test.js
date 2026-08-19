@@ -13,7 +13,7 @@ import {
   STATE_REQUIRED,
 } from '../../src/lib/auth.js'
 import { ApiError, CliError } from '../../src/lib/errors.js'
-import { HOST, mockApi } from '../helpers.js'
+import { HOST, mockApi, mockTokenExchange } from '../helpers.js'
 
 const { keychain, config, lock } = vi.hoisted(() => ({
   keychain: {
@@ -44,24 +44,6 @@ function blob(ageMs, overrides = {}) {
     clientSecret: SECRET,
     ...overrides,
   }
-}
-
-/** Interceptor that captures the decoded form body of the token request. */
-function mockToken(reply = {}, status = 200) {
-  const captured = {}
-  const scope = mockApi()
-    .post(TOKEN_PATH, (body) => {
-      Object.assign(captured, Object.fromEntries(new URLSearchParams(body)))
-      return true
-    })
-    .reply(status, {
-      access_token: 'acc',
-      token_type: 'Bearer',
-      expires_in: '600',
-      refresh_token: 'ref',
-      ...reply,
-    })
-  return { scope, captured }
 }
 
 beforeEach(() => {
@@ -123,19 +105,21 @@ describe('authUrl', () => {
     )
   })
 
-  it('omits state when the caller has none', () => {
-    const url = authUrl(HOST, {
-      clientId: 'cid',
-      redirectUri: 'https://acme.example/callback',
-    })
+  it('generates a state when the caller has none', () => {
+    const url = new URL(
+      authUrl(HOST, {
+        clientId: 'cid',
+        redirectUri: 'https://acme.example/callback',
+      }),
+    )
 
-    expect(url).not.toContain('state=')
+    expect(url.searchParams.get('state')).toMatch(/^[0-9a-f]{32}$/)
   })
 })
 
 describe('tokenRequest', () => {
   it('posts a form body with the client credentials and no auth header', async () => {
-    const { scope, captured } = mockToken()
+    const { scope, captured } = mockTokenExchange()
 
     const tokens = await tokenRequest(HOST, {
       grant_type: 'refresh_token',
@@ -174,12 +158,20 @@ describe('tokenRequest', () => {
   })
 
   it('turns the expires_in string into a number', async () => {
-    mockToken({ expires_in: '600' })
+    mockTokenExchange({ expires_in: '600' })
 
     const tokens = await tokenRequest(HOST, { grant_type: 'refresh_token' })
 
     expect(tokens.expiresIn).toBe(600)
     expect(typeof tokens.expiresIn).toBe('number')
+  })
+
+  it('falls back to 600 s when expires_in is absent or not a number', async () => {
+    mockTokenExchange({ expires_in: undefined })
+    expect((await tokenRequest(HOST, {})).expiresIn).toBe(600)
+
+    mockTokenExchange({ expires_in: 'soon' })
+    expect((await tokenRequest(HOST, {})).expiresIn).toBe(600)
   })
 
   it('throws an ApiError on a non-2xx answer', async () => {
@@ -218,7 +210,7 @@ describe('tokenRequest', () => {
 
 describe('exchangeCode', () => {
   it('sends the authorization-code grant with the redirect URI', async () => {
-    const { scope, captured } = mockToken()
+    const { scope, captured } = mockTokenExchange()
 
     const tokens = await exchangeCode({
       host: HOST,
@@ -240,7 +232,7 @@ describe('exchangeCode', () => {
   })
 
   it('decodes a percent-encoded code', async () => {
-    const { captured } = mockToken()
+    const { captured } = mockTokenExchange()
 
     await exchangeCode({
       host: HOST,
@@ -252,11 +244,43 @@ describe('exchangeCode', () => {
 
     expect(captured.code).toBe('ab!cd!')
   })
+
+  it('leaves an already decoded code alone', async () => {
+    const { captured } = mockTokenExchange()
+
+    await exchangeCode({
+      host: HOST,
+      code: '100%pure',
+      decode: false,
+      clientId: 'cid',
+      clientSecret: SECRET,
+      redirectUri: 'https://acme.example/callback',
+    })
+
+    expect(captured.code).toBe('100%pure')
+  })
+
+  it('refuses a malformed escape with exit 64', async () => {
+    const { scope } = mockTokenExchange()
+
+    const err = await exchangeCode({
+      host: HOST,
+      code: '100%pure',
+      clientId: 'cid',
+      clientSecret: SECRET,
+      redirectUri: 'https://acme.example/callback',
+    }).catch((e) => e)
+
+    expect(err.exitCode).toBe(64)
+    expect(err.message).toBe('Invalid authorization code')
+    expect(err.message).not.toContain('100%pure')
+    expect(scope.isDone()).toBe(false)
+  })
 })
 
 describe('refreshAccessToken', () => {
   it('sends the refresh grant with the client credentials', async () => {
-    const { scope, captured } = mockToken()
+    const { scope, captured } = mockTokenExchange()
 
     const tokens = await refreshAccessToken({
       host: HOST,
@@ -368,7 +392,7 @@ describe('getValidOAuthAccess', () => {
 
   it('refreshes under the oauth lock once the token reaches 575 s', async () => {
     keychain.getOAuthTokens.mockResolvedValue(blob(575_000))
-    const { scope, captured } = mockToken()
+    const { scope, captured } = mockTokenExchange()
 
     const access = await getValidOAuthAccess('acme')
 
@@ -403,7 +427,7 @@ describe('getValidOAuthAccess', () => {
 
   it('allows a forced refresh between the floor and the refresh age', async () => {
     keychain.getOAuthTokens.mockResolvedValue(blob(572_000))
-    const { scope } = mockToken()
+    const { scope } = mockTokenExchange()
 
     const access = await getValidOAuthAccess('default', { force: true })
 
@@ -417,7 +441,7 @@ describe('getValidOAuthAccess', () => {
     keychain.getOAuthTokens
       .mockResolvedValueOnce(stale)
       .mockResolvedValueOnce(fresh)
-    const { scope } = mockToken()
+    const { scope } = mockTokenExchange()
 
     const access = await getValidOAuthAccess('default')
 
@@ -429,7 +453,7 @@ describe('getValidOAuthAccess', () => {
   it('refreshes when the re-read finds the same blob', async () => {
     const stale = blob(600_000)
     keychain.getOAuthTokens.mockResolvedValue(stale)
-    const { scope } = mockToken()
+    const { scope } = mockTokenExchange()
 
     const access = await getValidOAuthAccess('default')
 
@@ -437,22 +461,48 @@ describe('getValidOAuthAccess', () => {
     expect(access.accessToken).toBe('acc')
   })
 
-  it('refreshes when the blob disappeared between the read and the lock', async () => {
+  it('demands a login when the blob disappeared before the lock', async () => {
+    // A sibling process logged out. Refreshing here would resurrect the blob.
     keychain.getOAuthTokens
       .mockResolvedValueOnce(blob(600_000))
       .mockResolvedValueOnce(null)
-    const { scope } = mockToken()
+    const { scope } = mockTokenExchange()
+
+    const err = await getValidOAuthAccess('default').catch((e) => e)
+
+    expect(err.exitCode).toBe(77)
+    expect(err.message).toMatch(/Not authenticated/)
+    expect(scope.isDone()).toBe(false)
+    expect(keychain.setOAuthTokens).not.toHaveBeenCalled()
+  })
+
+  it('spends the re-read refresh token, not the pre-lock snapshot', async () => {
+    // Same obtainedAt, different credentials: `auth login` rewrote the blob
+    // while this process waited for the lock.
+    const before = blob(600_000)
+    const rewritten = blob(600_000, {
+      refreshToken: 'rotated-refresh',
+      clientId: 'new-cid',
+      clientSecret: 'new-secret',
+    })
+    keychain.getOAuthTokens
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(rewritten)
+    const { captured } = mockTokenExchange()
 
     const access = await getValidOAuthAccess('default')
 
-    expect(scope.isDone()).toBe(true)
-    expect(access.accessToken).toBe('acc')
+    expect(captured.refresh_token).toBe('rotated-refresh')
+    expect(captured.client_id).toBe('new-cid')
+    expect(captured.client_secret).toBe('new-secret')
+    expect(access.clientId).toBe('new-cid')
+    expect(access.clientSecret).toBe('new-secret')
   })
 
   it('refuses to spend the refresh token when the keychain cannot store it', async () => {
     keychain.getOAuthTokens.mockResolvedValue(blob(600_000))
     keychain.isKeychainAvailable.mockReturnValue(false)
-    const { scope } = mockToken()
+    const { scope } = mockTokenExchange()
 
     const err = await getValidOAuthAccess('default').catch((e) => e)
 

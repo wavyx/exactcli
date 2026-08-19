@@ -2,36 +2,33 @@ import { createServer } from 'node:net'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import nock from 'nock'
 import { authorizationCodeFlow, manualCodeFlow } from '../../src/lib/auth.js'
-import { HOST, mockApi } from '../helpers.js'
+import { HOST, mockApi, mockTokenExchange } from '../helpers.js'
 
-const { prompts } = vi.hoisted(() => ({
+const { prompts, http } = vi.hoisted(() => ({
   prompts: { input: vi.fn(async () => 'prompted-code') },
+  http: { servers: [] },
 }))
 
 vi.mock('@inquirer/prompts', () => prompts)
+
+// Keep every loopback server the flow creates, so a test can drive an event
+// that only the server itself can emit.
+vi.mock('node:http', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    createServer: (...args) => {
+      const server = actual.createServer(...args)
+      http.servers.push(server)
+      return server
+    },
+  }
+})
 
 const TOKEN_PATH = '/api/oauth2/token'
 const SECRET = 'super-secret'
 const REDIRECT = 'https://acme.example/callback'
 const DEFAULT_PORT = 9999
-
-/** Interceptor that captures the decoded form body of the token request. */
-function mockToken(reply = {}, status = 200) {
-  const captured = {}
-  const scope = mockApi()
-    .post(TOKEN_PATH, (body) => {
-      Object.assign(captured, Object.fromEntries(new URLSearchParams(body)))
-      return true
-    })
-    .reply(status, {
-      access_token: 'acc',
-      token_type: 'Bearer',
-      expires_in: '600',
-      refresh_token: 'ref',
-      ...reply,
-    })
-  return { scope, captured }
-}
 
 /** A port that nothing listens on right now. */
 function freePort() {
@@ -84,7 +81,7 @@ async function startFlow(overrides = {}) {
   const url = new URL(await listening)
   const callback = (query) =>
     fetch(`http://127.0.0.1:${port}/callback?${query}`)
-  return { outcome, url, port, callback }
+  return { outcome, url, port, callback, server: http.servers.at(-1) }
 }
 
 beforeEach(() => {
@@ -92,6 +89,7 @@ beforeEach(() => {
   nock.disableNetConnect()
   nock.enableNetConnect('127.0.0.1')
   prompts.input.mockClear().mockResolvedValue('prompted-code')
+  http.servers.length = 0
 })
 
 afterEach(() => {
@@ -103,7 +101,7 @@ afterEach(() => {
 describe('authorizationCodeFlow', () => {
   it('announces the authorization URL once it listens', async () => {
     const { outcome, url, callback } = await startFlow({ state: 'st4te' })
-    mockToken()
+    mockTokenExchange()
 
     expect(url.origin).toBe(`https://${HOST}`)
     expect(url.pathname).toBe('/api/oauth2/auth')
@@ -117,7 +115,7 @@ describe('authorizationCodeFlow', () => {
 
   it('exchanges the code and resolves the token set', async () => {
     const { outcome, callback } = await startFlow({ state: 'st4te' })
-    const { scope, captured } = mockToken()
+    const { scope, captured } = mockTokenExchange()
 
     const res = await callback('code=the-code&state=st4te')
     const page = await res.text()
@@ -140,9 +138,21 @@ describe('authorizationCodeFlow', () => {
     })
   })
 
+  it('never decodes the callback code twice', async () => {
+    // The query parser already decoded it. A second decode would throw on a
+    // code that ends in a literal percent sign.
+    const { outcome, callback } = await startFlow({ state: 's' })
+    const { captured } = mockTokenExchange()
+
+    await callback('code=100%25pure&state=s')
+    await outcome
+
+    expect(captured.code).toBe('100%pure')
+  })
+
   it('closes the loopback server once the login succeeded', async () => {
     const { outcome, callback, port } = await startFlow({ state: 's' })
-    mockToken()
+    mockTokenExchange()
 
     await callback('code=c&state=s')
     await outcome
@@ -152,7 +162,7 @@ describe('authorizationCodeFlow', () => {
 
   it('generates a state when the caller passes none', async () => {
     const { outcome, url, callback } = await startFlow()
-    mockToken()
+    mockTokenExchange()
 
     const state = url.searchParams.get('state')
     expect(state).toMatch(/^[0-9a-f]{32}$/)
@@ -163,7 +173,7 @@ describe('authorizationCodeFlow', () => {
 
   it('accepts a callback without state while STATE_REQUIRED is false', async () => {
     const { outcome, callback } = await startFlow({ state: 'st4te' })
-    mockToken()
+    mockTokenExchange()
 
     await callback('code=c')
 
@@ -172,7 +182,7 @@ describe('authorizationCodeFlow', () => {
 
   it('answers 400 on a state mismatch and keeps listening', async () => {
     const { outcome, callback } = await startFlow({ state: 'st4te' })
-    mockToken()
+    mockTokenExchange()
 
     const res = await callback('code=c&state=wrong')
     const page = await res.text()
@@ -187,7 +197,7 @@ describe('authorizationCodeFlow', () => {
 
   it('answers 400 without a code and keeps listening', async () => {
     const { outcome, callback } = await startFlow({ state: 'st4te' })
-    mockToken()
+    mockTokenExchange()
 
     const res = await callback('state=st4te')
 
@@ -200,7 +210,7 @@ describe('authorizationCodeFlow', () => {
 
   it('answers 404 on another path and on another method', async () => {
     const { outcome, callback, port } = await startFlow({ state: 's' })
-    mockToken()
+    mockTokenExchange()
 
     const other = await fetch(`http://127.0.0.1:${port}/elsewhere`)
     expect(other.status).toBe(404)
@@ -251,7 +261,10 @@ describe('authorizationCodeFlow', () => {
 
     expect(res.status).toBe(500)
     expect(page).toMatch(/exchange failed/i)
-    expect(err.statusCode).toBe(400)
+    expect(err.exitCode).toBe(77)
+    expect(err.message).toMatch(/Authorization failed \(.*invalid_grant.*\)/)
+    expect(err.message).toMatch(/Run: exactcli auth login/)
+    expect(err.cause.statusCode).toBe(400)
   })
 
   it('rejects with 77 after the timeout elapses', async () => {
@@ -268,6 +281,17 @@ describe('authorizationCodeFlow', () => {
 
     expect(err.exitCode).toBe(77)
     expect(err.message).toMatch(/timed out/i)
+    await expect(fetch(`http://127.0.0.1:${port}/callback`)).rejects.toThrow()
+  })
+
+  it('closes the server when it fails after it started to listen', async () => {
+    const { outcome, port, server } = await startFlow({ state: 's' })
+
+    server.emit('error', new Error('boom'))
+    const err = await outcome
+
+    expect(err.exitCode).toBe(78)
+    expect(err.message).toMatch(/boom/)
     await expect(fetch(`http://127.0.0.1:${port}/callback`)).rejects.toThrow()
   })
 
@@ -299,7 +323,7 @@ describe('manualCodeFlow', () => {
   }
 
   it('extracts the code from a pasted redirect URL', async () => {
-    const { captured } = mockToken()
+    const { captured } = mockTokenExchange()
 
     const tokens = await manualCodeFlow({
       ...options,
@@ -311,12 +335,35 @@ describe('manualCodeFlow', () => {
     expect(tokens.accessToken).toBe('acc')
   })
 
+  it('decodes a code from a URL only once', async () => {
+    // searchParams already decoded it, so a second decode would mangle a
+    // literal percent sign.
+    const { captured } = mockTokenExchange()
+
+    await manualCodeFlow({
+      ...options,
+      prompt: async () => `${REDIRECT}?code=100%25pure`,
+    })
+
+    expect(captured.code).toBe('100%pure')
+  })
+
   it('accepts a bare code and decodes it', async () => {
-    const { captured } = mockToken()
+    const { captured } = mockTokenExchange()
 
     await manualCodeFlow({ ...options, prompt: async () => ' ab%21cd \n' })
 
     expect(captured.code).toBe('ab!cd')
+  })
+
+  it('refuses a bare code with a malformed escape', async () => {
+    const err = await manualCodeFlow({
+      ...options,
+      prompt: async () => '100%pure',
+    }).catch((e) => e)
+
+    expect(err.exitCode).toBe(64)
+    expect(err.message).toBe('Invalid authorization code')
   })
 
   it('refuses an empty answer with exit 64', async () => {
@@ -339,7 +386,7 @@ describe('manualCodeFlow', () => {
   })
 
   it('asks for the redirected URL or the code by default', async () => {
-    const { captured } = mockToken()
+    const { captured } = mockTokenExchange()
 
     await manualCodeFlow(options)
 
