@@ -1,0 +1,117 @@
+import chalk from 'chalk'
+import BaseCommand from '../../base-command.js'
+import { REFRESH_FLOOR_MS, fetchMe } from '../../lib/auth.js'
+import { createClient } from '../../lib/client.js'
+import { getProfileConfig } from '../../lib/config.js'
+import { getOAuthTokens, isKeychainAvailable } from '../../lib/keychain.js'
+
+const DEFAULT_HOST = 'start.exactonline.be'
+const DAY_MS = 86_400_000
+/** A refresh token dies after 30 days without use. Warn before that. */
+const IDLE_WARN_DAYS = 25
+/** Column where every value starts. */
+const LABEL_WIDTH = 20
+
+export default class StatusCommand extends BaseCommand {
+  static skipAuth = true
+
+  static description = 'Show the authentication status of the profile'
+
+  static examples = [
+    '<%= config.bin %> auth status',
+    '<%= config.bin %> auth status --output json',
+  ]
+
+  async run() {
+    await this.parse(StatusCommand)
+    const profile = this.activeProfile
+    const domain = getProfileConfig(profile, 'ngrok_domain')
+
+    const status = {
+      profile,
+      keychain: isKeychainAvailable() ? 'OS keychain' : 'unavailable',
+      host: getProfileConfig(profile, 'host') ?? DEFAULT_HOST,
+      redirectUri: domain ? `https://${domain}/callback` : null,
+      division: getProfileConfig(profile, 'division') ?? null,
+      authenticated: false,
+      tokenAgeSeconds: null,
+      refreshableNow: null,
+      refreshTokenIdleDays: null,
+      identity: null,
+    }
+
+    const blob = await getOAuthTokens(profile)
+    if (blob) {
+      const age = Date.now() - blob.obtainedAt
+      status.authenticated = true
+      status.tokenAgeSeconds = Math.round(age / 1000)
+      status.refreshableNow = age >= REFRESH_FLOOR_MS
+      status.refreshTokenIdleDays = Math.floor(age / DAY_MS)
+      status.identity = await this.#identity(status.host, blob.accessToken)
+    }
+
+    if (this.resolveFormat() !== 'table') {
+      await this.outputResults(status, {})
+      return
+    }
+    this.#print(status)
+  }
+
+  /**
+   * Best effort: an expired token or a network hiccup must not hide the rest
+   * of the report.
+   * @param {string} host
+   * @param {string} token
+   * @returns {Promise<{fullName: string, email: string} | null>}
+   */
+  async #identity(host, token) {
+    try {
+      const me = await fetchMe(
+        createClient({
+          host,
+          token,
+          retry: false,
+          userAgent: `exactcli/${this.config.version}`,
+        }),
+      )
+      return { fullName: me.FullName, email: me.Email }
+    } catch {
+      return null
+    }
+  }
+
+  /** @param {Record<string, any>} status */
+  #print(status) {
+    const line = (label, value) =>
+      this.log(`${`${label}:`.padEnd(LABEL_WIDTH)}${value}`)
+
+    line('Profile', status.profile)
+    line('Keychain', status.keychain)
+    line('Host', status.host)
+    if (status.redirectUri) line('Redirect URI', status.redirectUri)
+    line('Division', status.division ?? chalk.dim('(not set)'))
+
+    if (!status.authenticated) {
+      line('Status', chalk.red('Not authenticated'))
+      this.log('')
+      this.log(`Run ${chalk.cyan('exactcli auth login')} to authenticate.`)
+      return
+    }
+
+    line('Token age', `${status.tokenAgeSeconds}s`)
+    line('Refreshable now', status.refreshableNow ? 'yes' : 'no')
+    line('Refresh token idle', `${status.refreshTokenIdleDays} days`)
+    if (status.refreshTokenIdleDays > IDLE_WARN_DAYS) {
+      this.log(
+        chalk.yellow(
+          'Refresh tokens expire after 30 days without use. ' +
+            'Run a command or exactcli auth login soon.',
+        ),
+      )
+    }
+    if (status.identity) {
+      line('Name', status.identity.fullName)
+      line('Email', status.identity.email)
+    }
+  }
+}
