@@ -177,4 +177,40 @@ describe('startTunnel', () => {
       'ngrok did not report a tunnel within 2s. Use --manual',
     )
   })
+
+  it('drains stderr before and after the tunnel is ready', async () => {
+    const child = fakeChild()
+    const promise = startTunnel({
+      domain: DOMAIN,
+      port: PORT,
+      spawn: () => child,
+    })
+
+    // A listener puts the stream in flowing mode: an unread pipe fills up and
+    // blocks ngrok, and ngrok has to survive the whole login.
+    expect(child.stderr.readableFlowing).toBe(true)
+    child.stderr.write('WARN something before ready\n')
+    child.stdout.write(READY)
+    const tunnel = await promise
+    child.stderr.write('WARN something after ready\n')
+    await flush()
+
+    expect(tunnel.url).toBe(URL)
+    tunnel.stop()
+    expect(child.kill).toHaveBeenCalledWith('SIGTERM')
+  })
+
+  it('tolerates a child without a stderr pipe', async () => {
+    const child = fakeChild()
+    child.stderr = null
+    const promise = startTunnel({
+      domain: DOMAIN,
+      port: PORT,
+      spawn: () => child,
+    })
+
+    child.stdout.write(READY)
+
+    await expect(promise).resolves.toMatchObject({ url: URL })
+  })
 })

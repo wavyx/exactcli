@@ -36,6 +36,9 @@ export function startTunnel({
   ]
   debug('spawn %s %s', bin, args.join(' '))
   const child = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+  // Drain stderr: a piped stream that nobody reads fills up and blocks ngrok,
+  // and the tunnel has to survive the whole login.
+  child.stderr?.on('data', (chunk) => debug('stderr: %s', String(chunk).trim()))
 
   return new Promise((resolve, reject) => {
     let settled = false
