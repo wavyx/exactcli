@@ -5,12 +5,11 @@ import chalk from 'chalk'
 import BaseCommand from '../base-command.js'
 import { getConf, getProfileConfig } from '../lib/config.js'
 import { getOAuthTokens, isKeychainAvailable } from '../lib/keychain.js'
-import { HOST_RE, createClient } from '../lib/client.js'
+import { DEFAULT_HOST, HOST_RE, createClient } from '../lib/client.js'
 import { jqBinaryExists, jqBinaryPath } from '../lib/jq.js'
 import { REFRESH_FLOOR_MS, fetchMe } from '../lib/auth.js'
 
 const MIN_NODE_MAJOR = 20
-const DEFAULT_HOST = 'start.exactonline.be'
 
 const COLUMNS = {
   check: { header: 'Check' },

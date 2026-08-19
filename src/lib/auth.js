@@ -8,7 +8,7 @@ import {
 } from './keychain.js'
 import { getProfileConfig } from './config.js'
 import { withLock } from './lock.js'
-import { HOST_RE } from './client.js'
+import { DEFAULT_HOST, HOST_RE } from './client.js'
 import { unwrap } from './odata.js'
 import {
   ApiError,
@@ -20,7 +20,6 @@ import {
 
 const debug = createDebug('exact:auth')
 
-const DEFAULT_HOST = 'start.exactonline.be'
 const AUTH_PATH = '/api/oauth2/auth'
 const TOKEN_PATH = '/api/oauth2/token'
 
@@ -342,7 +341,7 @@ export function authorizationCodeFlow({
   redirectUri,
   port = 9999,
   timeout = 300_000,
-  state = randomBytes(16).toString('hex'),
+  state = newState(),
   onReady,
 }) {
   const callbackPath = new URL(redirectUri).pathname

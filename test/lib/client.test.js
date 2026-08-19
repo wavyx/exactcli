@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import nock from 'nock'
-import { createClient, HOST_RE, timers } from '../../src/lib/client.js'
+import {
+  DEFAULT_HOST,
+  createClient,
+  HOST_RE,
+  timers,
+} from '../../src/lib/client.js'
 import { ApiError, CliError } from '../../src/lib/errors.js'
 import { apiBase, mockApi } from '../helpers.js'
 
@@ -32,6 +37,11 @@ describe('host allowlist', () => {
     for (const tld of ['be', 'nl', 'de', 'co.uk', 'com', 'es', 'fr']) {
       expect(HOST_RE.test(`start.exactonline.${tld}`)).toBe(true)
     }
+  })
+
+  it('shares one default host with the commands', () => {
+    expect(DEFAULT_HOST).toBe('start.exactonline.be')
+    expect(HOST_RE.test(DEFAULT_HOST)).toBe(true)
   })
 
   it('defaults to start.exactonline.be', async () => {

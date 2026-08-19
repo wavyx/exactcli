@@ -1,11 +1,10 @@
 import chalk from 'chalk'
 import BaseCommand from '../../base-command.js'
 import { REFRESH_FLOOR_MS, fetchMe } from '../../lib/auth.js'
-import { createClient } from '../../lib/client.js'
+import { DEFAULT_HOST, createClient } from '../../lib/client.js'
 import { getProfileConfig } from '../../lib/config.js'
 import { getOAuthTokens, isKeychainAvailable } from '../../lib/keychain.js'
 
-const DEFAULT_HOST = 'start.exactonline.be'
 const DAY_MS = 86_400_000
 /** A refresh token dies after 30 days without use. Warn before that. */
 const IDLE_WARN_DAYS = 25

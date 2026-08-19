@@ -11,26 +11,15 @@ import {
   fetchMe,
   manualCodeFlow,
 } from '../../lib/auth.js'
-import { HOST_RE, createClient } from '../../lib/client.js'
-import { getProfileConfig, setProfileConfig } from '../../lib/config.js'
+import { DEFAULT_HOST, HOST_RE, createClient } from '../../lib/client.js'
+import {
+  getProfileConfig,
+  normalizeDomain,
+  setProfileConfig,
+} from '../../lib/config.js'
 import { CliError, ConfigError } from '../../lib/errors.js'
 import { setOAuthTokens } from '../../lib/keychain.js'
 import { startTunnel } from '../../lib/ngrok.js'
-
-const DEFAULT_HOST = 'start.exactonline.be'
-
-/**
- * A pasted ngrok domain often carries the scheme and a trailing slash. The
- * redirect URI needs the bare name.
- * @param {string} value
- * @returns {string}
- */
-function bareDomain(value) {
-  return value
-    .trim()
-    .replace(/^https:\/\//, '')
-    .replace(/\/$/, '')
-}
 
 export default class LoginCommand extends BaseCommand {
   static skipAuth = true
@@ -134,13 +123,13 @@ export default class LoginCommand extends BaseCommand {
   async #resolveDomain(flags, profile) {
     // An empty stored value is a broken profile, not a choice: ask again.
     const stored = getProfileConfig(profile, 'ngrok_domain') || undefined
-    const domain = bareDomain(
+    const domain = normalizeDomain(
       flags['ngrok-domain'] ??
         stored ??
         (await input({
           message: 'ngrok static domain (for example acme.ngrok-free.app):',
           validate: (value) =>
-            bareDomain(value) !== '' || 'Enter your ngrok static domain',
+            normalizeDomain(value) !== '' || 'Enter your ngrok static domain',
         })),
     )
     // Without a domain the redirect URI reads https:///callback, which the

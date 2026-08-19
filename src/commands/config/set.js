@@ -1,7 +1,7 @@
 import { Args } from '@oclif/core'
 import chalk from 'chalk'
 import BaseCommand from '../../base-command.js'
-import { setProfileConfig } from '../../lib/config.js'
+import { normalizeDomain, setProfileConfig } from '../../lib/config.js'
 import { CliError } from '../../lib/errors.js'
 import { HOST_RE } from '../../lib/client.js'
 
@@ -46,10 +46,7 @@ function normalizeValue(key, rawValue) {
   }
 
   // ngrok_domain: no fixed format, only cleaned of a scheme and a trailing slash.
-  return rawValue
-    .trim()
-    .replace(/^https:\/\//, '')
-    .replace(/\/$/, '')
+  return normalizeDomain(rawValue)
 }
 
 export default class ConfigSetCommand extends BaseCommand {

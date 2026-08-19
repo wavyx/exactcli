@@ -12,6 +12,9 @@ const debug = createDebug('exact:client')
 /** The seven Exact Online country hosts. Tokens never leave one of these. */
 export const HOST_RE = /^start\.exactonline\.(be|nl|de|co\.uk|com|es|fr)$/
 
+/** The country host a profile uses when it names none. */
+export const DEFAULT_HOST = 'start.exactonline.be'
+
 /** Exact Online refuses a request URI longer than this. */
 const MAX_URL_LENGTH = 6000
 /** Shortest and longest rate-limit wait. The minutely window is 60 s. */
