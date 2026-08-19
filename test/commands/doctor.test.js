@@ -1,0 +1,165 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync, chmodSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { delimiter, join } from 'node:path'
+import { runCmd } from '../helpers.js'
+
+const mocks = vi.hoisted(() => ({
+  fetchMe: vi.fn(),
+  loadConfig: vi.fn(() => ({ activeProfile: 'default' })),
+  getProfileConfig: vi.fn(),
+  getConf: vi.fn(() => ({ path: '/tmp/exactcli/config.json' })),
+  getOAuthTokens: vi.fn(),
+  isKeychainAvailable: vi.fn(() => true),
+}))
+
+vi.mock('../../src/lib/auth.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  fetchMe: mocks.fetchMe,
+}))
+vi.mock('../../src/lib/config.js', () => ({
+  loadConfig: mocks.loadConfig,
+  getProfileConfig: mocks.getProfileConfig,
+  getConf: mocks.getConf,
+}))
+vi.mock('../../src/lib/keychain.js', () => ({
+  getOAuthTokens: mocks.getOAuthTokens,
+  isKeychainAvailable: mocks.isKeychainAvailable,
+}))
+
+const { default: DoctorCommand } = await import('../../src/commands/doctor.js')
+
+function profile(values = {}) {
+  mocks.getProfileConfig.mockImplementation((_profile, key) => values[key])
+}
+
+function blob(ageMs) {
+  const obtainedAt = Date.now() - ageMs
+  return {
+    accessToken: 'at-1',
+    refreshToken: 'rt-1',
+    obtainedAt,
+    expiresAt: obtainedAt + 600_000,
+    clientId: 'cid',
+    clientSecret: 'csec',
+  }
+}
+
+const FULL = {
+  host: 'start.exactonline.be',
+  ngrok_domain: 'acme.ngrok-free.app',
+  division: 123,
+}
+let binDir
+const savedPath = process.env.PATH
+const savedJq = process.env.JQ_PATH
+
+beforeEach(() => {
+  vi.resetAllMocks()
+  mocks.loadConfig.mockReturnValue({ activeProfile: 'default' })
+  mocks.isKeychainAvailable.mockReturnValue(true)
+  mocks.getConf.mockReturnValue({ path: '/tmp/exactcli/config.json' })
+  mocks.fetchMe.mockResolvedValue({ FullName: 'Jane Doe' })
+  mocks.getOAuthTokens.mockResolvedValue(null)
+  profile({})
+  binDir = mkdtempSync(join(tmpdir(), 'exactcli-doctor-'))
+  writeFileSync(join(binDir, 'ngrok'), '#!/bin/sh\n')
+  chmodSync(join(binDir, 'ngrok'), 0o755)
+  process.env.PATH = binDir
+  process.env.JQ_PATH = process.execPath
+  process.exitCode = undefined
+  process.stdout.isTTY = true
+})
+
+afterEach(() => {
+  process.env.PATH = savedPath
+  if (savedJq === undefined) delete process.env.JQ_PATH
+  else process.env.JQ_PATH = savedJq
+  process.exitCode = undefined
+  rmSync(binDir, { recursive: true, force: true })
+})
+
+/** @returns {Record<string, {status: string, detail: string}>} */
+async function runJson(argv = []) {
+  const rows = JSON.parse(
+    await runCmd(DoctorCommand, ['--output', 'json', ...argv]),
+  )
+  return Object.fromEntries(rows.map((r) => [r.check, r]))
+}
+
+describe('doctor', () => {
+  it('passes every check with a full profile, a fresh token and a reachable API', async () => {
+    profile(FULL)
+    mocks.getOAuthTokens.mockResolvedValue(blob(10_000))
+    const checks = await runJson()
+    expect(Object.values(checks).every((c) => c.status === 'ok')).toBe(true)
+    expect(checks.token.detail).toMatch(/fresh/)
+    expect(checks.api.detail).toMatch(/Jane Doe/)
+    expect(process.exitCode).toBeUndefined()
+  })
+
+  it('reports an old token as refreshable', async () => {
+    profile(FULL)
+    mocks.getOAuthTokens.mockResolvedValue(blob(600_000))
+    const checks = await runJson(['--offline'])
+    expect(checks.token.detail).toMatch(/refreshable/)
+    expect(checks.api.detail).toMatch(/skipped/)
+  })
+
+  it('fails the token, division and api checks when nothing is set up', async () => {
+    const checks = await runJson()
+    expect(checks.token.status).toBe('FAIL')
+    expect(checks.division.status).toBe('FAIL')
+    expect(checks['ngrok-domain'].status).toBe('FAIL')
+    expect(checks.api.detail).toMatch(/no token/)
+    expect(process.exitCode).toBe(1)
+  })
+
+  it('fails host, ngrok, jq, keychain and config when they are broken', async () => {
+    profile({ ...FULL, host: 'evil.example' })
+    process.env.PATH = `${tmpdir()}${delimiter}`
+    process.env.JQ_PATH = '/nonexistent/jq'
+    mocks.isKeychainAvailable.mockReturnValue(false)
+    mocks.getConf.mockImplementation(() => {
+      throw new Error('store locked')
+    })
+    const checks = await runJson(['--offline'])
+    expect(checks.host.status).toBe('FAIL')
+    expect(checks.ngrok.status).toBe('FAIL')
+    expect(checks.jq.status).toBe('FAIL')
+    expect(checks.keychain.status).toBe('FAIL')
+    expect(checks.config).toEqual(
+      expect.objectContaining({ status: 'FAIL', detail: 'store locked' }),
+    )
+  })
+
+  it('reports an API failure and an empty Me answer', async () => {
+    profile(FULL)
+    mocks.getOAuthTokens.mockResolvedValue(blob(1000))
+    mocks.fetchMe.mockRejectedValue(new Error('boom'))
+    expect((await runJson()).api).toEqual(
+      expect.objectContaining({ status: 'FAIL', detail: 'boom' }),
+    )
+    mocks.fetchMe.mockResolvedValue(null)
+    expect((await runJson()).api.detail).toBe('empty')
+  })
+
+  it('looks for the bundled jq binary when JQ_PATH is unset', async () => {
+    delete process.env.JQ_PATH
+    const checks = await runJson(['--offline'])
+    expect(checks.jq.detail).toMatch(/node-jq[\\/]bin[\\/]jq/)
+  })
+
+  it('prints a human summary in table mode', async () => {
+    profile(FULL)
+    mocks.getOAuthTokens.mockResolvedValue(blob(1000))
+    const out = await runCmd(DoctorCommand, ['--offline'])
+    expect(out).toMatch(/\[ok\] node/)
+    expect(out).toMatch(/All checks passed/)
+    mocks.getOAuthTokens.mockResolvedValue(null)
+    delete process.env.PATH
+    const bad = await runCmd(DoctorCommand, ['--offline'])
+    expect(bad).toMatch(/\[!!\] token/)
+    expect(bad).toMatch(/check\(s\) failed/)
+  })
+})
