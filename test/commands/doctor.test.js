@@ -26,8 +26,14 @@ vi.mock('../../src/lib/keychain.js', () => ({
   getOAuthTokens: mocks.getOAuthTokens,
   isKeychainAvailable: mocks.isKeychainAvailable,
 }))
+// The real client still runs; the spy only records what the probe built.
+vi.mock('../../src/lib/client.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, createClient: vi.fn(actual.createClient) }
+})
 
 const { default: DoctorCommand } = await import('../../src/commands/doctor.js')
+const { createClient } = await import('../../src/lib/client.js')
 
 function profile(values = {}) {
   mocks.getProfileConfig.mockImplementation((_profile, key) => values[key])
@@ -53,6 +59,7 @@ const FULL = {
 let binDir
 const savedPath = process.env.PATH
 const savedJq = process.env.JQ_PATH
+const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform')
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -67,14 +74,18 @@ beforeEach(() => {
   chmodSync(join(binDir, 'ngrok'), 0o755)
   process.env.PATH = binDir
   process.env.JQ_PATH = process.execPath
+  delete process.env.npm_config_jq_path
   process.exitCode = undefined
   process.stdout.isTTY = true
 })
 
 afterEach(() => {
+  Object.defineProperty(process, 'platform', platformDescriptor)
   process.env.PATH = savedPath
   if (savedJq === undefined) delete process.env.JQ_PATH
   else process.env.JQ_PATH = savedJq
+  delete process.env.EXACTCLI_ACCESS_TOKEN
+  delete process.env.EXACTCLI_DIVISION
   process.exitCode = undefined
   rmSync(binDir, { recursive: true, force: true })
 })
@@ -106,13 +117,72 @@ describe('doctor', () => {
     expect(checks.api.detail).toMatch(/skipped/)
   })
 
-  it('fails the token, division and api checks when nothing is set up', async () => {
+  it('fails the token and division checks when nothing is set up', async () => {
     const checks = await runJson()
     expect(checks.token.status).toBe('FAIL')
     expect(checks.division.status).toBe('FAIL')
-    expect(checks['ngrok-domain'].status).toBe('FAIL')
-    expect(checks.api.detail).toMatch(/no token/)
     expect(process.exitCode).toBe(1)
+  })
+
+  it('warns instead of failing when ngrok-domain is unset', async () => {
+    const checks = await runJson(['--offline'])
+    expect(checks['ngrok-domain']).toEqual(
+      expect.objectContaining({
+        status: 'warn',
+        detail: 'not set (auth login asks; --manual needs none)',
+      }),
+    )
+  })
+
+  it('skips the api probe without a token and keeps it out of the failures', async () => {
+    profile({ ...FULL, division: undefined })
+    const checks = await runJson()
+    expect(checks.api).toEqual(
+      expect.objectContaining({ status: 'ok', detail: 'skipped: no token' }),
+    )
+    // Only the token check counts the missing login.
+    expect(process.exitCode).toBe(1)
+  })
+
+  it('accepts the token from EXACTCLI_ACCESS_TOKEN and probes with it', async () => {
+    profile(FULL)
+    process.env.EXACTCLI_ACCESS_TOKEN = 'env-token'
+    const checks = await runJson()
+    expect(checks.token).toEqual(
+      expect.objectContaining({
+        status: 'ok',
+        detail: 'from EXACTCLI_ACCESS_TOKEN',
+      }),
+    )
+    expect(checks.api.detail).toMatch(/Jane Doe/)
+    expect(mocks.getOAuthTokens).not.toHaveBeenCalled()
+    expect(createClient.mock.calls[0][0].token).toBe('env-token')
+  })
+
+  it('passes --timeout to the probe client', async () => {
+    profile(FULL)
+    mocks.getOAuthTokens.mockResolvedValue(blob(1000))
+    await runJson(['--timeout', '1234'])
+    expect(createClient.mock.calls[0][0].timeout).toBe(1234)
+  })
+
+  it('accepts the division from EXACTCLI_DIVISION', async () => {
+    process.env.EXACTCLI_DIVISION = '654321'
+    const checks = await runJson(['--offline'])
+    expect(checks.division).toEqual(
+      expect.objectContaining({ status: 'ok', detail: '654321' }),
+    )
+  })
+
+  it('finds ngrok.exe on windows', async () => {
+    rmSync(join(binDir, 'ngrok'))
+    writeFileSync(join(binDir, 'ngrok.exe'), '#!/bin/sh\n')
+    chmodSync(join(binDir, 'ngrok.exe'), 0o755)
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    })
+    expect((await runJson(['--offline'])).ngrok.status).toBe('ok')
   })
 
   it('fails host, ngrok, jq, keychain and config when they are broken', async () => {
@@ -157,9 +227,11 @@ describe('doctor', () => {
     expect(out).toMatch(/\[ok\] node/)
     expect(out).toMatch(/All checks passed/)
     mocks.getOAuthTokens.mockResolvedValue(null)
+    profile({})
     delete process.env.PATH
     const bad = await runCmd(DoctorCommand, ['--offline'])
     expect(bad).toMatch(/\[!!\] token/)
+    expect(bad).toMatch(/\[--\] ngrok-domain/)
     expect(bad).toMatch(/check\(s\) failed/)
   })
 })
