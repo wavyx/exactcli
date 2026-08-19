@@ -114,5 +114,8 @@
     "test:coverage": "vitest run --coverage",
     "prepare": "npm run build",
     "postpack": "rm -f oclif.manifest.json"
+  },
+  "allowScripts": {
+    "node-jq@6.3.1": true
   }
 }

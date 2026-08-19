@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { Command, Flags } from '@oclif/core'
 import { formatOutput } from './lib/output/index.js'
 import { loadConfig } from './lib/config.js'
@@ -25,11 +28,26 @@ const JQ_TIMEOUT_MS = 15_000
  * @param {string} input JSON string
  * @returns {Promise<string>}
  */
+/** Where node-jq expects its downloaded binary. */
+async function bundledJqPath() {
+  const require = createRequire(import.meta.url)
+  const dir = dirname(require.resolve('node-jq/package.json'))
+  return join(dir, 'bin', 'jq')
+}
+
 async function runJq(filter, input) {
   const override = Number(process.env.EXACTCLI_JQ_TIMEOUT_MS)
   const timeoutMs =
     Number.isFinite(override) && override > 0 ? override : JQ_TIMEOUT_MS
   const { run } = await import('node-jq')
+  const jqPath = process.env.JQ_PATH ?? (await bundledJqPath())
+  if (!existsSync(jqPath)) {
+    throw new CliError(
+      `jq binary not found at ${jqPath}. Run: npm rebuild node-jq ` +
+        '(or set JQ_PATH to a jq binary).',
+      { exitCode: 69 },
+    )
+  }
   const TIMED_OUT = Symbol('jq-timeout')
   let timer
   const timeout = new Promise((_resolve, reject) => {

@@ -118,6 +118,9 @@ beforeEach(() => {
   auth.resolveCredentials.mockReset()
   auth.getValidOAuthAccess.mockReset()
   jq.run.mockReset()
+  // The bundled jq binary may be absent (npm blocks the preinstall script);
+  // point the pre-check at a file that exists so the run() mock is reached.
+  process.env.JQ_PATH = process.execPath
   config.loadConfig.mockReset()
   config.loadConfig.mockReturnValue({ activeProfile: 'default' })
   auth.resolveCredentials.mockResolvedValue({
@@ -134,6 +137,7 @@ afterEach(() => {
   delete process.env.FORCE_COLOR
   delete process.env.EXACTCLI_DIVISION
   delete process.env.EXACTCLI_JQ_TIMEOUT_MS
+  delete process.env.JQ_PATH
 })
 
 describe('BaseCommand global flags', () => {
@@ -504,6 +508,27 @@ describe('BaseCommand runJq guard', () => {
     expect(err.exitCode ?? err.oclif?.exit).toBe(70)
     expect(err.message).toMatch(/syntax error/)
     expect(err.message).not.toMatch(/did not respond/)
+  })
+
+  it('fails with exit 69 before calling jq when its binary is missing', async () => {
+    process.env.JQ_PATH = '/nonexistent/jq'
+    const err = await RecordCmd.run(['--jq', '.name']).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(69)
+    expect(err.message).toMatch(/jq binary not found at \/nonexistent\/jq/)
+    expect(jq.run).not.toHaveBeenCalled()
+  })
+
+  it('looks for the bundled binary when JQ_PATH is unset', async () => {
+    delete process.env.JQ_PATH
+    jq.run.mockResolvedValue('1')
+    const err = await RecordCmd.run(['--jq', '.id']).catch((e) => e)
+    // Either the bundled binary exists (run() answers) or the pre-check
+    // names its expected path; both prove the lookup happened.
+    if (err instanceof Error) {
+      expect(err.message).toMatch(/node-jq[\\/]bin[\\/]jq/)
+    } else {
+      expect(jq.run).toHaveBeenCalled()
+    }
   })
 
   it('fails fast with exit 69 when jq never answers', async () => {
