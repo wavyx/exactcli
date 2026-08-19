@@ -45,6 +45,7 @@ export default class ApiCommand extends BaseCommand {
     '<%= config.bin %> api POST crm/Accounts --body \'{"Name":"Acme"}\'',
     '<%= config.bin %> api PUT "crm/Accounts(guid\'<id>\')" --body @patch.json',
     '<%= config.bin %> api GET logistics/Items --paginate --output json',
+    '<%= config.bin %> api GET logistics/Items --paginate --max-pages 20',
   ]
 
   static args = {
@@ -70,6 +71,11 @@ export default class ApiCommand extends BaseCommand {
     paginate: Flags.boolean({
       description:
         'Follow __next and collect every d.results into one array (GET only)',
+    }),
+    'max-pages': Flags.integer({
+      description: 'Maximum number of pages to read with --paginate',
+      default: 100,
+      min: 1,
     }),
   }
 
@@ -106,9 +112,16 @@ export default class ApiCommand extends BaseCommand {
 
     if (this.flags.paginate) {
       const rows = await collectPages(
-        this.apiClient.pageOData(path, query),
+        this.apiClient.pageOData(path, query, {
+          maxPages: this.flags['max-pages'],
+        }),
         this.flags.limit,
       )
+      // A `__next` that survives the walk means the server has more to give.
+      // It goes to stderr, so a piped stdout stays parseable.
+      if (this.apiClient.lastNext) {
+        process.stderr.write('More results available. Raise --max-pages.\n')
+      }
       await this.outputResults(rows, autoColumns(rows))
       return
     }

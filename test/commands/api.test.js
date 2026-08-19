@@ -6,6 +6,7 @@ import {
   afterAll,
   beforeEach,
   afterEach,
+  vi,
 } from 'vitest'
 import nock from 'nock'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -21,6 +22,18 @@ const { default: ApiCommand } = await import('../../src/commands/api.js')
 const BASE = apiBase()
 const ACCOUNTS_PATH = '/api/v1/123/crm/Accounts'
 
+/** Capture what the command writes to stderr. */
+function captureStderr() {
+  const chunks = []
+  const spy = vi
+    .spyOn(process.stderr, 'write')
+    .mockImplementation((chunk) => chunks.push(String(chunk)) > 0)
+  return {
+    text: () => chunks.join(''),
+    restore: () => spy.mockRestore(),
+  }
+}
+
 beforeAll(() => {
   process.env.EXACTCLI_CONFIG_DIR = TMP_CONFIG_DIR
   process.env.EXACTCLI_ACCESS_TOKEN = 'test-token'
@@ -35,11 +48,13 @@ afterAll(() => {
 
 beforeEach(() => {
   nock.cleanAll()
+  nock.disableNetConnect()
   delete process.env.EXACTCLI_DIVISION
 })
 
 afterEach(() => {
   nock.cleanAll()
+  nock.enableNetConnect()
   delete process.env.EXACTCLI_DIVISION
 })
 
@@ -282,19 +297,85 @@ describe('api', () => {
         },
       })
 
-    const stdout = await runCmd(ApiCommand, [
-      'GET',
-      'crm/Accounts',
-      '--paginate',
-      '--limit',
-      '1',
-      '--division',
-      '123',
-      '--output',
-      'json',
-    ])
+    const stderr = captureStderr()
+    let stdout
+    try {
+      stdout = await runCmd(ApiCommand, [
+        'GET',
+        'crm/Accounts',
+        '--paginate',
+        '--limit',
+        '1',
+        '--division',
+        '123',
+        '--output',
+        'json',
+      ])
+    } finally {
+      stderr.restore()
+    }
 
     expect(JSON.parse(stdout)).toEqual([{ Code: '1' }])
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('--paginate stops at --max-pages and reports the rest on stderr', async () => {
+    mockApi()
+      .get(ACCOUNTS_PATH)
+      .reply(200, {
+        d: {
+          results: [{ Code: '1' }],
+          __next: `${BASE}${ACCOUNTS_PATH}?$skiptoken=guid'1'`,
+        },
+      })
+      .get(ACCOUNTS_PATH)
+      .query({ $skiptoken: "guid'1'" })
+      .reply(200, { d: { results: [{ Code: '2' }] } })
+
+    const stderr = captureStderr()
+    let stdout
+    try {
+      stdout = await runCmd(ApiCommand, [
+        'GET',
+        'crm/Accounts',
+        '--paginate',
+        '--max-pages',
+        '1',
+        '--division',
+        '123',
+        '--output',
+        'json',
+      ])
+    } finally {
+      stderr.restore()
+    }
+
+    expect(JSON.parse(stdout)).toEqual([{ Code: '1' }])
+    expect(stderr.text()).toBe('More results available. Raise --max-pages.\n')
+    expect(nock.pendingMocks()).toHaveLength(1)
+  })
+
+  it('--paginate stays quiet on stderr when the pages run out', async () => {
+    const scope = mockApi()
+      .get(ACCOUNTS_PATH)
+      .reply(200, { d: { results: [{ Code: '1' }] } })
+
+    const stderr = captureStderr()
+    try {
+      await runCmd(ApiCommand, [
+        'GET',
+        'crm/Accounts',
+        '--paginate',
+        '--division',
+        '123',
+        '--output',
+        'json',
+      ])
+    } finally {
+      stderr.restore()
+    }
+
+    expect(stderr.text()).toBe('')
     expect(scope.isDone()).toBe(true)
   })
 
