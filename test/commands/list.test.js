@@ -59,11 +59,13 @@ afterAll(() => {
 
 beforeEach(() => {
   nock.cleanAll()
+  nock.disableNetConnect()
   delete process.env.EXACTCLI_DIVISION
 })
 
 afterEach(() => {
   nock.cleanAll()
+  nock.enableNetConnect()
   delete process.env.EXACTCLI_DIVISION
 })
 
@@ -219,6 +221,47 @@ describe('list', () => {
     expect(JSON.parse(stdout).map((r) => r.Code)).toEqual(['1', '2', '3'])
     expect(stderr.text()).toContain('More results available')
     expect(scope.isDone()).toBe(true)
+  })
+
+  it('reports the rest when --limit ends exactly on a page boundary', async () => {
+    // --top 2 --limit 2 consumes the whole first page. The note still goes
+    // out, so the second page must stay unrequested.
+    mockApi()
+      .get(ACCOUNTS_PATH)
+      .query({ $top: '2' })
+      .reply(200, {
+        d: {
+          results: [account({ Code: '1' }), account({ Code: '2' })],
+          __next: `${BASE}${ACCOUNTS_PATH}?$skiptoken=guid'2'`,
+        },
+      })
+      .get(ACCOUNTS_PATH)
+      .query({ $skiptoken: "guid'2'" })
+      .reply(200, { d: { results: [account({ Code: '3' })] } })
+
+    const stderr = captureStderr()
+    let stdout
+    try {
+      stdout = await runCmd(ListCommand, [
+        'crm/Accounts',
+        '--division',
+        '123',
+        '--top',
+        '2',
+        '--limit',
+        '2',
+        '--output',
+        'json',
+      ])
+    } finally {
+      stderr.restore()
+    }
+
+    expect(JSON.parse(stdout).map((r) => r.Code)).toEqual(['1', '2'])
+    expect(stderr.text()).toBe(
+      'More results available. Use --all or --limit.\n',
+    )
+    expect(nock.pendingMocks()).toHaveLength(1)
   })
 
   it('--limit alone truncates inside the first page', async () => {

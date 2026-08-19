@@ -148,4 +148,27 @@ describe('pageOData', () => {
 
     expect(await collect(client().pageOData(ACCOUNTS))).toEqual([])
   })
+
+  it('records lastNext before it yields the rows of the page', async () => {
+    const next = `${BASE}${ACCOUNTS}?$skiptoken=guid'g2'`
+    mockApi()
+      .get(ACCOUNTS)
+      .reply(200, {
+        d: { results: [{ ID: 'g1' }, { ID: 'g2' }], __next: next },
+      })
+      .get(ACCOUNTS)
+      .query({ $skiptoken: "guid'g2'" })
+      .reply(200, { d: { results: [{ ID: 'g3' }] } })
+
+    const api = client()
+    const seen = []
+    for await (const row of api.pageOData(ACCOUNTS)) {
+      seen.push(row)
+      break // a consumer that stops mid-page must still learn about __next
+    }
+
+    expect(seen).toEqual([{ ID: 'g1' }])
+    expect(api.lastNext).toBe(next)
+    expect(nock.pendingMocks()).toHaveLength(1)
+  })
 })
