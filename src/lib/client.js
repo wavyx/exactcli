@@ -368,11 +368,12 @@ export function createClient({
         : await request('GET', path, { query })
       pages++
       const envelope = body?.d
-      yield* envelope?.results ?? []
+      // Recorded before the rows go out: a consumer that stops early (a
+      // --limit inside the page) still learns that more data exists, and the
+      // value stays set when maxPages stops the walk.
       next = envelope?.__next ?? null
-      // Left set when maxPages stops the walk, so the caller can tell that
-      // more data exists.
       api.lastNext = next
+      yield* envelope?.results ?? []
       if (!next) break
     }
   }
