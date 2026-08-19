@@ -5,9 +5,9 @@ export default defineConfig({
     globals: true,
     include: ['test/**/*.test.js'],
     setupFiles: ['test/setup.js'],
-    // The client retry tests exercise real exponential backoff (sleeps that
-    // sum to ~14s in the worst-case exhaustion path), so the 5s default is too
-    // tight; give generous headroom, more so on coverage-instrumented CI.
+    // The retry tests drive the backoff through a fake clock, but the launcher
+    // tests spawn a real node process and the lock tests wait on real timers,
+    // so the 5s default is too tight on coverage-instrumented CI.
     testTimeout: 30000,
     hookTimeout: 30000,
     coverage: {
