@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   utimesSync,
@@ -143,5 +144,50 @@ describe('withLock', () => {
 
     expect(err.code).toBe('ENOENT')
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('serializes concurrent callers after a stale takeover', async () => {
+    const lockPath = join(locksDir, 'shared.lock')
+    mkdirSync(lockPath, { recursive: true })
+    const old = new Date(Date.now() - 120_000)
+    utimesSync(lockPath, old, old)
+    const spans = []
+    const section = async (id) => {
+      const enter = Date.now()
+      await new Promise((resolve) => setTimeout(resolve, 60))
+      spans.push({ id, enter, exit: Date.now() })
+    }
+
+    await Promise.all([
+      withLock('shared', () => section('a'), { waitMs: 5_000 }),
+      withLock('shared', () => section('b'), { waitMs: 5_000 }),
+    ])
+
+    const [first, second] = spans
+    expect(spans).toHaveLength(2)
+    expect(first.id).not.toBe(second.id)
+    // The second caller enters only after the first one left.
+    expect(second.enter).toBeGreaterThanOrEqual(first.exit)
+    // No lock and no claimed stale directory survives the run.
+    expect(readdirSync(locksDir)).toEqual([])
+  })
+
+  it('times out instead of spinning when it cannot claim a stale lock', async () => {
+    // A name this long makes the claim target exceed the 255 byte filename
+    // limit, so every rename fails: the loop must fall through to the wait,
+    // not retry the takeover forever.
+    const name = 'x'.repeat(240)
+    const lockPath = join(locksDir, `${name}.lock`)
+    mkdirSync(lockPath, { recursive: true })
+    const old = new Date(Date.now() - 120_000)
+    utimesSync(lockPath, old, old)
+    const fn = vi.fn()
+
+    const err = await withLock(name, fn, { waitMs: 300 }).catch((e) => e)
+
+    expect(err).toBeInstanceOf(CliError)
+    expect(err.exitCode).toBe(75)
+    expect(fn).not.toHaveBeenCalled()
+    expect(existsSync(lockPath)).toBe(true)
   })
 })
