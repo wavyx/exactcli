@@ -121,4 +121,19 @@ describe('sales-entry list', () => {
     expect(out).toContain('26700004')
     expect(out).toContain('Processed')
   })
+
+  it('--select narrows the table columns to the returned fields', async () => {
+    process.stdout.isTTY = true
+    mockApi()
+      .get(PATH)
+      .query(true)
+      .reply(200, {
+        d: { results: [{ EntryNumber: 26700005, AmountDC: 500 }] },
+      })
+
+    const out = await runCmd(Cmd, ['--select', 'EntryNumber,AmountDC'])
+    expect(out).toContain('EntryNumber')
+    expect(out).toContain('AmountDC')
+    expect(out).not.toContain('CustomerName')
+  })
 })

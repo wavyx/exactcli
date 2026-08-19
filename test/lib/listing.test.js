@@ -4,6 +4,7 @@ import {
   collectListing,
   listingFlags,
   pageBudget,
+  visibleColumns,
 } from '../../src/lib/listing.js'
 
 describe('pageBudget', () => {
@@ -86,6 +87,16 @@ describe('collectListing', () => {
     }
   })
 
+  it('falls back to 100 pages when the caller has no --max-pages', async () => {
+    const cmd = fakeCmd([[{ A: 1 }]], { 'max-pages': undefined, all: true })
+    await collectListing(cmd, '/p')
+    expect(cmd.apiClient.pageOData).toHaveBeenCalledWith(
+      '/p',
+      {},
+      { maxPages: 100 },
+    )
+  })
+
   it('follows every page with --all and stays quiet when exhausted', async () => {
     const write = vi
       .spyOn(process.stderr, 'write')
@@ -98,5 +109,24 @@ describe('collectListing', () => {
     } finally {
       write.mockRestore()
     }
+  })
+})
+
+describe('visibleColumns', () => {
+  const columns = { A: { header: 'A' }, B: { header: 'B' }, C: { header: 'C' } }
+
+  it('keeps every column without --select', () => {
+    expect(visibleColumns(columns, [{ A: 1 }], undefined)).toBe(columns)
+  })
+
+  it('keeps only the columns the first row carries with --select', () => {
+    expect(visibleColumns(columns, [{ A: 1, C: 3 }], 'A,C')).toEqual({
+      A: { header: 'A' },
+      C: { header: 'C' },
+    })
+  })
+
+  it('drops every column when --select returns no rows', () => {
+    expect(visibleColumns(columns, [], 'A')).toEqual({})
   })
 })

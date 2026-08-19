@@ -1,6 +1,10 @@
 import BaseCommand from '../../base-command.js'
 import { buildQuery, divisionPath } from '../../lib/odata.js'
-import { collectListing, listingFlags } from '../../lib/listing.js'
+import {
+  collectListing,
+  listingFlags,
+  visibleColumns,
+} from '../../lib/listing.js'
 
 export const COLUMNS = {
   EntryID: { header: 'EntryID' },
@@ -36,6 +40,9 @@ export default class SalesEntryListCommand extends BaseCommand {
       ...buildQuery(this.flags),
     }
     const data = await collectListing(this, path, query)
-    await this.outputResults(data, COLUMNS)
+    await this.outputResults(
+      data,
+      visibleColumns(COLUMNS, data, this.flags.select),
+    )
   }
 }

@@ -50,7 +50,7 @@ export async function collectListing(cmd, path, query = buildQuery(cmd.flags)) {
     all,
     limit,
     top,
-    maxPages: cmd.flags['max-pages'],
+    maxPages: cmd.flags['max-pages'] ?? 100,
   })
 
   const rows = await collectPages(
@@ -65,4 +65,21 @@ export async function collectListing(cmd, path, query = buildQuery(cmd.flags)) {
   }
 
   return raw ? rows : rows.map(normalize)
+}
+
+/**
+ * The columns a table or a CSV must show. With --select the server answers
+ * only the requested properties, so a fixed column set would print a row of
+ * empty cells. Keep the columns the rows actually carry.
+ * @param {Record<string, object>} columns the full column set of the command
+ * @param {object[]} rows the returned rows
+ * @param {string} [select] the --select flag, when the user gave one
+ * @returns {Record<string, object>}
+ */
+export function visibleColumns(columns, rows, select) {
+  if (!select) return columns
+  const present = new Set(Object.keys(rows[0] ?? {}))
+  return Object.fromEntries(
+    Object.entries(columns).filter(([key]) => present.has(key)),
+  )
 }
