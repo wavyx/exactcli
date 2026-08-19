@@ -38,7 +38,8 @@ vi.mock('../../../src/lib/auth.js', async (importOriginal) => ({
   manualCodeFlow: mocks.manualCodeFlow,
   fetchMe: mocks.fetchMe,
 }))
-vi.mock('../../../src/lib/config.js', () => ({
+vi.mock('../../../src/lib/config.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   loadConfig: mocks.loadConfig,
   getProfileConfig: mocks.getProfileConfig,
   setProfileConfig: mocks.setProfileConfig,

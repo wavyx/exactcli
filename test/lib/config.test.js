@@ -9,6 +9,8 @@ const TMP_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'exactcli-config-test-'))
 process.env.EXACTCLI_CONFIG_DIR = TMP_CONFIG_DIR
 
 const {
+  PROFILE_NAME_RE,
+  normalizeDomain,
   getConf,
   getActiveProfile,
   setActiveProfile,
@@ -39,6 +41,27 @@ describe('config', () => {
     conf.delete('profiles.test-profile')
     conf.delete('profiles.alpha')
     conf.delete('profiles.beta')
+  })
+
+  describe('PROFILE_NAME_RE', () => {
+    it.each(['default', 'acme', 'acme.1', 'a_b-c'])('accepts %o', (name) => {
+      expect(PROFILE_NAME_RE.test(name)).toBe(true)
+    })
+
+    it.each(['', '../evil', 'a/b', 'a b', 'a\\b'])('rejects %o', (name) => {
+      expect(PROFILE_NAME_RE.test(name)).toBe(false)
+    })
+  })
+
+  describe('normalizeDomain', () => {
+    it.each([
+      ['acme.ngrok-free.app', 'acme.ngrok-free.app'],
+      ['https://acme.ngrok-free.app', 'acme.ngrok-free.app'],
+      ['  https://acme.ngrok-free.app/  ', 'acme.ngrok-free.app'],
+      ['', ''],
+    ])('turns %o into %o', (raw, expected) => {
+      expect(normalizeDomain(raw)).toBe(expected)
+    })
   })
 
   describe('getConf', () => {

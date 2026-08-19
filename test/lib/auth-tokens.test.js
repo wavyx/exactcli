@@ -26,7 +26,10 @@ const { keychain, config, lock } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../src/lib/keychain.js', () => keychain)
-vi.mock('../../src/lib/config.js', () => config)
+vi.mock('../../src/lib/config.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  ...config,
+}))
 vi.mock('../../src/lib/lock.js', () => lock)
 
 const TOKEN_PATH = '/api/oauth2/token'

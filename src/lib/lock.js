@@ -9,6 +9,13 @@ const debug = createDebug('exact:lock')
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
+ * The name becomes a path segment under the config directory. A traversal in
+ * it would move both the lock and its stale-lock removal somewhere else, so
+ * the same safe segment as a profile name is the rule here.
+ */
+const LOCK_NAME_RE = /^[A-Za-z0-9._-]+$/
+
+/**
  * Claim a stale lock, then remove it. The rename is the atomic gate: of all
  * the waiters that judged the same lock stale, only one rename can succeed,
  * so only one waiter removes anything. A blind rmSync would let every waiter
@@ -48,6 +55,9 @@ export async function withLock(
   fn,
   { waitMs = 30_000, staleMs = 60_000 } = {},
 ) {
+  if (!LOCK_NAME_RE.test(name)) {
+    throw new CliError(`Invalid lock name: ${name}`, { exitCode: 70 })
+  }
   const dir = path.join(path.dirname(getConf().path), 'locks')
   const lockPath = path.join(dir, `${name}.lock`)
   mkdirSync(dir, { recursive: true })

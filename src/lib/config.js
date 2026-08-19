@@ -1,5 +1,24 @@
 import Conf from 'conf'
 
+/**
+ * A profile name becomes a lock file name and a keychain entry, so it must
+ * stay one safe path segment.
+ */
+export const PROFILE_NAME_RE = /^[A-Za-z0-9._-]+$/
+
+/**
+ * A pasted ngrok domain often carries the scheme and a trailing slash. The
+ * redirect URI needs the bare name.
+ * @param {string} value
+ * @returns {string}
+ */
+export function normalizeDomain(value) {
+  return value
+    .trim()
+    .replace(/^https:\/\//, '')
+    .replace(/\/$/, '')
+}
+
 const schema = {
   activeProfile: { type: 'string', default: 'default' },
   profiles: {

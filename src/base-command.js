@@ -1,7 +1,9 @@
 import { Command, Flags } from '@oclif/core'
+import chalk from 'chalk'
+import createDebug from 'debug'
 import { formatOutput } from './lib/output/index.js'
 import { jqBinaryExists, jqBinaryPath } from './lib/jq.js'
-import { loadConfig } from './lib/config.js'
+import { PROFILE_NAME_RE, loadConfig } from './lib/config.js'
 import { getValidOAuthAccess, resolveCredentials } from './lib/auth.js'
 import { createClient } from './lib/client.js'
 import { requireDivision } from './lib/odata.js'
@@ -125,13 +127,28 @@ export default class BaseCommand extends Command {
     this.flags = flags
 
     if (flags['no-color'] || process.env.NO_COLOR) {
+      // chalk read the color support when it was imported, so FORCE_COLOR
+      // alone arrives too late. It still travels to a child process.
       process.env.FORCE_COLOR = '0'
+      chalk.level = 0
     }
 
     if (flags.verbose) {
-      process.env.DEBUG = process.env.DEBUG
-        ? `${process.env.DEBUG},exact:*`
-        : 'exact:*'
+      // debug read DEBUG when it was imported, so enable() is what turns the
+      // namespaces on for the loggers this process already built.
+      const namespaces = [process.env.DEBUG, 'exact:*']
+        .filter(Boolean)
+        .join(',')
+      process.env.DEBUG = namespaces
+      createDebug.enable(namespaces)
+    }
+
+    // The profile name becomes a lock file name and a keychain entry.
+    if (flags.profile !== undefined && !PROFILE_NAME_RE.test(flags.profile)) {
+      throw new CliError(
+        'Profile names may contain letters, digits, dot, underscore and dash',
+        { exitCode: 64 },
+      )
     }
 
     const config = loadConfig(flags.profile)

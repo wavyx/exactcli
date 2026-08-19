@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import nock from 'nock'
+import chalk from 'chalk'
+import createDebug from 'debug'
 import { join } from 'node:path'
 import { HOST, mockApi, runCmd } from './helpers.js'
 
@@ -15,7 +17,11 @@ vi.mock('../src/lib/auth.js', async (importOriginal) => ({
   ...(await importOriginal()),
   ...auth,
 }))
-vi.mock('../src/lib/config.js', () => config)
+// Spread the original: the command reads PROFILE_NAME_RE from the same module.
+vi.mock('../src/lib/config.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  ...config,
+}))
 vi.mock('node-jq', () => jq)
 // Keep the real lookup, but let a test force a MISSING binary deterministically.
 vi.mock('../src/lib/jq.js', async (importOriginal) => {
@@ -97,6 +103,14 @@ class ActionCmd extends BaseCommand {
   }
 }
 
+/** Prints one colored word, so a test can look for the ANSI escape. */
+class ColorCmd extends BaseCommand {
+  static skipAuth = true
+  async run() {
+    this.log(chalk.cyan('tint'))
+  }
+}
+
 class DivisionCmd extends BaseCommand {
   static skipAuth = true
   async run() {
@@ -122,6 +136,8 @@ function oauthCreds(overrides = {}) {
   }
 }
 
+const chalkLevel = chalk.level
+
 beforeEach(() => {
   nock.cleanAll()
   createClient.mockClear()
@@ -142,6 +158,8 @@ beforeEach(() => {
 
 afterEach(() => {
   nock.cleanAll()
+  chalk.level = chalkLevel
+  createDebug.disable()
   delete process.env.DEBUG
   delete process.env.NO_COLOR
   delete process.env.FORCE_COLOR
@@ -215,6 +233,21 @@ describe('BaseCommand init', () => {
     expect(process.env.DEBUG).toBe('other:*,exact:*')
   })
 
+  it('enables the exact:* namespaces for --verbose', async () => {
+    // debug reads DEBUG when it is imported, so the env variable alone
+    // arrives too late for the loggers this process already built.
+    expect(createDebug.enabled('exact:client')).toBe(false)
+    await runCmd(NoAuthCmd, ['--verbose'])
+    expect(createDebug.enabled('exact:client')).toBe(true)
+  })
+
+  it('keeps the namespaces of an existing DEBUG for --verbose', async () => {
+    process.env.DEBUG = 'other:*'
+    await runCmd(NoAuthCmd, ['--verbose'])
+    expect(createDebug.enabled('other:thing')).toBe(true)
+    expect(createDebug.enabled('exact:client')).toBe(true)
+  })
+
   it('sets FORCE_COLOR=0 for --no-color', async () => {
     await runCmd(NoAuthCmd, ['--no-color'])
     expect(process.env.FORCE_COLOR).toBe('0')
@@ -229,6 +262,40 @@ describe('BaseCommand init', () => {
   it('leaves the color untouched without --no-color or NO_COLOR', async () => {
     await runCmd(NoAuthCmd)
     expect(process.env.FORCE_COLOR).toBeUndefined()
+  })
+
+  it('prints no ANSI escape for --no-color', async () => {
+    chalk.level = 3
+    const stdout = await runCmd(ColorCmd, ['--no-color'])
+    expect(stdout).toBe('tint')
+  })
+
+  it('prints no ANSI escape when NO_COLOR is set', async () => {
+    chalk.level = 3
+    process.env.NO_COLOR = '1'
+    const stdout = await runCmd(ColorCmd)
+    expect(stdout).toBe('tint')
+  })
+
+  it('keeps the color without --no-color or NO_COLOR', async () => {
+    chalk.level = 3
+    const stdout = await runCmd(ColorCmd)
+    expect(stdout).toContain('\u001b[')
+  })
+
+  it.each(['../evil', 'a/b', ''])(
+    'rejects the unsafe profile name %o with exit 64',
+    async (name) => {
+      const err = await NoAuthCmd.run(['--profile', name]).catch((e) => e)
+      expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+      expect(err.message).toMatch(/Profile names may contain/)
+    },
+  )
+
+  it('accepts a safe profile name', async () => {
+    config.loadConfig.mockReturnValue({ activeProfile: 'acme.1_x-y' })
+    const stdout = await runCmd(NoAuthCmd, ['--profile', 'acme.1_x-y'])
+    expect(stdout).toContain('profile:acme.1_x-y')
   })
 
   it('skips the credential lookup when skipAuth is set', async () => {

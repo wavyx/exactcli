@@ -136,15 +136,31 @@ describe('withLock', () => {
   })
 
   it('propagates a filesystem error that is not contention', async () => {
-    // The intermediate directory is missing, so the non-recursive mkdir fails
-    // with ENOENT. Only EEXIST means contention; everything else must surface.
+    // The name exceeds the filename limit, so the mkdir of the lock fails
+    // before any contention. Only EEXIST means contention; everything else
+    // must surface with its own errno.
     const fn = vi.fn()
 
-    const err = await withLock('missing/parent', fn).catch((e) => e)
+    const err = await withLock('x'.repeat(300), fn).catch((e) => e)
 
-    expect(err.code).toBe('ENOENT')
+    expect(err).not.toBeInstanceOf(CliError)
+    expect(err.code).toBeDefined()
     expect(fn).not.toHaveBeenCalled()
   })
+
+  it.each(['../oauth-default', 'a/b', ''])(
+    'refuses the lock name %o with exit 70',
+    async (name) => {
+      const fn = vi.fn()
+
+      const err = await withLock(name, fn).catch((e) => e)
+
+      expect(err).toBeInstanceOf(CliError)
+      expect(err.exitCode).toBe(70)
+      expect(err.message).toMatch(/Invalid lock name/)
+      expect(fn).not.toHaveBeenCalled()
+    },
+  )
 
   it('serializes concurrent callers after a stale takeover', async () => {
     const lockPath = join(locksDir, 'shared.lock')

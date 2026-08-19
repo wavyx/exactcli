@@ -6,7 +6,10 @@ const mocks = vi.hoisted(() => ({
   deleteOAuthTokens: vi.fn(),
 }))
 
-vi.mock('../../../src/lib/config.js', () => ({ loadConfig: mocks.loadConfig }))
+vi.mock('../../../src/lib/config.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  loadConfig: mocks.loadConfig,
+}))
 vi.mock('../../../src/lib/keychain.js', () => ({
   deleteOAuthTokens: mocks.deleteOAuthTokens,
 }))

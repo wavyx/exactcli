@@ -1,12 +1,8 @@
 import { Args } from '@oclif/core'
 import chalk from 'chalk'
 import BaseCommand from '../../base-command.js'
-import { setActiveProfile } from '../../lib/config.js'
+import { PROFILE_NAME_RE, setActiveProfile } from '../../lib/config.js'
 import { CliError } from '../../lib/errors.js'
-
-// The profile name becomes part of a lock file path, so it must stay a safe
-// filesystem segment.
-const NAME_RE = /^[A-Za-z0-9._-]+$/
 
 export default class ProfileUseCommand extends BaseCommand {
   static skipAuth = true
@@ -25,7 +21,7 @@ export default class ProfileUseCommand extends BaseCommand {
   async run() {
     const { args } = await this.parse(ProfileUseCommand)
 
-    if (!NAME_RE.test(args.name)) {
+    if (!PROFILE_NAME_RE.test(args.name)) {
       throw new CliError(
         'Profile names may contain letters, digits, dot, underscore and dash',
         { exitCode: 64 },
