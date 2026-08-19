@@ -60,7 +60,7 @@ exactcli get crm/Accounts <guid> --expand BankAccounts
 exactcli sales-entry list --filter "EntryDate ge datetime'2026-01-01'" --all
 exactcli purchase-entry list --limit 50 --output csv
 exactcli api GET /api/v1/current/Me
-exactcli api GET "crm/Accounts?\$top=1"
+exactcli api GET crm/Accounts --query '$top=1'
 exactcli api POST crm/Accounts --body @account.json
 ```
 

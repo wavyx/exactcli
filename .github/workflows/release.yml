@@ -46,9 +46,7 @@ jobs:
       - name: Publish to npm (skip if already published)
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          # A prerelease (0.20.0-rc1) must NOT take the `latest` dist-tag, or
-          # `npm i` and the Scoop checkver (which reads dist-tags.latest) serve
-          # the RC. npm does not auto-detect prereleases, so pass --tag.
+          # A prerelease must not take the latest dist-tag.
           case "$VERSION" in
             *-*) NPM_TAG=next ;;
             *)   NPM_TAG=latest ;;
