@@ -119,7 +119,7 @@ function hostToBaseOrigin(value) {
  * @param {string} [options.userAgent]
  */
 export function createClient({
-  host = 'start.exactonline.be',
+  host = DEFAULT_HOST,
   token: initialToken,
   onRefresh,
   timeout = 30_000,
