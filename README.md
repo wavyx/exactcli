@@ -105,6 +105,8 @@ Environment: `EXACTCLI_PROFILE`, `EXACTCLI_DIVISION`, `EXACTCLI_CLIENT_ID`,
 `EXACTCLI_CLIENT_SECRET`, `EXACTCLI_CONFIG_DIR`, `EXACTCLI_ACCESS_TOKEN` (use a token
 you obtained elsewhere; skips the keychain).
 
+`exactcli` does not read `.env` files; export the variables in your shell.
+
 ## Output and exit codes
 
 Dates arrive from Exact as `/Date(ms)/` in CET wall-clock time. `list`, `get` and the
