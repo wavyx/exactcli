@@ -1,3 +1,5 @@
+import { createServer } from 'node:http'
+import { randomBytes } from 'node:crypto'
 import createDebug from 'debug'
 import {
   getOAuthTokens,
@@ -243,6 +245,211 @@ export async function resolveCredentials({ profile }) {
 
   const blob = await getValidOAuthAccess(profile)
   return { token: blob.accessToken, source: 'profile', host, oauth: blob }
+}
+
+/**
+ * Static answers for the browser. A query value never reaches the page: the
+ * callback is reachable by any local page, so reflecting it would be an XSS
+ * vector.
+ */
+const PAGE = {
+  ok: 'Authenticated. You can close this window.',
+  failed: 'Authorization failed. Return to the terminal.',
+  state: 'State mismatch. Return to the terminal.',
+  noCode: 'No authorization code. Return to the terminal.',
+  exchange: 'The token exchange failed. Return to the terminal.',
+}
+
+/** @param {string} body @returns {string} */
+function page(body) {
+  return `<!doctype html><meta charset="utf-8"><title>exactcli</title><h2>${body}</h2>`
+}
+
+/**
+ * Keep an unknown `error` value out of the terminal too: only a documented
+ * OAuth error code passes.
+ * @param {string} value
+ * @returns {string}
+ */
+function errorCode(value) {
+  return /^[a-z_]{1,64}$/.test(value) ? value : 'unknown'
+}
+
+/**
+ * @param {import('node:http').ServerResponse} res
+ * @param {number} status
+ * @param {string} body
+ * @returns {Promise<void>} settles once the answer left the process
+ */
+function respond(res, status, body) {
+  return new Promise((done) => {
+    res.writeHead(status, { 'content-type': 'text/html; charset=utf-8' })
+    res.end(page(body), done)
+  })
+}
+
+/**
+ * Run the authorization-code flow behind a loopback server. The redirect URI
+ * is the public HTTPS name that Exact knows (a tunnel in front of this
+ * server), so only its pathname is served here. The caller opens the browser
+ * on the URL that `onReady` receives.
+ *
+ * @param {object} options
+ * @param {string} options.host
+ * @param {string} options.clientId
+ * @param {string} options.clientSecret
+ * @param {string} options.redirectUri public HTTPS URI of the registration
+ * @param {number} [options.port] loopback port behind the tunnel
+ * @param {number} [options.timeout] ms to wait for the callback
+ * @param {string} [options.state] CSRF token, generated when absent
+ * @param {(url: string) => void} [options.onReady] receives the auth URL
+ * @returns {Promise<TokenSet>}
+ */
+export function authorizationCodeFlow({
+  host,
+  clientId,
+  clientSecret,
+  redirectUri,
+  port = 9999,
+  timeout = 300_000,
+  state = randomBytes(16).toString('hex'),
+  onReady,
+}) {
+  const callbackPath = new URL(redirectUri).pathname
+
+  return new Promise((resolve, reject) => {
+    function shutdown() {
+      clearTimeout(timer)
+      server.close()
+      // Undici keeps the callback connection alive, which would hold the
+      // event loop for the whole keep-alive window after close().
+      server.closeAllConnections()
+    }
+
+    const server = createServer(async (req, res) => {
+      const url = new URL(req.url, 'http://127.0.0.1')
+      if (req.method !== 'GET' || url.pathname !== callbackPath) {
+        res.writeHead(404)
+        res.end()
+        return
+      }
+
+      const failure = url.searchParams.get('error')
+      if (failure) {
+        await respond(res, 400, PAGE.failed)
+        shutdown()
+        reject(
+          new CliError(
+            `Authorization failed (${errorCode(failure)}). Run: exactcli auth login`,
+            { exitCode: 77 },
+          ),
+        )
+        return
+      }
+
+      // A stray or replayed callback must not end the login: answer it and
+      // keep waiting for the real one.
+      const echoed = url.searchParams.get('state')
+      const stateOk = echoed === null ? !STATE_REQUIRED : echoed === state
+      if (!stateOk) {
+        debug('callback with an unexpected state')
+        await respond(res, 400, PAGE.state)
+        return
+      }
+
+      const code = url.searchParams.get('code')
+      if (!code) {
+        await respond(res, 400, PAGE.noCode)
+        return
+      }
+
+      try {
+        const tokens = await exchangeCode({
+          host,
+          code,
+          clientId,
+          clientSecret,
+          redirectUri,
+        })
+        await respond(res, 200, PAGE.ok)
+        shutdown()
+        resolve(tokens)
+      } catch (err) {
+        await respond(res, 500, PAGE.exchange)
+        shutdown()
+        reject(err)
+      }
+    })
+
+    server.on('error', (err) => {
+      // The server never opened, so it must not be closed here.
+      clearTimeout(timer)
+      reject(
+        new CliError(
+          `Cannot start the local callback server on port ${port}: ${err.message}. ` +
+            'Close whatever holds the port, or use: exactcli auth login --manual',
+          { exitCode: 78 },
+        ),
+      )
+    })
+
+    const timer = setTimeout(() => {
+      shutdown()
+      reject(
+        new CliError(
+          `Authentication timed out after ${Math.round(timeout / 1000)}s`,
+          { exitCode: 77 },
+        ),
+      )
+    }, timeout)
+
+    server.listen(port, '127.0.0.1', () => {
+      debug('callback server listens on 127.0.0.1:%d', port)
+      onReady?.(authUrl(host, { clientId, redirectUri, state }))
+    })
+  })
+}
+
+/** @returns {Promise<string>} */
+async function defaultPrompt() {
+  // Loaded on demand: the prompt library is heavy and every other command
+  // pays for a top-level import.
+  const { input } = await import('@inquirer/prompts')
+  return input({ message: 'Paste the redirected URL or the code:' })
+}
+
+/** @param {string} answer @returns {string | null} */
+function codeFromAnswer(answer) {
+  try {
+    return new URL(answer).searchParams.get('code')
+  } catch {
+    return answer
+  }
+}
+
+/**
+ * Ask for the authorization code instead of catching it on a loopback port.
+ * @param {object} options
+ * @param {string} options.host
+ * @param {string} options.clientId
+ * @param {string} options.clientSecret
+ * @param {string} options.redirectUri
+ * @param {() => Promise<string>} [options.prompt]
+ * @returns {Promise<TokenSet>}
+ */
+export async function manualCodeFlow({
+  host,
+  clientId,
+  clientSecret,
+  redirectUri,
+  prompt = defaultPrompt,
+}) {
+  const answer = (await prompt()).trim()
+  const code = codeFromAnswer(answer)
+  if (!code) {
+    throw new CliError('No authorization code provided', { exitCode: 64 })
+  }
+  return exchangeCode({ host, code, clientId, clientSecret, redirectUri })
 }
 
 /**
