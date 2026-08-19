@@ -23,6 +23,11 @@ exactcli --help
 Node.js 20 or newer. Tokens go to the OS keychain (macOS Keychain, Windows Credential
 Manager, libsecret on Linux); `exactcli` refuses to write them to disk.
 
+`--jq` needs the jq binary. `npm install -g @wavyx/exactcli` may skip the download of
+node-jq, so install jq (`brew install jq`, `apt install jq`,
+`winget install jqlang.jq`) and set `JQ_PATH=/path/to/jq`, or run
+`npm rebuild node-jq` inside a project install. Every other command works without jq.
+
 ## Authenticate
 
 Exact Online supports the OAuth 2.0 authorization code flow only, and it requires a

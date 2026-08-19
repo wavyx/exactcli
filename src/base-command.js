@@ -35,8 +35,8 @@ async function runJq(filter, input) {
   const { run } = await import('node-jq')
   if (!jqBinaryExists()) {
     throw new CliError(
-      `jq binary not found at ${jqBinaryPath()}. Run: npm rebuild node-jq ` +
-        '(or set JQ_PATH to a jq binary).',
+      `jq binary not found at ${jqBinaryPath()}. Install jq and set ` +
+        'JQ_PATH, or run: npm rebuild node-jq',
       { exitCode: 69 },
     )
   }

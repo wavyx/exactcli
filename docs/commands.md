@@ -259,12 +259,20 @@ List the divisions (administrations) of the account
 exactcli division list [flags]
 ```
 
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 
 Examples:
 
 ```bash
 exactcli division list
+exactcli division list --all
 exactcli division list --output json
 ```
 

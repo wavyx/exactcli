@@ -31,7 +31,9 @@ types where they help.
 
 - Secrets go to the keychain only. Never log, print or store a token or a client
   secret.
-- Every HTTP call goes through `src/lib/client.js`. Do not call `fetch` elsewhere.
+- Every HTTP call to the API goes through `src/lib/client.js`; the only exception is the
+  OAuth token endpoint in `src/lib/auth.js` (no retries by design). Do not call `fetch`
+  anywhere else.
 - Never retry a 4xx except the single 401 refresh and 429. Keep API calls sequential.
 - New commands extend `BaseCommand`, spread the shared flags, and end with
   `outputResults` or `outputAction` so `--output`, `--jq` and `--fields` work.

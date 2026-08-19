@@ -21,4 +21,8 @@ First release.
 - `me`, `division list`, `profile`, `config`, `doctor`, `version`.
 - Output formats table, json, yaml, csv; `--jq` and `--fields` filters.
 
+### Security
+
+- The production launcher reads no `.env` file. Export the variables in your shell.
+
 [0.1.0]: https://github.com/wavyx/exactcli/releases/tag/v0.1.0

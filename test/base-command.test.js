@@ -592,6 +592,8 @@ describe('BaseCommand runJq guard', () => {
     const err = await RecordCmd.run(['--jq', '.name']).catch((e) => e)
     expect(err.exitCode ?? err.oclif?.exit).toBe(69)
     expect(err.message).toMatch(/jq binary not found at \/nonexistent\/jq/)
+    expect(err.message).toMatch(/Install jq and set JQ_PATH/)
+    expect(err.message).toMatch(/npm rebuild node-jq/)
     expect(jq.run).not.toHaveBeenCalled()
   })
 
