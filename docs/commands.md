@@ -20,6 +20,7 @@ exactcli api <method> <path> [flags]
 - `--body <value>` - Request body (JSON string, @file, or piped stdin)
 - `--query <value>` - Query parameter as key=value (repeatable)
 - `--paginate` - Follow __next and collect every d.results into one array (GET only)
+- `--max-pages <value>` - Maximum number of pages to read with --paginate
 
 Examples:
 
@@ -30,6 +31,7 @@ exactcli api GET "/api/v1/{division}/crm/Accounts" --query '$top=5'
 exactcli api POST crm/Accounts --body '{"Name":"Acme"}'
 exactcli api PUT "crm/Accounts(guid'<id>')" --body @patch.json
 exactcli api GET logistics/Items --paginate --output json
+exactcli api GET logistics/Items --paginate --max-pages 20
 ```
 
 ### `exactcli doctor`
