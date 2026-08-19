@@ -59,9 +59,14 @@ export async function collectListing(cmd, path, query = buildQuery(cmd.flags)) {
   )
 
   // A `__next` that survives the walk means the server has more to give.
-  // It goes to stderr, so a piped stdout stays parseable.
+  // It goes to stderr, so a piped stdout stays parseable. With --all the page
+  // budget is what stopped the walk, so name that flag and not --all again.
   if (cmd.apiClient.lastNext) {
-    process.stderr.write('More results available. Use --all or --limit.\n')
+    process.stderr.write(
+      all
+        ? 'More results available. Raise --max-pages.\n'
+        : 'More results available. Use --all or --limit.\n',
+    )
   }
 
   return raw ? rows : rows.map(normalize)

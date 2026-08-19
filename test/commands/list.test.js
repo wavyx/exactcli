@@ -382,7 +382,7 @@ describe('list', () => {
     }
 
     expect(JSON.parse(stdout)).toHaveLength(1)
-    expect(stderr.text()).toContain('More results available')
+    expect(stderr.text()).toBe('More results available. Raise --max-pages.\n')
     expect(scope.isDone()).toBe(true)
   })
 

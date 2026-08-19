@@ -87,6 +87,25 @@ describe('collectListing', () => {
     }
   })
 
+  it('points --all at --max-pages when pages remain', async () => {
+    const write = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    try {
+      const cmd = fakeCmd([[{ A: 1 }], [{ A: 2 }]], {
+        all: true,
+        'max-pages': 1,
+      })
+      const rows = await collectListing(cmd, '/p')
+      expect(rows).toEqual([{ A: 1 }])
+      expect(write).toHaveBeenCalledWith(
+        'More results available. Raise --max-pages.\n',
+      )
+    } finally {
+      write.mockRestore()
+    }
+  })
+
   it('falls back to 100 pages when the caller has no --max-pages', async () => {
     const cmd = fakeCmd([[{ A: 1 }]], { 'max-pages': undefined, all: true })
     await collectListing(cmd, '/p')

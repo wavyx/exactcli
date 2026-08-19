@@ -1,7 +1,10 @@
-import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
-import { divisionPath, normalize } from '../../lib/odata.js'
-import { collectPages } from '../../lib/pagination.js'
+import { divisionPath } from '../../lib/odata.js'
+import {
+  collectListing,
+  listingFlags,
+  visibleColumns,
+} from '../../lib/listing.js'
 
 const COLUMNS = {
   Code: { header: 'Code' },
@@ -18,28 +21,18 @@ export default class List extends BaseCommand {
 
   static examples = [
     '<%= config.bin %> division list',
+    '<%= config.bin %> division list --all',
     '<%= config.bin %> division list --output json',
   ]
 
-  static flags = {
-    raw: Flags.boolean({ description: 'Print the raw API envelope' }),
-  }
+  static flags = { ...listingFlags }
 
   async run() {
-    const division = this.resolveDivision()
-    const rows = await collectPages(
-      this.apiClient.pageOData(
-        divisionPath(division, 'hrm/Divisions'),
-        {},
-        {
-          maxPages: 10,
-        },
-      ),
-      this.flags.limit ?? Infinity,
-    )
+    const path = divisionPath(this.resolveDivision(), 'hrm/Divisions')
+    const data = await collectListing(this, path)
     await this.outputResults(
-      this.flags.raw ? rows : rows.map(normalize),
-      COLUMNS,
+      data,
+      visibleColumns(COLUMNS, data, this.flags.select),
     )
   }
 }

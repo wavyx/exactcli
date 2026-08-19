@@ -6,6 +6,7 @@ import {
   afterAll,
   beforeEach,
   afterEach,
+  vi,
 } from 'vitest'
 import nock from 'nock'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -19,6 +20,18 @@ const { default: List } = await import('../../../src/commands/division/list.js')
 
 const BASE = apiBase()
 const DIVISIONS_PATH = '/api/v1/123/hrm/Divisions'
+
+/** Collect what the command writes to stderr, for example the paging note. */
+function captureStderr() {
+  const chunks = []
+  const spy = vi
+    .spyOn(process.stderr, 'write')
+    .mockImplementation((chunk) => chunks.push(String(chunk)) > 0)
+  return {
+    text: () => chunks.join(''),
+    restore: () => spy.mockRestore(),
+  }
+}
 
 function division(overrides = {}) {
   return {
@@ -57,7 +70,7 @@ afterEach(() => {
 })
 
 describe('division list', () => {
-  it('pages through hrm/Divisions and normalizes the rows', async () => {
+  it('pages through hrm/Divisions with --all and normalizes the rows', async () => {
     const scope = mockApi()
       .get(DIVISIONS_PATH)
       .reply(200, {
@@ -95,7 +108,13 @@ describe('division list', () => {
         },
       })
 
-    const stdout = await runCmd(List, ['--division', '123', '--output', 'json'])
+    const stdout = await runCmd(List, [
+      '--division',
+      '123',
+      '--all',
+      '--output',
+      'json',
+    ])
     const rows = JSON.parse(stdout)
 
     expect(rows).toHaveLength(3)
@@ -123,7 +142,7 @@ describe('division list', () => {
     expect(stdout).toContain('Acme BE')
   })
 
-  it('--limit caps the rows and stops paging', async () => {
+  it('--limit caps the rows, stops paging and notes the rest', async () => {
     const scope = mockApi()
       .get(DIVISIONS_PATH)
       .reply(200, {
@@ -134,17 +153,70 @@ describe('division list', () => {
       })
     // A second page mock is deliberately absent: --limit 1 must stop before
     // pageOData ever follows __next to it.
-    const stdout = await runCmd(List, [
-      '--division',
-      '123',
-      '--limit',
-      '1',
-      '--output',
-      'json',
-    ])
+    const stderr = captureStderr()
+    let stdout
+    try {
+      stdout = await runCmd(List, [
+        '--division',
+        '123',
+        '--limit',
+        '1',
+        '--output',
+        'json',
+      ])
+    } finally {
+      stderr.restore()
+    }
     const rows = JSON.parse(stdout)
     expect(rows).toHaveLength(1)
     expect(rows[0].Code).toBe('123')
+    expect(stderr.text()).toBe(
+      'More results available. Use --all or --limit.\n',
+    )
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('reads one page without --all or --limit', async () => {
+    const scope = mockApi()
+      .get(DIVISIONS_PATH)
+      .reply(200, {
+        d: {
+          results: [division()],
+          __next: `${BASE}${DIVISIONS_PATH}?$skiptoken=guid'124'`,
+        },
+      })
+    const stderr = captureStderr()
+    let stdout
+    try {
+      stdout = await runCmd(List, ['--division', '123', '--output', 'json'])
+    } finally {
+      stderr.restore()
+    }
+    expect(JSON.parse(stdout)).toHaveLength(1)
+    expect(stderr.text()).toBe(
+      'More results available. Use --all or --limit.\n',
+    )
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('sends the shared OData flags', async () => {
+    const scope = mockApi()
+      .get(DIVISIONS_PATH)
+      .query({ $filter: 'Main eq true', $select: 'Code,Description' })
+      .reply(200, { d: { results: [{ Code: '123', Description: 'Acme BE' }] } })
+    const stdout = await runCmd(List, [
+      '--division',
+      '123',
+      '--filter',
+      'Main eq true',
+      '--select',
+      'Code,Description',
+      '--output',
+      'json',
+    ])
+    expect(JSON.parse(stdout)).toEqual([
+      { Code: '123', Description: 'Acme BE' },
+    ])
     expect(scope.isDone()).toBe(true)
   })
 
