@@ -1,0 +1,18 @@
+node_modules/
+oclif.manifest.json
+coverage/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+docs/superpowers/
+tmp/
+
+# scratch / handoff docs - never commit (see CLAUDE.md)
+CLAUDE.md
+exactcli-spec.md
+exact-api-notes.md
+
+# screenshots
+*.png
