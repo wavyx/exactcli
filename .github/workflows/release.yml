@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # create the GitHub Release
+  id-token: write # OIDC: npm trusted publishing + provenance (no NPM_TOKEN)
+
+jobs:
+  release:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      # Trusted publishing needs npm >= 11.5.1. Pin it, don't chase @latest:
+      # newer npm builds have shipped a broken provenance bundle (publish dies
+      # with "Cannot find module 'sigstore'"), and @latest also silently
+      # dropped node-jq's install script (handled explicitly below).
+      - run: npm install -g npm@11.5.1
+
+      - run: npm ci
+
+      # npm >= 11 (installed just above for trusted publishing) blocks
+      # dependency lifecycle scripts, so node-jq's preinstall never fetches its
+      # jq binary. Run its installer directly so --jq works in the test gate.
+      - run: node node_modules/node-jq/scripts/install-binary.mjs
+
+      # Gate the release on the same checks as CI.
+      - run: npm run lint
+      - run: npm run test:coverage
+
+      # Auth is via OIDC trusted publishing (configure the trusted publisher
+      # for this repo/workflow at npmjs.com first). Provenance is attached
+      # automatically; no NPM_TOKEN secret is needed. Skips when this version
+      # is already on npm (manual first publish, or a re-run of the tag).
+      - name: Publish to npm (skip if already published)
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          # A prerelease (0.20.0-rc1) must NOT take the `latest` dist-tag, or
+          # `npm i` and the Scoop checkver (which reads dist-tags.latest) serve
+          # the RC. npm does not auto-detect prereleases, so pass --tag.
+          case "$VERSION" in
+            *-*) NPM_TAG=next ;;
+            *)   NPM_TAG=latest ;;
+          esac
+          if npm view "@wavyx/exactcli@$VERSION" version >/dev/null 2>&1; then
+            echo "@wavyx/exactcli@$VERSION already published - skipping"
+          else
+            npm publish --provenance --tag "$NPM_TAG"
+          fi
+
+      - name: Create GitHub Release from CHANGELOG (skip if exists)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists - skipping"
+            exit 0
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES=$(awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { flag=1; next }
+            /^## \[/ { flag=0 }
+            flag { print }
+          ' CHANGELOG.md)
+          # Mark prerelease tags so an RC does not become GitHub's "Latest".
+          case "$VERSION" in *-*) PRE=--prerelease ;; *) PRE= ;; esac
+          gh release create "$GITHUB_REF_NAME" $PRE \
+            --title "$GITHUB_REF_NAME" \
+            --notes "${NOTES:-Release $GITHUB_REF_NAME}"
