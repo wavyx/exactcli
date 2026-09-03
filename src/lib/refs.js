@@ -1,8 +1,46 @@
+import { keyType } from './catalog.js'
 import { CliError } from './errors.js'
 import { divisionPath, unwrap } from './odata.js'
 
 export const GUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * A plain Exact Online key: a number, a code, an enum value. The key travels
+ * unquoted inside the parentheses, so anything outside this set could close
+ * them and append its own OData. Refuse it before it reaches the wire.
+ */
+const PLAIN_KEY_RE = /^[A-Za-z0-9_.:-]+$/
+
+/**
+ * The key suffix of a record path: `(guid'...')` for a GUID column, `(123)`
+ * for any other key. The catalogue says which one the resource wants; an
+ * unknown resource keeps the guess.
+ * @param {object | undefined} resource catalogue record
+ * @param {string} ref what the user typed, for the message
+ * @param {string} id
+ * @returns {string}
+ */
+export function renderKey(resource, ref, id) {
+  const isGuid = GUID_RE.test(id)
+  const wanted = resource ? keyType(resource) : undefined
+  if (wanted === 'guid' && !isGuid) {
+    throw new CliError(`Record key of ${ref} must be a GUID`, { exitCode: 64 })
+  }
+  if (wanted === 'plain' && isGuid) {
+    throw new CliError(
+      `Record key of ${ref} must be a plain key (letters, digits, _ . : -)`,
+      { exitCode: 64 },
+    )
+  }
+  if (!isGuid && !PLAIN_KEY_RE.test(id)) {
+    throw new CliError(
+      'Record key must be a GUID or a plain key (letters, digits, _ . : -)',
+      { exitCode: 64 },
+    )
+  }
+  return isGuid ? `(guid'${id}')` : `(${id})`
+}
 
 /** Exact stores a numeric code right-aligned in a field this wide. */
 const CODE_WIDTH = 18

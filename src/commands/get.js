@@ -8,15 +8,8 @@ import {
   odataFlags,
   unwrap,
 } from '../lib/odata.js'
-import { keyType, resolvePath, warnUnknown } from '../lib/catalog.js'
-import { GUID_RE } from '../lib/refs.js'
-
-/**
- * A plain Exact Online key: a number, a code, an enum value. The key travels
- * unquoted inside the parentheses, so anything outside this set could close
- * them and append its own OData. Refuse it before it reaches the wire.
- */
-const PLAIN_KEY_RE = /^[A-Za-z0-9_.:-]+$/
+import { resolvePath, warnUnknown } from '../lib/catalog.js'
+import { renderKey } from '../lib/refs.js'
 
 export default class GetCommand extends BaseCommand {
   static description = 'Read one record of any Exact Online resource'
@@ -56,29 +49,7 @@ export default class GetCommand extends BaseCommand {
     )
     warnUnknown(args.resource, resource)
 
-    // Exact Online keys a GUID column as guid'...'; every other key type
-    // (a number, an enum) goes into the parentheses as it is. The catalogue
-    // says which one the resource wants; an unknown resource keeps the guess.
-    const isGuid = GUID_RE.test(args.id)
-    const wanted = resource ? keyType(resource) : undefined
-    if (wanted === 'guid' && !isGuid) {
-      throw new CliError(`Record key of ${args.resource} must be a GUID`, {
-        exitCode: 64,
-      })
-    }
-    if (wanted === 'plain' && isGuid) {
-      throw new CliError(
-        `Record key of ${args.resource} must be a plain key (letters, digits, _ . : -)`,
-        { exitCode: 64 },
-      )
-    }
-    if (!isGuid && !PLAIN_KEY_RE.test(args.id)) {
-      throw new CliError(
-        'Record key must be a GUID or a plain key (letters, digits, _ . : -)',
-        { exitCode: 64 },
-      )
-    }
-    const key = isGuid ? `(guid'${args.id}')` : `(${args.id})`
+    const key = renderKey(resource, args.resource, args.id)
     const path = `${basePath}${key}`
 
     const body = await this.apiClient.get(path, {
