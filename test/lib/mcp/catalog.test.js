@@ -49,6 +49,11 @@ const commands = [
     { resource: { required: true }, id: { required: true } },
     { select: opt(), expand: opt(), beta: bool(), raw: bool() },
   ),
+  cmd(
+    'probe',
+    { resource: { required: true } },
+    { top: opt(), filter: opt(), beta: bool(), output: opt(), jq: opt() },
+  ),
   cmd('me', {}, { raw: bool() }),
   cmd('quota'),
   cmd(
@@ -139,12 +144,13 @@ describe('classifyKind and helpers', () => {
 describe('buildCatalog', () => {
   const catalog = buildCatalog(commands, descriptors)
 
-  it('exposes the six generic tools and one tool per descriptor, all reads', () => {
+  it('exposes the seven generic tools and one tool per descriptor, all reads', () => {
     expect(names(catalog)).toEqual([
       'exact_resources',
       'exact_metadata',
       'exact_list',
       'exact_get',
+      'exact_probe',
       'exact_me',
       'exact_quota',
       'exact_sales_entry_list',
@@ -155,13 +161,13 @@ describe('buildCatalog', () => {
       'exact_document_list',
       'exact_write',
     ])
-    expect(catalog.filter((e) => e.kind === 'read')).toHaveLength(12)
+    expect(catalog.filter((e) => e.kind === 'read')).toHaveLength(13)
     expect(catalog.at(-1)).toMatchObject({
       kind: 'write',
       custom: 'write',
       id: 'write',
     })
-    expect(GENERIC_TOOLS).toHaveLength(6)
+    expect(GENERIC_TOOLS).toHaveLength(7)
   })
 
   it('offers exact_write only when the three write commands exist', () => {
@@ -193,6 +199,13 @@ describe('buildCatalog', () => {
       'id',
       'resource',
       'select',
+    ])
+    const probe = catalog.find((e) => e.toolName === 'exact_probe')
+    expect(Object.keys(buildInputSchema(probe)).sort()).toEqual([
+      'beta',
+      'filter',
+      'resource',
+      'top',
     ])
   })
 

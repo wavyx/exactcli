@@ -1,6 +1,6 @@
 {
   "name": "@wavyx/exactcli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publishConfig": {
     "access": "public"
   },
@@ -160,6 +160,48 @@
       },
       "profit-loss": {
         "description": "Profit and loss overview"
+      },
+      "receivables-list": {
+        "description": "Open receivable invoices per customer (financial report)"
+      },
+      "payables-list": {
+        "description": "Open payable invoices per supplier (financial report)"
+      },
+      "revenue": {
+        "description": "Revenue per reporting year and period"
+      },
+      "aging-overview": {
+        "description": "Open receivables and payables per age group"
+      },
+      "purchase-order": {
+        "description": "Purchase orders (orders sent to suppliers)"
+      },
+      "goods-delivery": {
+        "description": "Goods deliveries (shipments of sales orders)"
+      },
+      "item-group": {
+        "description": "Item groups and their ledger accounts"
+      },
+      "cost-center": {
+        "description": "Cost centers"
+      },
+      "cost-unit": {
+        "description": "Cost units"
+      },
+      "project": {
+        "description": "Projects (time and cost projects)"
+      },
+      "budget": {
+        "description": "Budgets (amounts per ledger account and period)"
+      },
+      "asset": {
+        "description": "Fixed assets (investments and depreciation)"
+      },
+      "subscription": {
+        "description": "Subscriptions (recurring invoice contracts)"
+      },
+      "cash-entry": {
+        "description": "Cash entries (cash book headers)"
       }
     },
     "hooks": {

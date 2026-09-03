@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-09-03
+
+Catalogue date: 2026-08-19 (435 resources).
+
+### Added
+
+- Typed lists: `receivables-list`, `payables-list`, `revenue`, `aging-overview`,
+  `purchase-order`, `goods-delivery`, `item-group`, `cost-center`, `cost-unit`,
+  `project`, `budget`, `asset`, `subscription`, `cash-entry`.
+- Typed writes from codes: `item create`, `contact create`, `quotation create`,
+  `purchase-invoice create`, `purchase-order create`, `bank-entry create`,
+  `sales-order invoice`.
+- `exact_probe` MCP tool.
+- `config set read_only true`: a profile lock that refuses every write.
+
+### Fixed
+
+- A digits-only `--search` on a resource without a `Code` field searches the text
+  field instead of sending a `Code` filter that Exact rejects.
+
 ## [0.5.0] - 2026-09-03
 
 Catalogue date: 2026-08-19 (435 resources).
@@ -102,6 +122,7 @@ First release.
 
 - The production launcher reads no `.env` file. Export the variables in your shell.
 
+[0.6.0]: https://github.com/wavyx/exactcli/releases/tag/v0.6.0
 [0.5.0]: https://github.com/wavyx/exactcli/releases/tag/v0.5.0
 [0.4.0]: https://github.com/wavyx/exactcli/releases/tag/v0.4.0
 [0.3.0]: https://github.com/wavyx/exactcli/releases/tag/v0.3.0

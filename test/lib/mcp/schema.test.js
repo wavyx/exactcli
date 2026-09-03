@@ -16,7 +16,7 @@ const entry = {
     'exact-match': { type: 'boolean', description: 'Exact' },
     include: { type: 'option', multiple: true, description: 'Include' },
     limit: { type: 'option', description: 'Max items' },
-    // noise — must be dropped:
+    // noise - must be dropped:
     output: { type: 'option', options: ['table', 'json', 'yaml', 'csv'] },
     jq: { type: 'option' },
     fields: { type: 'option' },
@@ -55,7 +55,7 @@ describe('buildInputSchema', () => {
     }
   })
 
-  it('keeps limit — an agent legitimately sizes list results', () => {
+  it('keeps limit - an agent legitimately sizes list results', () => {
     expect(NOISE_FLAGS.has('limit')).toBe(false)
     expect(shape.limit.safeParse(50).success).toBe(true)
   })

@@ -49,6 +49,20 @@ import glClassification from './descriptors/gl-classification.js'
 import agingReceivable from './descriptors/aging-receivable.js'
 import agingPayable from './descriptors/aging-payable.js'
 import profitLoss from './descriptors/profit-loss.js'
+import receivablesList from './descriptors/receivables-list.js'
+import payablesList from './descriptors/payables-list.js'
+import revenue from './descriptors/revenue.js'
+import agingOverview from './descriptors/aging-overview.js'
+import purchaseOrder from './descriptors/purchase-order.js'
+import goodsDelivery from './descriptors/goods-delivery.js'
+import itemGroup from './descriptors/item-group.js'
+import costCenter from './descriptors/cost-center.js'
+import costUnit from './descriptors/cost-unit.js'
+import project from './descriptors/project.js'
+import budget from './descriptors/budget.js'
+import asset from './descriptors/asset.js'
+import subscription from './descriptors/subscription.js'
+import cashEntry from './descriptors/cash-entry.js'
 
 /**
  * One file per descriptor under ./descriptors/: a new typed command adds a
@@ -87,6 +101,20 @@ export const descriptors = {
   agingReceivable,
   agingPayable,
   profitLoss,
+  receivablesList,
+  payablesList,
+  revenue,
+  agingOverview,
+  purchaseOrder,
+  goodsDelivery,
+  itemGroup,
+  costCenter,
+  costUnit,
+  project,
+  budget,
+  asset,
+  subscription,
+  cashEntry,
 }
 
 /**

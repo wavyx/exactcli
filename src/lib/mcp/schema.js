@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /**
- * Global/output-shaping flags that are noise for an MCP tool — the server
+ * Global/output-shaping flags that are noise for an MCP tool - the server
  * forces `--output json` and runs under its own profile, so these never
  * belong in a tool's input schema. `limit` stays: an agent legitimately
  * sizes list results.
@@ -35,7 +35,7 @@ function flagSchema(flag) {
   if (Array.isArray(flag.options) && flag.options.length) {
     s = z.enum(flag.options)
   } else {
-    // Accept numbers too — an LLM will naturally send {limit: 50}, {id: 123}.
+    // Accept numbers too - an LLM will naturally send {limit: 50}, {id: 123}.
     // toArgv stringifies before spawning, so either form is fine.
     s = z.union([z.string(), z.number()])
   }

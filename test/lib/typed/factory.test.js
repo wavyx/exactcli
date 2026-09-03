@@ -87,6 +87,24 @@ describe('renderClause', () => {
     ).toBe("Date ge datetime'2026-01-01'")
   })
 
+  it('searches the text field for digits when the resource has no Code', () => {
+    expect(
+      renderClause({ field: 'Description', type: 'search' }, '42', {
+        hasCode: false,
+      }),
+    ).toBe("substringof('42', Description)")
+  })
+
+  it('resolves hasCode from the catalogue: sales orders have no Code field', async () => {
+    const cmd = { flags: { search: '42' } }
+    expect(await buildTypedFilter(cmd, descriptors.salesOrder)).toBe(
+      "substringof('42', Description)",
+    )
+    expect(await buildTypedFilter(cmd, descriptors.account)).toBe(
+      "(Code eq '42' or Code eq '                42')",
+    )
+  })
+
   it('renders a search as substringof, or an exact Code for digits', () => {
     expect(renderClause({ field: 'Name', type: 'search' }, 'acme')).toBe(
       "substringof('acme', Name)",

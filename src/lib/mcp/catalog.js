@@ -65,6 +65,18 @@ export const GENERIC_TOOLS = [
     flags: ['select', 'expand', 'beta'],
   },
   {
+    toolName: 'exact_probe',
+    id: 'probe',
+    description:
+      'Fetch a few records of a resource without $select. Compare the ' +
+      'returned fields with the catalogue: undocumented fields first, then ' +
+      'documented ones, then the catalogue fields that the server did not ' +
+      'return. Use it to learn the real shape of a resource before a filter ' +
+      'or a write, or on a resource that the catalogue lacks.',
+    args: ['resource'],
+    flags: ['top', 'filter', 'beta'],
+  },
+  {
     toolName: 'exact_me',
     id: 'me',
     description: 'The current user and the division in use.',

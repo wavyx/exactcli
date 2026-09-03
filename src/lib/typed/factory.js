@@ -4,6 +4,7 @@ import { CliError } from '../errors.js'
 import { buildQuery, divisionPath } from '../odata.js'
 import { collectListing, listingFlags, visibleColumns } from '../listing.js'
 import { padCode, quote, resolveRef } from '../refs.js'
+import { findResource, propertyNames } from '../catalog.js'
 import { columnsOf } from './descriptors.js'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -49,13 +50,15 @@ export function renderValue(type, value) {
  * One `$filter` clause for a typed filter and its flag value.
  * @param {import('./descriptors.js').TypedFilter} filter
  * @param {string} value
+ * @param {{hasCode?: boolean}} [options] the resource has a Code field
  * @returns {string}
  */
-export function renderClause(filter, value) {
+export function renderClause(filter, value, { hasCode = true } = {}) {
   if (filter.type === 'search') {
-    // Digits mean a code. Exact stores account codes padded to 18 and
-    // ledger codes as they are (verified live), so ask for both forms.
-    return /^\d+$/.test(value)
+    // Digits mean a code when the resource has one. Exact stores account
+    // codes padded to 18 and ledger codes as they are (verified live), so
+    // ask for both forms. A resource without Code searches the text field.
+    return hasCode && /^\d+$/.test(value)
       ? `(Code eq ${quote(value)} or Code eq ${quote(padCode(value))})`
       : `substringof(${quote(value)}, ${filter.field})`
   }
@@ -70,13 +73,15 @@ export function renderClause(filter, value) {
  */
 export async function buildTypedFilter(cmd, descriptor) {
   const clauses = []
+  const resource = findResource(descriptor.resource)
+  const hasCode = !resource || propertyNames(resource).includes('Code')
   for (const [name, filter] of Object.entries(descriptor.filters)) {
     const raw = cmd.flags[name]
     if (raw === undefined) continue
     const value = filter.resolve
       ? await resolveRef(cmd, filter.resolve, raw)
       : raw
-    clauses.push(renderClause(filter, value))
+    clauses.push(renderClause(filter, value, { hasCode }))
   }
   return clauses.length ? clauses.join(' and ') : undefined
 }

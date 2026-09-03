@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.5.0 (70 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.6.0 (91 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -431,6 +431,34 @@ exactcli address list --account 1001
 exactcli address list --type 3 --city Brussels --main yes --all
 ```
 
+## exactcli aging-overview
+
+### `exactcli aging-overview list`
+
+List open receivables and payables per age group
+
+```
+exactcli aging-overview list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--age-group <value>` - Age group number, 1 is the youngest
+- `--currency <value>` - Currency code, for example EUR
+
+Examples:
+
+```bash
+exactcli aging-overview list
+exactcli aging-overview list --currency EUR --output json
+```
+
 ## exactcli aging-payable
 
 ### `exactcli aging-payable list`
@@ -485,6 +513,36 @@ Examples:
 ```bash
 exactcli aging-receivable list --search acme
 exactcli aging-receivable list --account 1001 --output json
+```
+
+## exactcli asset
+
+### `exactcli asset list`
+
+List fixed assets (investments and their depreciation status)
+
+```
+exactcli asset list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--search <value>` - Description contains, or exact Code
+- `--status <value>` - Status code
+- `--from <value>` - Start date from (YYYY-MM-DD)
+- `--to <value>` - Start date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli asset list --search laptop --status 1
+exactcli asset list --from 2026-01-01 --to 2026-12-31 --all
 ```
 
 ## exactcli auth
@@ -605,6 +663,30 @@ exactcli bank-account list --main yes --all --output csv
 
 ## exactcli bank-entry
 
+### `exactcli bank-entry create`
+
+Book a bank statement by hand from ledger account codes (POST financialtransaction/BankEntries)
+
+```
+exactcli bank-entry create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--journal <value>` _(required)_ - Code of the bank journal, for example 500
+- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:description] (repeatable, at least one). The account is a code or a GUID. The amount is signed from the point of view of the bank: money received is positive, money paid negative
+- `--account <value>` - Customer or supplier code or GUID (crm/Accounts) carried by every line: a receipt from a customer or a payment to a supplier
+- `--date <value>` - Date of every line (YYYY-MM-DD)
+- `--description <value>` - Description of the lines that carry none
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli bank-entry create --journal 500 --line 400000:121:Invoice 26700001 --account 1001 --dry-run
+exactcli bank-entry create --journal 500 --line 656000:-12.5:Fees --date 2026-09-03 --allow-writes
+```
+
 ### `exactcli bank-entry list`
 
 List bank entries (bank statement headers)
@@ -630,6 +712,65 @@ Examples:
 ```bash
 exactcli bank-entry list --journal 55 --year 2026
 exactcli bank-entry list --year 2026 --period 9 --all --output csv
+```
+
+## exactcli budget
+
+### `exactcli budget list`
+
+List budgets (amounts per ledger account and period)
+
+```
+exactcli budget list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--year <value>` - Reporting year
+- `--period <value>` - Reporting period
+- `--gl-account <value>` - Ledger account code
+- `--scenario <value>` - Budget scenario code
+
+Examples:
+
+```bash
+exactcli budget list --year 2026 --gl-account 700000
+exactcli budget list --year 2026 --period 3 --scenario BUDGET --all
+```
+
+## exactcli cash-entry
+
+### `exactcli cash-entry list`
+
+List cash entries (cash book headers)
+
+```
+exactcli cash-entry list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--journal <value>` - Cash journal code
+- `--year <value>` - Financial year
+- `--period <value>` - Financial period
+
+Examples:
+
+```bash
+exactcli cash-entry list --journal 57 --year 2026
+exactcli cash-entry list --year 2026 --period 9 --all --output csv
 ```
 
 ## exactcli config
@@ -676,6 +817,7 @@ Examples:
 ```bash
 exactcli config set host start.exactonline.be
 exactcli config set division 123456
+exactcli config set read_only true
 ```
 
 ### `exactcli config unset`
@@ -693,6 +835,33 @@ exactcli config unset default_output
 ```
 
 ## exactcli contact
+
+### `exactcli contact create`
+
+Create a contact, a person of an account (POST crm/Contacts)
+
+```
+exactcli contact create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--account <value>` _(required)_ - Account code or GUID (crm/Accounts)
+- `--first-name <value>` _(required)_ - First name
+- `--last-name <value>` _(required)_ - Last name
+- `--email <value>` - E-mail address
+- `--phone <value>` - Business phone number
+- `--mobile <value>` - Mobile phone number
+- `--job-title <value>` - Job title (JobTitleDescription)
+- `--main <value>` - Main contact of the account: true, false, yes, no, 1 or 0 (IsMainContact)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli contact create --account 1001 --first-name Jane --last-name Doe --email jane@acme.example --dry-run
+exactcli contact create --account 1001 --first-name Jane --last-name Doe --main true --allow-writes
+```
 
 ### `exactcli contact list`
 
@@ -720,6 +889,61 @@ Examples:
 ```bash
 exactcli contact list --search jane
 exactcli contact list --account 1001 --output json
+```
+
+## exactcli cost-center
+
+### `exactcli cost-center list`
+
+List cost centers (the departments that costs book to)
+
+```
+exactcli cost-center list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--search <value>` - Description contains, or exact Code
+- `--active <value>` - Active cost centers only (true or false)
+
+Examples:
+
+```bash
+exactcli cost-center list
+exactcli cost-center list --search sales --active true
+```
+
+## exactcli cost-unit
+
+### `exactcli cost-unit list`
+
+List cost units (the projects or products that costs book to)
+
+```
+exactcli cost-unit list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--search <value>` - Description contains, or exact Code
+
+Examples:
+
+```bash
+exactcli cost-unit list
+exactcli cost-unit list --search project --all
 ```
 
 ## exactcli currency
@@ -1025,6 +1249,36 @@ exactcli gl-classification list --search turnover
 exactcli gl-classification list --parent <guid> --all
 ```
 
+## exactcli goods-delivery
+
+### `exactcli goods-delivery list`
+
+List goods deliveries (the shipments of sales orders)
+
+```
+exactcli goods-delivery list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--account <value>` - Delivery account GUID or code (the account that receives)
+- `--from <value>` - Delivery date from (YYYY-MM-DD)
+- `--to <value>` - Delivery date to (YYYY-MM-DD)
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli goods-delivery list --from 2026-01-01 --to 2026-01-31
+exactcli goods-delivery list --account 1001 --search urgent --all
+```
+
 ## exactcli invoice
 
 ### `exactcli invoice create`
@@ -1053,6 +1307,36 @@ exactcli invoice create --customer 1001 --journal 700 --line Default:2:100 --all
 
 ## exactcli item
 
+### `exactcli item create`
+
+Create an item, a product or a service (POST logistics/Items)
+
+```
+exactcli item create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` _(required)_ - Item code
+- `--description <value>` _(required)_ - Item description
+- `--sales-price <value>` - Standard sales price (StandardSalesPrice)
+- `--cost-price <value>` - Standard cost price (CostPriceStandard)
+- `--unit <value>` - Unit code, for example pc
+- `--sales <value>` - Sales item: true, false, yes, no, 1 or 0 (IsSalesItem)
+- `--purchase <value>` - Purchase item: true, false, yes, no, 1 or 0 (IsPurchaseItem)
+- `--stock <value>` - Stock item: true, false, yes, no, 1 or 0 (IsStockItem)
+- `--gl-revenue <value>` - Revenue ledger account code or GUID (GLRevenue)
+- `--gl-costs <value>` - Costs ledger account code or GUID (GLCosts)
+- `--group <value>` - Item group code or GUID (ItemGroup)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli item create --code WIDGET --description Widget --sales-price 99.5 --sales true --dry-run
+exactcli item create --code WIDGET --description Widget --gl-revenue 700000 --allow-writes
+```
+
 ### `exactcli item list`
 
 List items (products and services)
@@ -1079,6 +1363,34 @@ Examples:
 ```bash
 exactcli item list --search widget
 exactcli item list --sales yes --stock yes --all
+```
+
+## exactcli item-group
+
+### `exactcli item-group list`
+
+List item groups (the ledger accounts that items book to)
+
+```
+exactcli item-group list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--search <value>` - Description contains, or exact Code
+- `--default <value>` - Default group flag: 1 default, 0 other
+
+Examples:
+
+```bash
+exactcli item-group list
+exactcli item-group list --search parts --default 1
 ```
 
 ## exactcli journal
@@ -1160,6 +1472,36 @@ Examples:
 ```bash
 exactcli journal-entry list --journal 800 --year 2026
 exactcli journal-entry list --year 2026 --period 9 --status 20 --all
+```
+
+## exactcli payables-list
+
+### `exactcli payables-list list`
+
+List open payable invoices per supplier (financial report)
+
+```
+exactcli payables-list list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--search <value>` - Account name contains (a code goes to --account)
+- `--account <value>` - Account GUID or code
+- `--due-from <value>` - Due date from (YYYY-MM-DD)
+- `--due-to <value>` - Due date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli payables-list list --due-from 2026-09-01 --due-to 2026-09-30
+exactcli payables-list list --search acme --all --output csv
 ```
 
 ## exactcli payment
@@ -1292,6 +1634,37 @@ exactcli profit-loss list
 exactcli profit-loss list --output json
 ```
 
+## exactcli project
+
+### `exactcli project list`
+
+List projects (time and cost projects with their account)
+
+```
+exactcli project list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--account <value>` - Account GUID or code (the customer of the project)
+- `--search <value>` - Description contains, or exact Code
+- `--type <value>` - Project type code
+- `--from <value>` - Start date from (YYYY-MM-DD)
+- `--to <value>` - Start date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli project list --account 1001 --search website
+exactcli project list --type 1 --from 2026-01-01 --all --output csv
+```
+
 ## exactcli purchase-entry
 
 ### `exactcli purchase-entry create`
@@ -1346,6 +1719,32 @@ exactcli purchase-entry list --limit 200 --output json
 
 ## exactcli purchase-invoice
 
+### `exactcli purchase-invoice create`
+
+Create a purchase invoice from codes (POST purchase/PurchaseInvoices)
+
+```
+exactcli purchase-invoice create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--supplier <value>` _(required)_ - Supplier code or GUID (crm/Accounts with IsSupplier)
+- `--journal <value>` _(required)_ - Purchase journal code, for example 600
+- `--type <value>` - Invoice type: 8030 direct purchase invoice, 8031 direct purchase invoice (credit), 8033 purchase invoice, 8034 purchase invoice (credit)
+- `--line <value>` _(required)_ - Invoice line as item:quantity:unit price[:description] (repeatable)
+- `--description <value>` - Invoice description
+- `--date <value>` - Invoice date (YYYY-MM-DD)
+- `--reference <value>` - Invoice number of the supplier (YourRef)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-invoice create --supplier 2001 --journal 600 --line Default:2:100 --dry-run
+exactcli purchase-invoice create --supplier 2001 --journal 600 --line Default:2:100 --reference INV-2026-42 --allow-writes
+```
+
 ### `exactcli purchase-invoice list`
 
 List purchase invoices (the invoices received from suppliers)
@@ -1374,7 +1773,88 @@ exactcli purchase-invoice list --from 2026-01-01 --to 2026-01-31
 exactcli purchase-invoice list --supplier 2001 --status 20 --output json
 ```
 
+## exactcli purchase-order
+
+### `exactcli purchase-order create`
+
+Create a purchase order from codes (POST purchaseorder/PurchaseOrders)
+
+```
+exactcli purchase-order create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--supplier <value>` _(required)_ - Supplier code or GUID (crm/Accounts with IsSupplier)
+- `--line <value>` _(required)_ - Order line as item:quantity:unit price[:description] (repeatable)
+- `--description <value>` - Order description
+- `--date <value>` - Order date (YYYY-MM-DD)
+- `--receipt-date <value>` - Expected receipt date (YYYY-MM-DD)
+- `--reference <value>` - Reference of the supplier (YourRef)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order create --supplier 2001 --line Default:2:100 --dry-run
+exactcli purchase-order create --supplier 2001 --line Default:2:100 --receipt-date 2026-09-10 --allow-writes
+```
+
+### `exactcli purchase-order list`
+
+List purchase orders (the orders placed with suppliers)
+
+```
+exactcli purchase-order list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--supplier <value>` - Supplier GUID or code (the account that delivers)
+- `--from <value>` - Order date from (YYYY-MM-DD)
+- `--to <value>` - Order date to (YYYY-MM-DD)
+- `--status <value>` - Order status: 10 open, 20 partial, 30 complete, 40 cancelled
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli purchase-order list --from 2026-01-01 --to 2026-01-31
+exactcli purchase-order list --supplier 2001 --status 10 --all
+```
+
 ## exactcli quotation
+
+### `exactcli quotation create`
+
+Create a quotation from codes (POST crm/Quotations)
+
+```
+exactcli quotation create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--account <value>` _(required)_ - Account code or GUID that asked for the quotation (OrderAccount)
+- `--line <value>` _(required)_ - Quotation line as item:quantity:unit price[:description] (repeatable)
+- `--description <value>` - Quotation description
+- `--date <value>` - Quotation date (YYYY-MM-DD)
+- `--close-date <value>` - Date on which the customer accepted or rejected the quotation (YYYY-MM-DD)
+- `--reference <value>` - Reference of the customer (YourRef)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation create --account 1001 --line Default:2:100 --dry-run
+exactcli quotation create --account 1001 --line Default:2:100 --close-date 2026-09-30 --allow-writes
+```
 
 ### `exactcli quotation list`
 
@@ -1434,6 +1914,64 @@ Examples:
 ```bash
 exactcli receivable list --status 20 --due-to 2026-09-30
 exactcli receivable list --account 1001 --all --output csv
+```
+
+## exactcli receivables-list
+
+### `exactcli receivables-list list`
+
+List open receivable invoices per customer (financial report)
+
+```
+exactcli receivables-list list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--search <value>` - Account name contains (a code goes to --account)
+- `--account <value>` - Account GUID or code
+- `--due-from <value>` - Due date from (YYYY-MM-DD)
+- `--due-to <value>` - Due date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli receivables-list list --due-to 2026-09-30
+exactcli receivables-list list --account 1001 --output json
+```
+
+## exactcli revenue
+
+### `exactcli revenue list`
+
+List the revenue per reporting year and period
+
+```
+exactcli revenue list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--year <value>` - Reporting year
+- `--period <value>` - Reporting period
+
+Examples:
+
+```bash
+exactcli revenue list --year 2026
+exactcli revenue list --year 2026 --period 3 --output json
 ```
 
 ## exactcli sales-entry
@@ -1546,6 +2084,29 @@ exactcli sales-order create --customer 1001 --line Default:2:100 --dry-run
 exactcli sales-order create --customer 1001 --line Default:2:100 --delivery-date 2026-09-10 --allow-writes
 ```
 
+### `exactcli sales-order invoice`
+
+Invoice sales orders (POST salesinvoice/InvoiceSalesOrders)
+
+```
+exactcli sales-order invoice <order> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--journal <value>` _(required)_ - Code of the sales journal, for example 700
+- `--create-mode <value>` - CreateMode: 0 one invoice per customer, 1 one invoice per sales order
+- `--invoice-mode <value>` - InvoiceMode: 0 invoice the quantity delivered (default), 1 the quantity ordered
+- `--invoice-date <value>` - Invoice date (YYYY-MM-DD, UserInvoiceDate). Exact applies it only in the QuickBooks integration
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order invoice <order-id> --journal 700 --dry-run
+exactcli sales-order invoice <order-id> <order-id> --journal 700 --create-mode 0 --allow-writes
+```
+
 ### `exactcli sales-order list`
 
 List sales orders (the orders placed by customers)
@@ -1573,6 +2134,36 @@ Examples:
 ```bash
 exactcli sales-order list --from 2026-01-01 --to 2026-01-31
 exactcli sales-order list --customer 1001 --status 12 --all
+```
+
+## exactcli subscription
+
+### `exactcli subscription list`
+
+List subscriptions (recurring invoice contracts)
+
+```
+exactcli subscription list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--account <value>` - Account GUID or code (the account that is invoiced)
+- `--from <value>` - Start date from (YYYY-MM-DD)
+- `--to <value>` - Start date to (YYYY-MM-DD)
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli subscription list --account 1001
+exactcli subscription list --from 2026-01-01 --search hosting --all
 ```
 
 ## exactcli sync
