@@ -1,6 +1,11 @@
 import chalk from 'chalk'
 import BaseCommand from '../../base-command.js'
-import { REFRESH_FLOOR_MS, fetchMe } from '../../lib/auth.js'
+import {
+  REFRESH_AFTER_MS,
+  REFRESH_FLOOR_MS,
+  fetchMe,
+  getValidOAuthAccess,
+} from '../../lib/auth.js'
 import { DEFAULT_HOST, createClient } from '../../lib/client.js'
 import { getProfileConfig } from '../../lib/config.js'
 import { getOAuthTokens, isKeychainAvailable } from '../../lib/keychain.js'
@@ -46,7 +51,7 @@ export default class StatusCommand extends BaseCommand {
       status.tokenAgeSeconds = Math.round(age / 1000)
       status.refreshableNow = age >= REFRESH_FLOOR_MS
       status.refreshTokenIdleDays = Math.floor(age / DAY_MS)
-      status.identity = await this.#identity(status.host, blob.accessToken)
+      status.identity = await this.#identity(status.host, profile, blob, age)
     }
 
     if (this.resolveFormat() !== 'table') {
@@ -57,14 +62,21 @@ export default class StatusCommand extends BaseCommand {
   }
 
   /**
-   * Best effort: an expired token or a network hiccup must not hide the rest
-   * of the report.
+   * Best effort: a network hiccup must not hide the rest of the report. An
+   * access token past its refresh point is refreshed first, as any command
+   * would: the probe must not fail on a token that expired an hour ago.
    * @param {string} host
-   * @param {string} token
+   * @param {string} profile
+   * @param {{accessToken: string}} blob
+   * @param {number} age ms since the token was obtained
    * @returns {Promise<{fullName: string, email: string} | null>}
    */
-  async #identity(host, token) {
+  async #identity(host, profile, blob, age) {
     try {
+      const token =
+        age >= REFRESH_AFTER_MS
+          ? (await getValidOAuthAccess(profile)).accessToken
+          : blob.accessToken
       const me = await fetchMe(
         createClient({
           host,

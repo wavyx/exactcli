@@ -10,6 +10,7 @@ const ME = {
 
 const mocks = vi.hoisted(() => ({
   fetchMe: vi.fn(),
+  getValidOAuthAccess: vi.fn(),
   loadConfig: vi.fn(() => ({ activeProfile: 'default' })),
   getProfileConfig: vi.fn(),
   getOAuthTokens: vi.fn(),
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../../src/lib/auth.js', async (importOriginal) => ({
   ...(await importOriginal()),
   fetchMe: mocks.fetchMe,
+  getValidOAuthAccess: mocks.getValidOAuthAccess,
 }))
 vi.mock('../../../src/lib/config.js', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -179,10 +181,42 @@ describe('auth status', () => {
     expect(stdout).not.toContain('Name:')
   })
 
+  it('refreshes a token past its refresh point before the identity probe', async () => {
+    process.stdout.isTTY = false
+    profile({ division: 123456 })
+    mocks.getOAuthTokens.mockResolvedValue(blob(600_000))
+    mocks.getValidOAuthAccess.mockResolvedValue({ accessToken: 'at-fresh' })
+
+    const status = JSON.parse(await runCmd(StatusCommand))
+
+    expect(mocks.getValidOAuthAccess).toHaveBeenCalledWith('default')
+    expect(createClient).toHaveBeenCalledWith(
+      expect.objectContaining({ token: 'at-fresh' }),
+    )
+    expect(status.identity).toEqual({
+      fullName: 'Jane Doe',
+      email: 'jane@acme.example',
+    })
+  })
+
+  it('keeps a fresh token as it is for the identity probe', async () => {
+    process.stdout.isTTY = false
+    profile({ division: 123456 })
+    mocks.getOAuthTokens.mockResolvedValue(blob(10_000))
+
+    await runCmd(StatusCommand)
+
+    expect(mocks.getValidOAuthAccess).not.toHaveBeenCalled()
+    expect(createClient).toHaveBeenCalledWith(
+      expect.objectContaining({ token: 'at-1' }),
+    )
+  })
+
   it('emits one object when the output is piped', async () => {
     process.stdout.isTTY = false
     profile({ ngrok_domain: 'acme.ngrok-free.app', division: 123456 })
     mocks.getOAuthTokens.mockResolvedValue(blob(600_000))
+    mocks.getValidOAuthAccess.mockResolvedValue({ accessToken: 'at-fresh' })
 
     const stdout = await runCmd(StatusCommand)
 
