@@ -523,4 +523,92 @@ describe('list', () => {
       /^Unknown resource crm\/Nope \(not in the catalogue of \d{4}-\d{2}-\d{2}\)\. Sending anyway\.\n/,
     )
   })
+  it('--bulk reads the bulk variant with the catalogue columns and no $top', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/bulk/CRM/Accounts')
+      .query({ $select: SELECT })
+      .reply(200, { d: { results: [account()] } })
+
+    const stdout = await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--bulk',
+      '--top',
+      '2',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(JSON.parse(stdout)).toHaveLength(1)
+  })
+
+  it('--bulk falls back to the catalogue $select when --fields projects the output', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/bulk/CRM/Accounts')
+      .query({ $select: SELECT })
+      .reply(200, { d: { results: [account()] } })
+
+    const stdout = await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--bulk',
+      '--fields',
+      'Code',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(JSON.parse(stdout)).toEqual([{ Code: '1001' }])
+  })
+
+  it('--bulk keeps an explicit --select', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/bulk/CRM/Accounts')
+      .query({ $select: 'Code' })
+      .reply(200, { d: { results: [{ Code: '1' }] } })
+
+    await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--bulk',
+      '--select',
+      'Code',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('--bulk fails with 64 without a bulk variant, on an unknown resource, and with --raw', async () => {
+    const noVariant = await ListCommand.run([
+      'system/Divisions',
+      '--bulk',
+      '--division',
+      '123',
+    ]).catch((e) => e)
+    expect(noVariant.exitCode ?? noVariant.oclif?.exit).toBe(64)
+    expect(noVariant.message).toMatch(/has no bulk variant \(families: regular/)
+    const unknown = await ListCommand.run([
+      'crm/Nope',
+      '--bulk',
+      '--division',
+      '123',
+    ]).catch((e) => e)
+    expect(unknown.exitCode ?? unknown.oclif?.exit).toBe(64)
+    const raw = await ListCommand.run([
+      'crm/Accounts',
+      '--bulk',
+      '--raw',
+      '--division',
+      '123',
+    ]).catch((e) => e)
+    expect(raw.exitCode ?? raw.oclif?.exit).toBe(64)
+    expect(raw.message).toMatch(/--bulk needs --select/)
+  })
 })

@@ -97,6 +97,46 @@ export function catalogKey(ref) {
 const indexOf = (catalog) =>
   catalog === cached ? cachedIndex : buildIndex(catalog)
 
+/** All families a resource can come in, the regular one first. */
+const FAMILIES = ['regular', 'sync', 'bulk', 'read']
+
+/**
+ * `service/Resource` as a user types it, from a catalogue uri.
+ * @param {{uri: string}} res
+ * @returns {string}
+ */
+export function shortName(res) {
+  return res.uri.replace(/^\/api\/v1\/(beta\/)?(\{division\}\/)?/, '')
+}
+
+/**
+ * The record of another family of the same resource (`bulk/CRM/Accounts`
+ * for `crm/Accounts`), or undefined.
+ * @param {object} resource a regular record
+ * @param {'sync'|'bulk'|'read'} family
+ * @param {object} [catalog]
+ * @returns {object | undefined}
+ */
+export function variantOf(resource, family, catalog = loadCatalog()) {
+  const target = catalogKey(resource.uri).replace(
+    '{division}/',
+    `{division}/${family}/`,
+  )
+  return indexOf(catalog).get(target)
+}
+
+/**
+ * The families a regular resource exists in.
+ * @param {object} resource
+ * @param {object} [catalog]
+ * @returns {string[]}
+ */
+export function familiesOf(resource, catalog = loadCatalog()) {
+  return FAMILIES.filter(
+    (family) => family === 'regular' || variantOf(resource, family, catalog),
+  )
+}
+
 /**
  * @param {string} ref
  * @param {object} [catalog]

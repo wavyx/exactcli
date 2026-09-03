@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import {
   catalogKey,
   defaultColumns,
+  familiesOf,
   filterableFields,
   findResource,
   keyType,
@@ -11,7 +12,9 @@ import {
   resetCatalog,
   resolvePath,
   searchResources,
+  shortName,
   validateDescriptor,
+  variantOf,
 } from '../../src/lib/catalog.js'
 
 const FIXTURE = fileURLToPath(
@@ -146,6 +149,38 @@ describe('defaultColumns and dates', () => {
       'EndDate',
       'StartDate',
     ])
+  })
+})
+
+describe('variants and families', () => {
+  it('finds the bulk and sync variants of a regular resource', () => {
+    const accounts = findResource('crm/Accounts', catalog)
+    expect(variantOf(accounts, 'bulk', catalog).uri).toBe(
+      '/api/v1/{division}/bulk/CRM/Accounts',
+    )
+    expect(variantOf(accounts, 'sync', catalog).family).toBe('sync')
+    expect(
+      variantOf(findResource('financial/GLAccounts', catalog), 'bulk', catalog),
+    ).toBeUndefined()
+  })
+
+  it('lists the families a resource exists in, regular first', () => {
+    expect(familiesOf(findResource('crm/Accounts', catalog), catalog)).toEqual([
+      'regular',
+      'sync',
+      'bulk',
+    ])
+    expect(
+      familiesOf(findResource('financial/GLAccounts', catalog), catalog),
+    ).toEqual(['regular'])
+  })
+
+  it('shortName strips the api prefix and the division', () => {
+    expect(shortName({ uri: '/api/v1/{division}/crm/Accounts' })).toBe(
+      'crm/Accounts',
+    )
+    expect(shortName({ uri: '/api/v1/beta/{division}/crm/X' })).toBe('crm/X')
+    expect(shortName({ uri: '/api/v1/current/Me' })).toBe('current/Me')
   })
 })
 

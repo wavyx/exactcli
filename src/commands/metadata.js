@@ -7,7 +7,10 @@ import {
   loadCatalog,
   mandatoryFields,
   searchResources,
+  shortName,
 } from '../lib/catalog.js'
+
+export { shortName }
 
 const PROPERTY_COLUMNS = {
   name: { header: 'Name' },
@@ -35,15 +38,6 @@ const RESOURCE_COLUMNS = {
   family: { header: 'Family' },
   methods: { header: 'Methods' },
   properties: { header: 'Properties' },
-}
-
-/**
- * `service/Resource` as a user types it, from a catalogue uri.
- * @param {{uri: string}} res
- * @returns {string}
- */
-export function shortName(res) {
-  return res.uri.replace(/^\/api\/v1\/(beta\/)?(\{division\}\/)?/, '')
 }
 
 export default class MetadataCommand extends BaseCommand {

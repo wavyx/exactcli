@@ -4,6 +4,8 @@ import { collectPages } from './pagination.js'
 
 /** Exact Online caps a CRUD page at 60 records. */
 export const DEFAULT_PAGE_SIZE = 60
+/** The bulk and sync endpoints page at 1000 and ignore $top. */
+export const BULK_PAGE_SIZE = 1000
 
 /** Flags shared by every paged list command. */
 export const listingFlags = {
@@ -28,12 +30,19 @@ export const listingFlags = {
  * @param {number} [options.limit]
  * @param {number} [options.top]
  * @param {number} options.maxPages
+ * @param {number} [options.pageSize]
  * @returns {number}
  */
-export function pageBudget({ all, limit, top, maxPages }) {
+export function pageBudget({
+  all,
+  limit,
+  top,
+  maxPages,
+  pageSize = DEFAULT_PAGE_SIZE,
+}) {
   if (all) return maxPages
   if (limit === undefined) return 1
-  return Math.min(maxPages, Math.ceil(limit / (top ?? DEFAULT_PAGE_SIZE)))
+  return Math.min(maxPages, Math.ceil(limit / (top ?? pageSize)))
 }
 
 /**
@@ -42,19 +51,30 @@ export function pageBudget({ all, limit, top, maxPages }) {
  * @param {{ apiClient: object, flags: object }} cmd
  * @param {string} path division-qualified API path
  * @param {object} [query] OData query; defaults to buildQuery(cmd.flags)
+ * @param {{pageSize?: number, noTop?: boolean}} [options] noTop drops $top:
+ *   the bulk and sync endpoints ignore it and page at pageSize
  * @returns {Promise<object[]>}
  */
-export async function collectListing(cmd, path, query = buildQuery(cmd.flags)) {
-  const { all, limit, raw, top } = cmd.flags
+export async function collectListing(
+  cmd,
+  path,
+  query = buildQuery(cmd.flags),
+  { pageSize = DEFAULT_PAGE_SIZE, noTop = false } = {},
+) {
+  const { all, limit, raw } = cmd.flags
+  const top = noTop ? undefined : cmd.flags.top
+  const sent = { ...query }
+  if (noTop) delete sent.$top
   const maxPages = pageBudget({
     all,
     limit,
     top,
     maxPages: cmd.flags['max-pages'] ?? 100,
+    pageSize,
   })
 
   const rows = await collectPages(
-    cmd.apiClient.pageOData(path, query, { maxPages }),
+    cmd.apiClient.pageOData(path, sent, { maxPages }),
     all ? Infinity : (limit ?? Infinity),
   )
 

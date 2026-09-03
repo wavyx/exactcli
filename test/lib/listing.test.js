@@ -3,6 +3,7 @@ import {
   DEFAULT_PAGE_SIZE,
   collectListing,
   listingFlags,
+  BULK_PAGE_SIZE,
   pageBudget,
   visibleColumns,
 } from '../../src/lib/listing.js'
@@ -147,5 +148,14 @@ describe('visibleColumns', () => {
 
   it('drops every column when --select returns no rows', () => {
     expect(visibleColumns(columns, [], 'A')).toEqual({})
+  })
+})
+
+describe('bulk paging', () => {
+  it('budgets pages by the page size', () => {
+    expect(
+      pageBudget({ limit: 2500, maxPages: 100, pageSize: BULK_PAGE_SIZE }),
+    ).toBe(3)
+    expect(pageBudget({ limit: 2500, maxPages: 100 })).toBe(42)
   })
 })

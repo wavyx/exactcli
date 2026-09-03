@@ -1,8 +1,16 @@
 import { Args, Flags } from '@oclif/core'
 import BaseCommand from '../base-command.js'
-import { autoColumns, buildQuery } from '../lib/odata.js'
-import { defaultColumns, resolvePath, warnUnknown } from '../lib/catalog.js'
-import { collectListing, listingFlags } from '../lib/listing.js'
+import { CliError } from '../lib/errors.js'
+import { autoColumns, buildQuery, divisionPath } from '../lib/odata.js'
+import {
+  defaultColumns,
+  familiesOf,
+  resolvePath,
+  shortName,
+  variantOf,
+  warnUnknown,
+} from '../lib/catalog.js'
+import { BULK_PAGE_SIZE, collectListing, listingFlags } from '../lib/listing.js'
 
 export default class ListCommand extends BaseCommand {
   static description = 'List the records of any Exact Online resource'
@@ -12,6 +20,7 @@ export default class ListCommand extends BaseCommand {
     '<%= config.bin %> list crm/Accounts --filter "Status eq \'C\'" --top 20',
     '<%= config.bin %> list financial/GLAccounts --all --output json',
     '<%= config.bin %> list logistics/Items --select Code,Description --limit 200',
+    '<%= config.bin %> list crm/Accounts --bulk --all --output csv',
   ]
 
   static args = {
@@ -24,21 +33,24 @@ export default class ListCommand extends BaseCommand {
   static flags = {
     ...listingFlags,
     beta: Flags.boolean({ description: 'Use the beta API namespace' }),
+    bulk: Flags.boolean({
+      description:
+        'Read the bulk variant: 1000 rows per page, $select required',
+    }),
   }
 
   async run() {
     const { args } = await this.parse(ListCommand)
-    const { path, resource } = resolvePath(
-      this.resolveDivision(),
-      args.resource,
-      { beta: this.flags.beta },
-    )
+    const division = this.resolveDivision()
+    const { path, resource } = resolvePath(division, args.resource, {
+      beta: this.flags.beta,
+    })
     warnUnknown(args.resource, resource)
 
     // A known resource without an explicit projection gets the catalogue
     // columns as $select: lighter answers and a readable table. --raw keeps
     // the envelope, --fields and --select already say what to fetch.
-    const { select, fields, raw } = this.flags
+    const { select, fields, raw, bulk } = this.flags
     const query = buildQuery(this.flags)
     let columns
     const defaults = resource ? defaultColumns(resource) : []
@@ -47,7 +59,50 @@ export default class ListCommand extends BaseCommand {
       columns = Object.fromEntries(defaults.map((c) => [c, { header: c }]))
     }
 
+    if (bulk) {
+      const bulkPath = this.bulkPath(division, args.resource, resource)
+      // The bulk endpoints demand a $select. Without one, the catalogue
+      // columns stand in; --raw has no columns to offer.
+      if (!query.$select) {
+        if (raw) throw new CliError('--bulk needs --select', { exitCode: 64 })
+        query.$select = defaults.join(',')
+      }
+      const data = await collectListing(this, bulkPath, query, {
+        pageSize: BULK_PAGE_SIZE,
+        noTop: true,
+      })
+      await this.outputResults(data, columns ?? autoColumns(data))
+      return
+    }
+
     const data = await collectListing(this, path, query)
     await this.outputResults(data, columns ?? autoColumns(data))
+  }
+
+  /**
+   * The request path of the bulk variant, or a usage error that names the
+   * families the resource has.
+   * @param {number} division
+   * @param {string} ref
+   * @param {object | undefined} resource
+   * @returns {string}
+   */
+  bulkPath(division, ref, resource) {
+    if (!resource) {
+      throw new CliError(
+        `${ref} is not in the catalogue: --bulk needs a known resource`,
+        {
+          exitCode: 64,
+        },
+      )
+    }
+    const variant = variantOf(resource, 'bulk')
+    if (!variant) {
+      throw new CliError(
+        `${ref} has no bulk variant (families: ${familiesOf(resource).join(', ')})`,
+        { exitCode: 64 },
+      )
+    }
+    return divisionPath(division, shortName(variant))
   }
 }
