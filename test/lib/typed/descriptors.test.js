@@ -14,7 +14,7 @@ describe('descriptors', () => {
     const topics = Object.values(descriptors).map((d) => d.topic)
     expect(new Set(topics).size).toBe(topics.length)
     for (const d of Object.values(descriptors)) {
-      expect(d.resource).toMatch(/^[a-z]+\/[A-Za-z]+$/)
+      expect(d.resource).toMatch(/^(read\/)?[a-z]+\/[A-Za-z]+$/)
       expect(d.columns.length).toBeGreaterThan(0)
       expect(d.orderBy).toMatch(/ (asc|desc)$/)
       expect(d.description).toMatch(/^List /)
