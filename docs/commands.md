@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.2.0 (29 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.3.0 (35 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -35,6 +35,72 @@ exactcli api PUT "crm/Accounts(guid'<id>')" --body @patch.json --allow-writes
 exactcli api DELETE "crm/Accounts(guid'<id>')" --allow-writes --yes
 exactcli api GET logistics/Items --paginate --output json
 exactcli api GET logistics/Items --paginate --max-pages 20
+```
+
+### `exactcli create`
+
+Create a record (POST), validated against the catalogue
+
+```
+exactcli create <resource> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+- `--force` - Send even when the resource or a field is not in the catalogue
+- `--beta` - Use the beta API namespace
+
+Examples:
+
+```bash
+exactcli create crm/Accounts --set Name=Acme --set Code=1001 --dry-run
+exactcli create crm/Accounts --set Name=Acme --allow-writes
+exactcli create salesentry/SalesEntries --body @entry.json --set Customer=@ref:crm/Accounts:1001 --allow-writes
+```
+
+### `exactcli delete`
+
+Delete a record (DELETE). Needs --allow-writes and --yes
+
+```
+exactcli delete <resource> <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the request and send nothing
+- `--force` - Send even when the resource is not in the catalogue
+- `--beta` - Use the beta API namespace
+
+Examples:
+
+```bash
+exactcli delete crm/Accounts <id> --dry-run
+exactcli delete crm/Accounts <id> --allow-writes --yes
+```
+
+### `exactcli deleted`
+
+Read the records deleted since a timestamp (sync/Deleted); pair it with sync
+
+```
+exactcli deleted [flags]
+```
+
+- `--since <value>` - Timestamp to start after (from the last run). Default: the state file, else 0
+- `--state <value>` - JSON file that remembers the last timestamp per resource; read when --since is absent, written after a complete run
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--type <value>` - Only this EntityType code
+
+Examples:
+
+```bash
+exactcli deleted --since 0
+exactcli deleted --state ./sync.json --type 10
 ```
 
 ### `exactcli doctor`
@@ -93,6 +159,7 @@ exactcli list <resource> [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--beta` - Use the beta API namespace
+- `--bulk` - Read the bulk variant: 1000 rows per page, $select required
 
 Examples:
 
@@ -101,6 +168,7 @@ exactcli list crm/Accounts
 exactcli list crm/Accounts --filter "Status eq 'C'" --top 20
 exactcli list financial/GLAccounts --all --output json
 exactcli list logistics/Items --select Code,Description --limit 200
+exactcli list crm/Accounts --bulk --all --output csv
 ```
 
 ### `exactcli mcp`
@@ -109,9 +177,10 @@ Run exactcli as a Model Context Protocol (MCP) server over stdio.
 
 Exposes six generic tools that cover every resource of the catalogue
 (exact_resources, exact_metadata, exact_list, exact_get, exact_me,
-exact_quota) plus one tool per typed command. Mutating tools stay hidden
-unless --allow-writes is set. Each tool call runs exactcli as a child
-process under the profile and division of the server.
+exact_quota) plus one tool per typed command. --allow-writes adds
+exact_write (create, update, delete with dry_run and confirm). Each tool
+call runs exactcli as a child process under the profile and division of
+the server.
 
 Register with Claude Code:
   claude mcp add exact -- exactcli mcp
@@ -188,6 +257,51 @@ Examples:
 ```bash
 exactcli quota
 exactcli quota --output json
+```
+
+### `exactcli sync`
+
+Read the records changed since a timestamp (the sync API, 1000 per page)
+
+```
+exactcli sync <resource> [flags]
+```
+
+- `--since <value>` - Timestamp to start after (from the last run). Default: the state file, else 0
+- `--state <value>` - JSON file that remembers the last timestamp per resource; read when --since is absent, written after a complete run
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--select <value>` - Comma-separated properties for $select
+
+Examples:
+
+```bash
+exactcli sync crm/Accounts --since 0
+exactcli sync crm/Accounts --state ./sync.json
+exactcli sync financialtransaction/TransactionLines --state ./sync.json --output csv
+```
+
+### `exactcli update`
+
+Update a record (PUT), validated against the catalogue
+
+```
+exactcli update <resource> <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+- `--force` - Send even when the resource or a field is not in the catalogue
+- `--beta` - Use the beta API namespace
+
+Examples:
+
+```bash
+exactcli update crm/Accounts <id> --set Name="Acme NV" --allow-writes
+exactcli update crm/Accounts <id> --body @patch.json --dry-run
 ```
 
 ### `exactcli version`
@@ -580,6 +694,23 @@ Examples:
 exactcli sales-entry list
 exactcli sales-entry list --filter "EntryDate ge datetime'2026-01-01'" --all
 exactcli sales-entry list --limit 200 --output json
+```
+
+## exactcli sync
+
+### `exactcli sync timestamp`
+
+Show the current sync timestamp per endpoint (read/sync/Sync/SyncTimestamp)
+
+```
+exactcli sync timestamp [flags]
+```
+
+Examples:
+
+```bash
+exactcli sync timestamp
+exactcli sync timestamp --output json
 ```
 
 ## exactcli transaction-line

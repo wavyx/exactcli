@@ -52,9 +52,10 @@ export default class McpCommand extends BaseCommand {
 
 Exposes six generic tools that cover every resource of the catalogue
 (exact_resources, exact_metadata, exact_list, exact_get, exact_me,
-exact_quota) plus one tool per typed command. Mutating tools stay hidden
-unless --allow-writes is set. Each tool call runs exactcli as a child
-process under the profile and division of the server.
+exact_quota) plus one tool per typed command. --allow-writes adds
+exact_write (create, update, delete with dry_run and confirm). Each tool
+call runs exactcli as a child process under the profile and division of
+the server.
 
 Register with Claude Code:
   claude mcp add exact -- exactcli mcp

@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-09-03
+
+Catalogue date: 2026-08-19 (435 resources).
+
+### Added
+
+- `create`, `update`, `delete`: generic writes validated against the catalogue,
+  with `--body`, repeatable `--set Key=value`, `@ref:` markers that resolve a code
+  to a GUID, and `--dry-run`.
+- `sync <resource>`, `deleted`, `sync timestamp`: incremental reads with a
+  `--state` file that remembers the last timestamp.
+- `list --bulk`: the bulk API, 1000 rows per page.
+- `exact_write` MCP tool, registered only under `--allow-writes`.
+
+### Changed
+
+- Numeric codes are padded to 18 characters in exact-code searches and lookups,
+  as Exact stores them.
+
 ## [0.2.0] - 2026-09-03
 
 Catalogue date: 2026-08-19 (435 resources).
@@ -49,5 +68,6 @@ First release.
 
 - The production launcher reads no `.env` file. Export the variables in your shell.
 
+[0.3.0]: https://github.com/wavyx/exactcli/releases/tag/v0.3.0
 [0.2.0]: https://github.com/wavyx/exactcli/releases/tag/v0.2.0
 [0.1.0]: https://github.com/wavyx/exactcli/releases/tag/v0.1.0

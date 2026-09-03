@@ -25,7 +25,11 @@ entry.
 - Writes are off by default. POST, PUT and DELETE need `--allow-writes` (or
   `EXACTCLI_ALLOW_WRITES=1`), and a DELETE needs `--yes` as well. A refused write
   reads no body and sends no request. The MCP server exposes no mutating tool unless
-  it starts with `--allow-writes`. `doctor` warns when the environment switch is on.
+  it starts with `--allow-writes`, and its `exact_write` tool needs `confirm: true`
+  for a delete. `doctor` warns when the environment switch is on.
+- `create`, `update` and `delete` validate a body against the catalogue before the
+  request (method, mandatory fields, unknown fields, read-only fields), and
+  `--dry-run` shows the exact request without sending it.
 - The localhost mock override (`EXACTCLI_BASE_URL`) accepts only `http://localhost`,
   `http://127.0.0.1` or `http://[::1]`, and requires an explicit `EXACTCLI_ACCESS_TOKEN`,
   so a stored credential never reaches a mock.

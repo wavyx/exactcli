@@ -135,15 +135,47 @@ descriptor in `src/lib/typed/descriptors.js`; adding one is a matter of minutes.
 
 ## Writes
 
-Writes are off by default. `api POST`, `api PUT` and `api DELETE` need
-`--allow-writes` (or `EXACTCLI_ALLOW_WRITES=1` in the shell), and a DELETE needs
+Writes are off by default. `create`, `update`, `delete` and `api POST|PUT|DELETE` need
+`--allow-writes` (or `EXACTCLI_ALLOW_WRITES=1` in the shell), and a delete needs
 `--yes` as well. Without the flag nothing is read and nothing is sent, exit 77.
 `doctor` shows the state of the switch.
 
+The generic write commands validate the body against the catalogue before they send
+it: method allowed, mandatory fields present, no unknown field, no read-only field
+on an update. `--dry-run` prints the validated request and sends nothing; it needs
+no flag, so an agent can preview a write.
+
 ```sh
-exactcli api POST crm/Accounts --body '{"Name":"Acme"}' --allow-writes
-exactcli api DELETE "crm/Accounts(guid'<id>')" --allow-writes --yes
+exactcli create crm/Accounts --set Name=Acme --set Code=1001 --dry-run
+exactcli create crm/Accounts --set Name=Acme --set Code=1001 --allow-writes
+exactcli create salesentry/SalesEntries --body @entry.json \
+  --set Customer=@ref:crm/Accounts:1001 --allow-writes
+exactcli update crm/Accounts <id> --set Name="Acme NV" --allow-writes
+exactcli delete crm/Accounts <id> --allow-writes --yes
+exactcli api DELETE "crm/Accounts(guid'<id>')" --allow-writes --yes   # raw, no validation
 ```
+
+`--set Key=value` is repeatable and merges over `--body`. Values: text, numbers,
+`true`, `false`, `null`; `@str:1001` pins a string; `@guid:<id>` pins a GUID;
+`@ref:crm/Accounts:1001` resolves a code to the GUID of that record.
+
+## Sync and bulk
+
+Exact offers three read APIs per resource. The regular API pages at 60. The bulk
+API (`list --bulk`) pages at 1000 and needs a `$select` (the catalogue columns by
+default). The sync API returns only the records changed after a timestamp, 1000 per
+page, and pairs with the deleted feed:
+
+```sh
+exactcli list crm/Accounts --bulk --all --output csv
+exactcli sync crm/Accounts --since 0                     # full first load
+exactcli sync crm/Accounts --state ./sync.json           # then only the changes
+exactcli deleted --state ./sync.json                     # and the deletions
+exactcli sync timestamp                                  # the server timestamps
+```
+
+`--state` remembers the last timestamp per resource and is written only after a
+complete walk. The next timestamp also prints on stderr.
 
 ## Profiles and divisions
 
@@ -195,7 +227,8 @@ sequentially.
 generic tools that cover every resource of the catalogue (`exact_resources`,
 `exact_metadata`, `exact_list`, `exact_get`, `exact_me`, `exact_quota`) plus one
 tool per typed command (`exact_transaction_line_list`, `exact_account_list`, ...).
-The server is read-only unless it starts with `--allow-writes`. Each tool call
+The server is read-only unless it starts with `--allow-writes`, which adds
+`exact_write` (create, update, delete with `dry_run` and `confirm`). Each tool call
 runs `exactcli` as a child process under the profile and the division of the
 server.
 
@@ -215,7 +248,8 @@ Or in `.mcp.json` or `claude_desktop_config.json`:
 - Client secret, access token and refresh token live only in the OS keychain.
 - Every request is locked to your Exact Online host; redirects are refused.
 - The raw `api` command cannot leave that host.
-- Writes are off unless you add `--allow-writes`; a DELETE needs `--yes` as well.
+- Writes are off unless you add `--allow-writes`; a delete needs `--yes` as well.
+  `create`, `update` and `delete` validate the body against the catalogue first.
 - `--verbose` never prints credentials.
 
 ## Contributing
