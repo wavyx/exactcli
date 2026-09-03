@@ -44,17 +44,14 @@ function wrap(data) {
 }
 
 /**
- * Run a tool by executing the underlying command and shaping its output into an
- * MCP tool result. A non-zero exit OR a signal termination is reported as an
- * error (a signal-killed child must never look like success). On failure the
- * stderr JSON error envelope exactcli emits in machine mode
- * (`{error, message, exitCode, ...}`) becomes the MCP error text.
- * @param {object} entry catalog entry
- * @param {Record<string, unknown>} input
+ * Run an argv through the executor and shape the answer as an MCP tool
+ * result. A non-zero exit OR a signal termination is an error (a
+ * signal-killed child must never look like success). On failure the stderr
+ * JSON error envelope exactcli emits in machine mode becomes the error text.
+ * @param {string[]} argv
  * @param {(argv: string[]) => Promise<{stdout: string, stderr: string, code: number, signal?: string|null}>} exec
  */
-export async function runTool(entry, input, exec) {
-  const argv = toArgv(entry, input)
+export async function runArgv(argv, exec) {
   const { stdout, stderr, code, signal } = await exec(argv)
 
   if (signal || code !== 0) {
@@ -73,9 +70,81 @@ export async function runTool(entry, input, exec) {
   try {
     result.structuredContent = wrap(JSON.parse(text))
   } catch {
-    // Plain-text output (e.g. "Deleted deal 5") — no structured content.
+    // Plain-text output (e.g. "Deleted crm/Accounts 5") - no structured content.
   }
   return result
+}
+
+/**
+ * Run a catalogue tool: build the argv from the input, execute, shape.
+ * @param {object} entry catalog entry
+ * @param {Record<string, unknown>} input
+ * @param {Function} exec
+ */
+export function runTool(entry, input, exec) {
+  return runArgv(toArgv(entry, input), exec)
+}
+
+/** A --set value as the CLI parses it: literals stay, plain text is pinned. */
+function setValue(value) {
+  if (value === null) return 'null'
+  if (typeof value !== 'string') return String(value)
+  // A marker (@ref:, @guid:, @str:) travels as it is; other text is pinned
+  // so that "1001" stays a string instead of becoming a number.
+  return value.startsWith('@') ? value : `@str:${value}`
+}
+
+/**
+ * The argv of the exact_write tool, or an error text when the input cannot
+ * become a command. Nothing is spawned for an error.
+ * @param {{operation: string, resource: string, key?: string, body?: object, set?: object, dry_run?: boolean, confirm?: boolean}} input
+ * @returns {{argv?: string[], error?: string}}
+ */
+export function writeArgv(input) {
+  const {
+    operation,
+    resource,
+    key,
+    body,
+    set,
+    dry_run: dryRun,
+    confirm,
+  } = input
+  if ((operation === 'update' || operation === 'delete') && !key) {
+    return { error: `${operation} needs a key` }
+  }
+  if (operation === 'delete' && !dryRun && confirm !== true) {
+    return { error: 'delete needs confirm: true' }
+  }
+  const argv = [operation, resource]
+  if (key) argv.push(String(key))
+  if (operation !== 'delete') {
+    if (body) argv.push(`--body=${JSON.stringify(body)}`)
+    for (const [name, value] of Object.entries(set ?? {})) {
+      argv.push(`--set=${name}=${setValue(value)}`)
+    }
+  }
+  if (dryRun) argv.push('--dry-run')
+  argv.push('--allow-writes')
+  if (operation === 'delete' && confirm === true) argv.push('--yes')
+  argv.push('--output=json')
+  return { argv }
+}
+
+/**
+ * Run the exact_write tool.
+ * @param {object} input
+ * @param {Function} exec
+ */
+export function runWrite(input, exec) {
+  const { argv, error } = writeArgv(input)
+  if (error) {
+    return Promise.resolve({
+      content: [{ type: 'text', text: error }],
+      isError: true,
+    })
+  }
+  return runArgv(argv, exec)
 }
 
 /** A process killed by a signal reports a null exit code; treat that as 0. */

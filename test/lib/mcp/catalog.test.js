@@ -89,6 +89,9 @@ const commands = [
     { id: { required: true } },
     { out: opt(), force: bool() },
   ),
+  cmd('create', { resource: { required: true } }, { body: opt(), set: opt() }),
+  cmd('update', { resource: { required: true }, id: { required: true } }),
+  cmd('delete', { resource: { required: true }, id: { required: true } }),
   cmd('division:list', {}, listing),
   cmd('division:use', { code: { required: true } }),
   cmd('division:current'),
@@ -150,9 +153,20 @@ describe('buildCatalog', () => {
       'exact_account_list',
       'exact_gl_account_list',
       'exact_document_list',
+      'exact_write',
     ])
-    expect(catalog.every((e) => e.kind === 'read')).toBe(true)
+    expect(catalog.filter((e) => e.kind === 'read')).toHaveLength(12)
+    expect(catalog.at(-1)).toMatchObject({
+      kind: 'write',
+      custom: 'write',
+      id: 'write',
+    })
     expect(GENERIC_TOOLS).toHaveLength(6)
+  })
+
+  it('offers exact_write only when the three write commands exist', () => {
+    const partial = buildCatalog([cmd('create'), cmd('update')], {})
+    expect(names(partial)).toEqual([])
   })
 
   it('keeps only the listed args and flags of a generic tool', () => {
@@ -238,9 +252,10 @@ describe('buildCatalog', () => {
   })
 
   it('adds every other visible, non-excluded command with allTools', () => {
+    const base = names(buildCatalog(commands, descriptors))
     const all = buildCatalog(commands, descriptors, { allTools: true })
-    const extra = names(all).slice(12)
-    expect(extra).toEqual([
+    expect(names(all)).toEqual([
+      ...base,
       'exact_division_list',
       'exact_division_use',
       'exact_division_current',

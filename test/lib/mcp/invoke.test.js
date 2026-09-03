@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   toArgv,
+  runArgv,
   runTool,
+  runWrite,
+  writeArgv,
   makeExec,
   normalizeExit,
   errMessage,
@@ -354,5 +357,149 @@ describe('errMessage', () => {
   })
   it('falls back to the value itself', () => {
     expect(errMessage('plain')).toBe('plain')
+  })
+})
+
+describe('writeArgv', () => {
+  it('builds a create with body and pinned set values', () => {
+    expect(
+      writeArgv({
+        operation: 'create',
+        resource: 'crm/Accounts',
+        body: { Name: 'Acme' },
+        set: {
+          Code: '1001',
+          IsSales: true,
+          Note: null,
+          Amount: 2,
+          Customer: '@ref:crm/Accounts:1',
+        },
+      }).argv,
+    ).toEqual([
+      'create',
+      'crm/Accounts',
+      '--body={"Name":"Acme"}',
+      '--set=Code=@str:1001',
+      '--set=IsSales=true',
+      '--set=Note=null',
+      '--set=Amount=2',
+      '--set=Customer=@ref:crm/Accounts:1',
+      '--allow-writes',
+      '--output=json',
+    ])
+  })
+
+  it('builds an update with a key and a dry run', () => {
+    expect(
+      writeArgv({
+        operation: 'update',
+        resource: 'crm/Accounts',
+        key: 'abc',
+        set: { Name: 'X' },
+        dry_run: true,
+      }).argv,
+    ).toEqual([
+      'update',
+      'crm/Accounts',
+      'abc',
+      '--set=Name=@str:X',
+      '--dry-run',
+      '--allow-writes',
+      '--output=json',
+    ])
+  })
+
+  it('builds a delete with --yes only when confirmed, ignores body and set', () => {
+    expect(
+      writeArgv({
+        operation: 'delete',
+        resource: 'crm/Accounts',
+        key: 'abc',
+        confirm: true,
+        body: { a: 1 },
+        set: { b: 2 },
+      }).argv,
+    ).toEqual([
+      'delete',
+      'crm/Accounts',
+      'abc',
+      '--allow-writes',
+      '--yes',
+      '--output=json',
+    ])
+    expect(
+      writeArgv({
+        operation: 'delete',
+        resource: 'crm/Accounts',
+        key: 'abc',
+        dry_run: true,
+      }).argv,
+    ).toEqual([
+      'delete',
+      'crm/Accounts',
+      'abc',
+      '--dry-run',
+      '--allow-writes',
+      '--output=json',
+    ])
+  })
+
+  it('builds a bare create without body or set', () => {
+    expect(writeArgv({ operation: 'create', resource: 'r' }).argv).toEqual([
+      'create',
+      'r',
+      '--allow-writes',
+      '--output=json',
+    ])
+  })
+
+  it('refuses a missing key and a delete without confirm', () => {
+    expect(writeArgv({ operation: 'update', resource: 'r' })).toEqual({
+      error: 'update needs a key',
+    })
+    expect(writeArgv({ operation: 'delete', resource: 'r', key: 'k' })).toEqual(
+      { error: 'delete needs confirm: true' },
+    )
+  })
+})
+
+describe('runWrite and runArgv', () => {
+  it('returns the error without spawning', async () => {
+    const exec = vi.fn()
+    const result = await runWrite(
+      { operation: 'delete', resource: 'r', key: 'k' },
+      exec,
+    )
+    expect(result).toEqual({
+      content: [{ type: 'text', text: 'delete needs confirm: true' }],
+      isError: true,
+    })
+    expect(exec).not.toHaveBeenCalled()
+  })
+
+  it('runs the argv and shapes the answer', async () => {
+    const exec = vi.fn(async () => ({
+      stdout: '{"ok":true}',
+      stderr: '',
+      code: 0,
+    }))
+    const result = await runWrite(
+      { operation: 'create', resource: 'r', set: { A: 1 } },
+      exec,
+    )
+    expect(exec).toHaveBeenCalledWith([
+      'create',
+      'r',
+      '--set=A=1',
+      '--allow-writes',
+      '--output=json',
+    ])
+    expect(result.structuredContent).toEqual({ ok: true })
+    const plain = await runArgv(['x'], async () => ({
+      stdout: 'Deleted',
+      stderr: '',
+      code: 0,
+    }))
+    expect(plain).toEqual({ content: [{ type: 'text', text: 'Deleted' }] })
   })
 })

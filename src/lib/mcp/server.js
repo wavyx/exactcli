@@ -1,7 +1,38 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { z } from 'zod'
 import { buildCatalog } from './catalog.js'
 import { buildInputSchema } from './schema.js'
-import { runTool } from './invoke.js'
+import { runTool, runWrite } from './invoke.js'
+
+/** The input of exact_write: hand-written, it maps to three commands. */
+export const WRITE_SHAPE = {
+  operation: z
+    .enum(['create', 'update', 'delete'])
+    .describe('create (POST), update (PUT) or delete (DELETE)'),
+  resource: z.string().describe('Resource path, for example crm/Accounts'),
+  key: z
+    .string()
+    .optional()
+    .describe('Record key for update and delete: a GUID, or an integer'),
+  body: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Request body as an object (nested values allowed)'),
+  set: z
+    .record(
+      z.string(),
+      z.union([z.string(), z.number(), z.boolean(), z.null()]),
+    )
+    .optional()
+    .describe(
+      'Flat fields merged over body; "@ref:service/Resource:code" resolves a code',
+    ),
+  dry_run: z
+    .boolean()
+    .optional()
+    .describe('Show the validated request and send nothing'),
+  confirm: z.boolean().optional().describe('Required true for delete'),
+}
 
 /**
  * MCP tool annotations derived from a catalogue entry's kind. Per the MCP
@@ -53,15 +84,18 @@ export function buildServer({
   })
 
   for (const entry of tools) {
+    const custom = entry.custom === 'write'
     server.registerTool(
       entry.toolName,
       {
         title: entry.summary,
         description: entry.summary,
-        inputSchema: buildInputSchema(entry),
+        inputSchema: custom ? WRITE_SHAPE : buildInputSchema(entry),
         annotations: annotationsFor(entry),
       },
-      (input) => runTool(entry, input, exec),
+      custom
+        ? (input) => runWrite(input, exec)
+        : (input) => runTool(entry, input, exec),
     )
   }
 

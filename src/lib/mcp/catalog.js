@@ -85,9 +85,35 @@ export const GENERIC_TOOLS = [
 /** Flags every typed list tool keeps next to its own filters. */
 const TYPED_FLAGS = ['filter', 'select', 'orderby', 'all', 'max-pages', 'limit']
 
-// Never exposed: the raw escape hatch, local diagnostics, the server itself,
-// a command that writes files, and the commands that manage local state.
-export const EXCLUDED = new Set(['api', 'doctor', 'mcp', 'document:download'])
+/**
+ * The one write tool. It maps an operation to create, update or delete and
+ * exists only when the server runs with --allow-writes.
+ */
+export const WRITE_TOOL = {
+  id: 'write',
+  toolName: 'exact_write',
+  kind: 'write',
+  custom: 'write',
+  summary:
+    'Create, update or delete a record. Validated against the catalogue ' +
+    '(mandatory and unknown fields). Use dry_run: true first to see the ' +
+    'request. delete needs confirm: true. set values: strings, numbers, ' +
+    'booleans, null; "@ref:crm/Accounts:1001" resolves a code to a GUID.',
+  args: {},
+  flags: {},
+}
+const WRITE_COMMANDS = ['create', 'update', 'delete']
+
+// Never exposed one by one: the raw escape hatch, local diagnostics, the
+// server itself, a command that writes files, the three write commands
+// (exact_write covers them), and the commands that manage local state.
+export const EXCLUDED = new Set([
+  'api',
+  'doctor',
+  'mcp',
+  'document:download',
+  ...WRITE_COMMANDS,
+])
 const EXCLUDED_PREFIXES = ['auth:', 'config:', 'profile:']
 
 const READ_LEAVES = new Set([
@@ -193,6 +219,9 @@ export function buildCatalog(
   })
   const typed = typedTools(descriptors, commands)
   const entries = [...generic, ...typed]
+  if (WRITE_COMMANDS.every((id) => commands.some((c) => c.id === id))) {
+    entries.push(WRITE_TOOL)
+  }
 
   if (allTools) {
     const seen = new Set(entries.map((e) => e.id))

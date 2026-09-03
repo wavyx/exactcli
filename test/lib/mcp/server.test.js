@@ -27,6 +27,9 @@ const commands = [
     flags: {},
   },
   { id: 'division:list', summary: 'Divisions', args: {}, flags: {} },
+  { id: 'create', summary: 'Create', args: {}, flags: {} },
+  { id: 'update', summary: 'Update', args: {}, flags: {} },
+  { id: 'delete', summary: 'Delete', args: {}, flags: {} },
 ]
 
 describe('selectTools', () => {
@@ -104,6 +107,60 @@ describe('buildServer', () => {
       ['account', 'list', '--search=acme', '--output=json'],
     ])
     expect(result.structuredContent).toEqual({ results: [{ Code: '1001' }] })
+  })
+
+  it('registers exact_write only with allowWrites and routes it to the write argv', async () => {
+    const readOnly = await connect({})
+    expect(
+      (await readOnly.client.listTools()).tools.map((t) => t.name),
+    ).not.toContain('exact_write')
+
+    const calls = []
+    const exec = async (argv) => {
+      calls.push(argv)
+      return { stdout: '{"method":"POST"}', stderr: '', code: 0 }
+    }
+    const writes = await connect({ allowWrites: true, exec })
+    const listed = await writes.client.listTools()
+    const tool = listed.tools.find((t) => t.name === 'exact_write')
+    expect(tool.annotations.readOnlyHint).toBe(false)
+    expect(Object.keys(tool.inputSchema.properties).sort()).toEqual([
+      'body',
+      'confirm',
+      'dry_run',
+      'key',
+      'operation',
+      'resource',
+      'set',
+    ])
+
+    const result = await writes.client.callTool({
+      name: 'exact_write',
+      arguments: {
+        operation: 'create',
+        resource: 'crm/Accounts',
+        set: { Name: 'Acme' },
+        dry_run: true,
+      },
+    })
+    expect(calls).toEqual([
+      [
+        'create',
+        'crm/Accounts',
+        '--set=Name=@str:Acme',
+        '--dry-run',
+        '--allow-writes',
+        '--output=json',
+      ],
+    ])
+    expect(result.structuredContent).toEqual({ method: 'POST' })
+
+    const refused = await writes.client.callTool({
+      name: 'exact_write',
+      arguments: { operation: 'delete', resource: 'crm/Accounts', key: 'k' },
+    })
+    expect(refused.isError).toBe(true)
+    expect(calls).toHaveLength(1)
   })
 
   it('adds writes only with allowWrites and allTools', async () => {
