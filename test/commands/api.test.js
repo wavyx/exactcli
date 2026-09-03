@@ -165,6 +165,7 @@ describe('api', () => {
       '{"Name":"Acme BE"}',
       '--division',
       '123',
+      '--allow-writes',
       '--output',
       'json',
     ])
@@ -185,6 +186,7 @@ describe('api', () => {
       `@${BODY_FILE}`,
       '--division',
       '123',
+      '--allow-writes',
       '--output',
       'json',
     ])
@@ -200,6 +202,7 @@ describe('api', () => {
       'not json',
       '--division',
       '123',
+      '--allow-writes',
     ]).catch((e) => e)
     expect(err.exitCode ?? err.oclif?.exit).toBe(64)
     expect(err.message).toMatch(/--body is not valid JSON/)
@@ -217,6 +220,7 @@ describe('api', () => {
       '{"Name":"Acme NV"}',
       '--division',
       '123',
+      '--allow-writes',
       '--output',
       'json',
     ])
@@ -233,6 +237,8 @@ describe('api', () => {
       "crm/Accounts(guid'1')",
       '--division',
       '123',
+      '--allow-writes',
+      '--yes',
       '--output',
       'json',
     ])
@@ -422,5 +428,55 @@ describe('api', () => {
     ]).catch((e) => e)
     expect(err.exitCode ?? err.oclif?.exit).toBe(64)
     expect(err.message).toMatch(/--paginate is only valid with GET/)
+  })
+  it('refuses a POST without --allow-writes with exit 77 and sends nothing', async () => {
+    const scope = mockApi().post(ACCOUNTS_PATH).reply(201, { d: {} })
+    const err = await ApiCommand.run([
+      'POST',
+      'crm/Accounts',
+      '--body',
+      '{"Name":"Acme"}',
+      '--division',
+      '123',
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(77)
+    expect(err.message).toMatch(/Writes are off. Add --allow-writes/)
+    expect(scope.isDone()).toBe(false)
+  })
+
+  it('refuses a DELETE without --yes even with --allow-writes', async () => {
+    const scope = mockApi().delete(`${ACCOUNTS_PATH}(guid'1')`).reply(204)
+    const err = await ApiCommand.run([
+      'DELETE',
+      "crm/Accounts(guid'1')",
+      '--division',
+      '123',
+      '--allow-writes',
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(77)
+    expect(err.message).toMatch(/DELETE needs --yes/)
+    expect(scope.isDone()).toBe(false)
+  })
+
+  it('allows a PUT through EXACTCLI_ALLOW_WRITES=1', async () => {
+    process.env.EXACTCLI_ALLOW_WRITES = '1'
+    const scope = mockApi()
+      .put(`${ACCOUNTS_PATH}(guid'1')`, { Name: 'X' })
+      .reply(204)
+    try {
+      await runCmd(ApiCommand, [
+        'PUT',
+        "crm/Accounts(guid'1')",
+        '--body',
+        '{"Name":"X"}',
+        '--division',
+        '123',
+        '--output',
+        'json',
+      ])
+    } finally {
+      delete process.env.EXACTCLI_ALLOW_WRITES
+    }
+    expect(scope.isDone()).toBe(true)
   })
 })

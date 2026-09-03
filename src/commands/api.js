@@ -4,6 +4,7 @@ import { resolveBody } from '../lib/body.js'
 import { CliError } from '../lib/errors.js'
 import { autoColumns, divisionPath, substituteDivision } from '../lib/odata.js'
 import { collectPages } from '../lib/pagination.js'
+import { assertWritesAllowed, writeFlags } from '../lib/writes.js'
 
 /** Method -> the client call that carries it. */
 const CALLS = {
@@ -42,8 +43,9 @@ export default class ApiCommand extends BaseCommand {
     '<%= config.bin %> api GET crm/Accounts',
     '<%= config.bin %> api GET /api/v1/current/Me',
     '<%= config.bin %> api GET "/api/v1/{division}/crm/Accounts" --query \'$top=5\'',
-    '<%= config.bin %> api POST crm/Accounts --body \'{"Name":"Acme"}\'',
-    '<%= config.bin %> api PUT "crm/Accounts(guid\'<id>\')" --body @patch.json',
+    '<%= config.bin %> api POST crm/Accounts --body \'{"Name":"Acme"}\' --allow-writes',
+    '<%= config.bin %> api PUT "crm/Accounts(guid\'<id>\')" --body @patch.json --allow-writes',
+    '<%= config.bin %> api DELETE "crm/Accounts(guid\'<id>\')" --allow-writes --yes',
     '<%= config.bin %> api GET logistics/Items --paginate --output json',
     '<%= config.bin %> api GET logistics/Items --paginate --max-pages 20',
   ]
@@ -61,6 +63,7 @@ export default class ApiCommand extends BaseCommand {
   }
 
   static flags = {
+    ...writeFlags,
     body: Flags.string({
       description: 'Request body (JSON string, @file, or piped stdin)',
     }),
@@ -108,6 +111,9 @@ export default class ApiCommand extends BaseCommand {
     if (this.flags.paginate && method !== 'GET') {
       throw new CliError('--paginate is only valid with GET', { exitCode: 64 })
     }
+    // The gate comes before the body and the request: a refused write reads
+    // nothing and sends nothing.
+    assertWritesAllowed(this.flags, method)
 
     const path = this.resolvePath(args.path)
     const query = parseQuery(this.flags.query)

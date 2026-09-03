@@ -107,6 +107,25 @@ describe('doctor', () => {
     expect(Object.values(checks).every((c) => c.status === 'ok')).toBe(true)
     expect(checks.token.detail).toMatch(/fresh/)
     expect(checks.api.detail).toMatch(/Jane Doe/)
+    expect(checks.writes.detail).toBe('off (default)')
+    expect(process.exitCode).toBeUndefined()
+  })
+
+  it('warns when EXACTCLI_ALLOW_WRITES is set in the environment', async () => {
+    profile(FULL)
+    mocks.getOAuthTokens.mockResolvedValue(blob(10_000))
+    process.env.EXACTCLI_ALLOW_WRITES = '1'
+    let checks
+    try {
+      checks = await runJson()
+    } finally {
+      delete process.env.EXACTCLI_ALLOW_WRITES
+    }
+    expect(checks.writes).toEqual({
+      check: 'writes',
+      status: 'warn',
+      detail: 'EXACTCLI_ALLOW_WRITES is set: every command may write',
+    })
     expect(process.exitCode).toBeUndefined()
   })
 

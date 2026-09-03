@@ -95,6 +95,14 @@ export default class DoctorCommand extends BaseCommand {
       this.flags.division ?? getProfileConfig(profile, 'division')
     add('division', Boolean(division), division ? String(division) : 'not set')
 
+    // Writes are off by default. A global switch in the environment deserves
+    // a reminder: every command in this shell may write.
+    if (process.env.EXACTCLI_ALLOW_WRITES === '1') {
+      warn('writes', 'EXACTCLI_ALLOW_WRITES is set: every command may write')
+    } else {
+      add('writes', true, 'off (default)')
+    }
+
     const envToken = process.env.EXACTCLI_ACCESS_TOKEN
     let blob = null
     if (envToken) {
