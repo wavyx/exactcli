@@ -37,10 +37,14 @@ afterEach(() => {
   nock.enableNetConnect()
 })
 
+const QUERY = { modified: "datetime'2026-09-01'", endPoint: "'Accounts'" }
+const ARGS = ['--endpoint', 'Accounts', '--modified', '2026-09-01']
+
 describe('sync timestamp', () => {
-  it('prints the timestamps per endpoint', async () => {
+  it('asks the function for the feed and the date, prints the timestamp', async () => {
     const scope = mockApi()
       .get(PATH)
+      .query(QUERY)
       .reply(200, {
         d: {
           results: [
@@ -54,7 +58,7 @@ describe('sync timestamp', () => {
         },
       })
 
-    const out = JSON.parse(await runCmd(Cmd, []))
+    const out = JSON.parse(await runCmd(Cmd, ARGS))
 
     expect(scope.isDone()).toBe(true)
     expect(out).toEqual([
@@ -69,12 +73,25 @@ describe('sync timestamp', () => {
   it('wraps a single record and prints a table', async () => {
     mockApi()
       .get(PATH)
+      .query(QUERY)
       .reply(200, { d: { API: 'All', TimeStampAsBigInt: '9' } })
     process.stdout.isTTY = true
 
-    const out = await runCmd(Cmd, [])
+    const out = await runCmd(Cmd, ARGS)
 
     expect(out).toMatch(/All/)
     expect(out).toMatch(/9/)
+  })
+
+  it('rejects a date that is not YYYY-MM-DD with 64', async () => {
+    process.stdout.isTTY = true
+    const err = await Cmd.run([
+      '--endpoint',
+      'Accounts',
+      '--modified',
+      'today',
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(/--modified expects YYYY-MM-DD/)
   })
 })

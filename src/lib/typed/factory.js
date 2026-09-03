@@ -53,10 +53,10 @@ export function renderValue(type, value) {
  */
 export function renderClause(filter, value) {
   if (filter.type === 'search') {
-    // Digits mean a code. Exact stores numeric codes padded, so an exact
-    // match needs the padded form (verified live on crm/Accounts).
+    // Digits mean a code. Exact stores account codes padded to 18 and
+    // ledger codes as they are (verified live), so ask for both forms.
     return /^\d+$/.test(value)
-      ? `Code eq ${quote(padCode(value))}`
+      ? `(Code eq ${quote(value)} or Code eq ${quote(padCode(value))})`
       : `substringof(${quote(value)}, ${filter.field})`
   }
   return `${filter.field} ${filter.op ?? 'eq'} ${renderValue(filter.type, value)}`

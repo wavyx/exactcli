@@ -1,5 +1,6 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../base-command.js'
+import { findResource, propertyNames } from '../lib/catalog.js'
 import { divisionPath } from '../lib/odata.js'
 import {
   finishSync,
@@ -43,7 +44,12 @@ export default class DeletedCommand extends BaseCommand {
         ? undefined
         : `EntityType eq ${this.flags.type}`
 
-    const result = await syncSince(this, { path, since, filter })
+    const result = await syncSince(this, {
+      path,
+      since,
+      filter,
+      select: propertyNames(findResource('sync/Deleted')).join(','),
+    })
     await this.outputResults(result.rows, COLUMNS)
     finishSync(result, { since, key: KEY, stateFile, state })
   }

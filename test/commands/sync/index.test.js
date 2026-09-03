@@ -14,6 +14,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apiBase, mockApi, runCmd } from '../../helpers.js'
 import { readState } from '../../../src/lib/sync-state.js'
+import {
+  findResource,
+  propertyNames,
+  variantOf,
+} from '../../../src/lib/catalog.js'
 
 const TMP_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'exactcli-sync-'))
 
@@ -21,6 +26,9 @@ const { default: Cmd } = await import('../../../src/commands/sync/index.js')
 
 const BASE = apiBase()
 const PATH = '/api/v1/123/sync/CRM/Accounts'
+const SELECT = propertyNames(
+  variantOf(findResource('crm/Accounts'), 'sync'),
+).join(',')
 let stateFile
 let stderr
 
@@ -64,7 +72,7 @@ describe('sync', () => {
   it('walks every page after the timestamp without $top and reports the next one', async () => {
     const scope = mockApi()
       .get(PATH)
-      .query({ $filter: 'Timestamp gt 0L' })
+      .query({ $filter: 'Timestamp gt 0L', $select: SELECT })
       .reply(200, {
         d: {
           results: [row(5, { Code: '1' }), row(10, { Code: '2' })],
@@ -89,14 +97,14 @@ describe('sync', () => {
   it('reads and writes the state file, and --since wins over it', async () => {
     mockApi()
       .get(PATH)
-      .query({ $filter: 'Timestamp gt 0L' })
+      .query({ $filter: 'Timestamp gt 0L', $select: SELECT })
       .reply(200, { d: { results: [row(20)] } })
     await runCmd(Cmd, ['crm/Accounts', '--state', stateFile])
     expect(readState(stateFile)).toEqual({ 'sync/CRM/Accounts': 20 })
 
     mockApi()
       .get(PATH)
-      .query({ $filter: 'Timestamp gt 20L' })
+      .query({ $filter: 'Timestamp gt 20L', $select: SELECT })
       .reply(200, { d: { results: [] } })
     await runCmd(Cmd, ['crm/Accounts', '--state', stateFile])
     expect(stderr.join('')).toMatch(/No changes since 20\n$/)
@@ -104,7 +112,7 @@ describe('sync', () => {
 
     mockApi()
       .get(PATH)
-      .query({ $filter: 'Timestamp gt 7L' })
+      .query({ $filter: 'Timestamp gt 7L', $select: SELECT })
       .reply(200, { d: { results: [row(9)] } })
     await runCmd(Cmd, ['crm/Accounts', '--state', stateFile, '--since', '7'])
     expect(readState(stateFile)).toEqual({ 'sync/CRM/Accounts': 9 })
@@ -113,7 +121,7 @@ describe('sync', () => {
   it('leaves the state alone after a partial walk (max-pages, limit)', async () => {
     mockApi()
       .get(PATH)
-      .query({ $filter: 'Timestamp gt 0L' })
+      .query({ $filter: 'Timestamp gt 0L', $select: SELECT })
       .reply(200, {
         d: { results: [row(5)], __next: `${BASE}${PATH}?$skiptoken=5` },
       })
@@ -128,7 +136,7 @@ describe('sync', () => {
 
     mockApi()
       .get(PATH)
-      .query({ $filter: 'Timestamp gt 0L' })
+      .query({ $filter: 'Timestamp gt 0L', $select: SELECT })
       .reply(200, { d: { results: [row(5), row(6)] } })
     const out = JSON.parse(
       await runCmd(Cmd, ['crm/Accounts', '--state', stateFile, '--limit', '1']),
@@ -176,7 +184,7 @@ describe('sync', () => {
   it('shows the catalogue columns in a terminal', async () => {
     mockApi()
       .get(PATH)
-      .query({ $filter: 'Timestamp gt 0L' })
+      .query({ $filter: 'Timestamp gt 0L', $select: SELECT })
       .reply(200, { d: { results: [row(5, { Code: '1', Name: 'Acme' })] } })
     process.stdout.isTTY = true
 

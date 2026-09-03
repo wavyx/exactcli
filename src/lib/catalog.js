@@ -122,8 +122,25 @@ export function variantOf(resource, family, catalog = loadCatalog()) {
     '{division}/',
     `{division}/${family}/`,
   )
-  return indexOf(catalog).get(target)
+  const direct = indexOf(catalog).get(target)
+  if (direct) return direct
+  // Some feeds live under another service (sync/Financial/SalesEntries for
+  // salesentry/SalesEntries): a unique resource name in the family is it.
+  // The scrape names a feed 'CRM/Accounts': compare the last segment only.
+  const last = (r) => r.resource.split('/').pop().toLowerCase()
+  const name = last(resource)
+  const byName = catalog.resources.filter(
+    (r) => r.family === family && last(r) === name,
+  )
+  return byName.length === 1 ? byName[0] : undefined
 }
+
+/**
+ * The names of the properties a reader can ask for: no hidden, no navigation.
+ * @param {object} res
+ * @returns {string[]}
+ */
+export const propertyNames = (res) => visible(res).map((p) => p.name)
 
 /**
  * The families a regular resource exists in.

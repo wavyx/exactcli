@@ -52,18 +52,17 @@ export function resolveSince(flags, state, key) {
  * unless --limit. Reports the highest timestamp seen and whether the walk
  * was complete (nothing left on the server, no cut by --limit).
  * @param {{ apiClient: object, flags: object }} cmd
- * @param {{ path: string, since: number, filter?: string, select?: string }} options
+ * @param {{ path: string, since: number, filter?: string, select: string }} options
  * @returns {Promise<{ rows: object[], max: number, complete: boolean }>}
  */
 export async function syncSince(cmd, { path, since, filter, select }) {
   const clauses = [`Timestamp gt ${since}L`]
   if (filter) clauses.push(filter)
-  const query = { $filter: clauses.join(' and ') }
-  if (select) {
-    const fields = select.split(',').map((f) => f.trim())
-    if (!fields.includes('Timestamp')) fields.push('Timestamp')
-    query.$select = fields.join(',')
-  }
+  // The feeds refuse a call without $select; Timestamp must be in it to
+  // compute the next starting point.
+  const fields = select.split(',').map((f) => f.trim())
+  if (!fields.includes('Timestamp')) fields.push('Timestamp')
+  const query = { $filter: clauses.join(' and '), $select: fields.join(',') }
   // A sync read wants every page: --limit is the only reason to stop early.
   cmd.flags.all = cmd.flags.limit === undefined
   const rows = await collectListing(cmd, path, query, {

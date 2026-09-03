@@ -4,6 +4,7 @@ import {
   defaultColumns,
   familiesOf,
   findResource,
+  propertyNames,
   shortName,
   variantOf,
 } from '../../lib/catalog.js'
@@ -72,10 +73,12 @@ export default class SyncCommand extends BaseCommand {
     const state = stateFile ? readState(stateFile) : {}
     const since = resolveSince(this.flags, state, key)
 
+    // The sync endpoints refuse a call without $select (verified live): the
+    // default asks for every field the catalogue knows.
     const result = await syncSince(this, {
       path,
       since,
-      select: this.flags.select,
+      select: this.flags.select ?? propertyNames(variant).join(','),
     })
     const defaults = defaultColumns(variant)
     const columns = this.flags.select

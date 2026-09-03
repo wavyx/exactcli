@@ -14,12 +14,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mockApi, runCmd } from '../helpers.js'
 import { readState } from '../../src/lib/sync-state.js'
+import { findResource, propertyNames } from '../../src/lib/catalog.js'
 
 const TMP_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'exactcli-deleted-'))
 
 const { default: Cmd } = await import('../../src/commands/deleted.js')
 
 const PATH = '/api/v1/123/sync/Deleted'
+const SELECT = propertyNames(findResource('sync/Deleted')).join(',')
 let stateFile
 let stderr
 
@@ -62,7 +64,10 @@ describe('deleted', () => {
   it('reads sync/Deleted after the timestamp, filtered on the type', async () => {
     const scope = mockApi()
       .get(PATH)
-      .query({ $filter: 'Timestamp gt 5L and EntityType eq 10' })
+      .query({
+        $filter: 'Timestamp gt 5L and EntityType eq 10',
+        $select: SELECT,
+      })
       .reply(200, {
         d: {
           results: [
@@ -92,7 +97,7 @@ describe('deleted', () => {
   it('remembers the timestamp under the Deleted key', async () => {
     mockApi()
       .get(PATH)
-      .query({ $filter: 'Timestamp gt 0L' })
+      .query({ $filter: 'Timestamp gt 0L', $select: SELECT })
       .reply(200, { d: { results: [row(3)] } })
 
     await runCmd(Cmd, ['--state', stateFile])

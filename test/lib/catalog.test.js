@@ -9,6 +9,7 @@ import {
   keyType,
   loadCatalog,
   mandatoryFields,
+  propertyNames,
   resetCatalog,
   resolvePath,
   searchResources,
@@ -101,6 +102,15 @@ describe('field helpers', () => {
     expect(filterableFields(res)).toEqual(['ID', 'Code', 'Name'])
   })
 
+  it('lists the visible property names', () => {
+    const names = propertyNames(findResource('crm/Accounts', catalog))
+    expect(names[0]).toBe('ID')
+    expect(names).not.toContain('Secret')
+    expect(
+      propertyNames(findResource('salesentry/SalesEntries', catalog)),
+    ).not.toContain('SalesEntryLines')
+  })
+
   it('reports the key type', () => {
     expect(keyType(findResource('crm/Accounts', catalog))).toBe('guid')
     expect(keyType(findResource('system/Divisions', catalog))).toBe('plain')
@@ -161,6 +171,18 @@ describe('variants and families', () => {
     expect(variantOf(accounts, 'sync', catalog).family).toBe('sync')
     expect(
       variantOf(findResource('financial/GLAccounts', catalog), 'bulk', catalog),
+    ).toBeUndefined()
+  })
+
+  it('falls back to a unique resource name when the sync service differs', () => {
+    resetCatalog()
+    const real = loadCatalog(REAL)
+    const entries = findResource('salesentry/SalesEntries', real)
+    expect(variantOf(entries, 'sync', real).uri).toBe(
+      '/api/v1/{division}/sync/Financial/SalesEntries',
+    )
+    expect(
+      variantOf(findResource('system/Divisions', real), 'sync', real),
     ).toBeUndefined()
   })
 
