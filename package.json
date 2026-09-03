@@ -1,6 +1,6 @@
 {
   "name": "@wavyx/exactcli",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "publishConfig": {
     "access": "public"
   },
@@ -118,6 +118,48 @@
       },
       "invoice": {
         "description": "Sales invoices (create from codes)"
+      },
+      "sales-order": {
+        "description": "Sales orders (orders placed by customers)"
+      },
+      "quotation": {
+        "description": "Quotations (offers sent to prospects and customers)"
+      },
+      "webhook": {
+        "description": "Webhook subscriptions"
+      },
+      "currency": {
+        "description": "Currencies"
+      },
+      "exchange-rate": {
+        "description": "Exchange rates"
+      },
+      "payment": {
+        "description": "Payments (outstanding supplier items to pay)"
+      },
+      "bank-account": {
+        "description": "Bank accounts of customers and suppliers"
+      },
+      "address": {
+        "description": "Addresses of customers and suppliers"
+      },
+      "balance": {
+        "description": "Trial balance (amounts per ledger account and period)"
+      },
+      "financial-period": {
+        "description": "Financial periods (the bookkeeping calendar)"
+      },
+      "gl-classification": {
+        "description": "Ledger classifications (reporting scheme elements)"
+      },
+      "aging-receivable": {
+        "description": "Aged receivables per customer"
+      },
+      "aging-payable": {
+        "description": "Aged payables per supplier"
+      },
+      "profit-loss": {
+        "description": "Profit and loss overview"
       }
     },
     "hooks": {

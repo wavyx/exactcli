@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-09-03
+
+Catalogue date: 2026-08-19 (435 resources).
+
+### Added
+
+- Typed lists: `balance`, `financial-period`, `gl-classification`, `aging-receivable`,
+  `aging-payable`, `profit-loss`, `sales-order`, `quotation`, `payment`,
+  `bank-account`, `address`, `webhook`, `currency`, `exchange-rate`.
+- Typed writes from codes: `account create`, `sales-entry create`,
+  `purchase-entry create`, `sales-order create`, `webhook create`, `webhook delete`.
+- `probe <resource>`: what the server returns next to what the catalogue says.
+- `docs/recipes.md`: twelve end-to-end recipes, each step marked "Verified live" or
+  "From the documentation".
+
 ## [0.4.0] - 2026-09-03
 
 Catalogue date: 2026-08-19 (435 resources).
@@ -87,6 +102,7 @@ First release.
 
 - The production launcher reads no `.env` file. Export the variables in your shell.
 
+[0.5.0]: https://github.com/wavyx/exactcli/releases/tag/v0.5.0
 [0.4.0]: https://github.com/wavyx/exactcli/releases/tag/v0.4.0
 [0.3.0]: https://github.com/wavyx/exactcli/releases/tag/v0.3.0
 [0.2.0]: https://github.com/wavyx/exactcli/releases/tag/v0.2.0

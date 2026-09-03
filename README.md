@@ -76,35 +76,33 @@ with `list`, `get` and `api`: pass the `service/Resource` path, for example
 
 ## Commands
 
-| Topic             | Commands                                                                                                             |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
-| auth              | `login`, `logout`, `status`                                                                                          |
-| profile           | `list`, `use`, `current`                                                                                             |
-| config            | `get`, `set`, `list`, `unset`                                                                                        |
-| division          | `list`, `use`, `current`                                                                                             |
-| account           | `list`                                                                                                               |
-| contact           | `list`                                                                                                               |
-| item              | `list`                                                                                                               |
-| gl-account        | `list`                                                                                                               |
-| journal           | `list`                                                                                                               |
-| vat-code          | `list`                                                                                                               |
-| payment-condition | `list`                                                                                                               |
-| sales-entry       | `list`                                                                                                               |
-| purchase-entry    | `list`                                                                                                               |
-| transaction-line  | `list`                                                                                                               |
-| journal-entry     | `list`, `create`                                                                                                     |
-| bank-entry        | `list`                                                                                                               |
-| sales-invoice     | `list`                                                                                                               |
-| purchase-invoice  | `list`                                                                                                               |
-| invoice           | `create`                                                                                                             |
-| receivable        | `list`                                                                                                               |
-| document          | `list`, `download`, `create`                                                                                         |
-| document-type     | `list`                                                                                                               |
-| sync              | `sync <resource>`, `timestamp`                                                                                       |
-| (root)            | `me`, `list`, `get`, `create`, `update`, `delete`, `deleted`, `api`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
+| Topic                                                                   | Commands                                                                                                                      |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| auth                                                                    | `login`, `logout`, `status`                                                                                                   |
+| profile                                                                 | `list`, `use`, `current`                                                                                                      |
+| config                                                                  | `get`, `set`, `list`, `unset`                                                                                                 |
+| division                                                                | `list`, `use`, `current`                                                                                                      |
+| account                                                                 | `list`, `create`                                                                                                              |
+| contact, address, bank-account                                          | `list`                                                                                                                        |
+| item, currency, exchange-rate                                           | `list`                                                                                                                        |
+| gl-account, gl-classification, journal, vat-code, payment-condition     | `list`                                                                                                                        |
+| financial-period, balance, profit-loss, aging-receivable, aging-payable | `list`                                                                                                                        |
+| sales-entry, purchase-entry                                             | `list`, `create`                                                                                                              |
+| transaction-line, bank-entry                                            | `list`                                                                                                                        |
+| journal-entry                                                           | `list`, `create`                                                                                                              |
+| sales-invoice, purchase-invoice, quotation                              | `list`                                                                                                                        |
+| invoice                                                                 | `create`                                                                                                                      |
+| sales-order                                                             | `list`, `create`                                                                                                              |
+| receivable, payment                                                     | `list`                                                                                                                        |
+| document                                                                | `list`, `download`, `create`                                                                                                  |
+| document-type                                                           | `list`                                                                                                                        |
+| webhook                                                                 | `list`, `create`, `delete`                                                                                                    |
+| sync                                                                    | `sync <resource>`, `timestamp`                                                                                                |
+| (root)                                                                  | `me`, `list`, `get`, `create`, `update`, `delete`, `deleted`, `api`, `probe`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
 
 Full reference with every flag: [docs/commands.md](docs/commands.md) or
-`exactcli <command> --help`.
+`exactcli <command> --help`. End-to-end flows (login, entries, invoices, documents,
+synchronisation, reporting, agents): [docs/recipes.md](docs/recipes.md).
 
 Global flags on every command: `--output table|json|yaml|csv`, `--jq <expr>`,
 `--fields a,b`, `--profile <name>`, `--division <code>`, `--limit <n>`,
@@ -127,6 +125,9 @@ exactcli metadata crm/Accounts --methods    # summary: methods, keys, webhook
 `list` and `get` read the catalogue too: a known resource gets readable default
 columns (and a lighter `$select`), and the key type of `get` follows the
 resource. A path that is not in the catalogue still goes out, with a warning.
+`probe <resource>` fetches a few records and compares the fields the server
+returns with the catalogue: undocumented fields first, then the documented ones,
+then the catalogue fields the server did not return.
 
 ## Typed commands
 
@@ -153,6 +154,18 @@ exactcli receivable list --status 20 --due-to 2026-09-30
 exactcli document list --from 2026-01-01 --type 10
 exactcli document-type list --creatable yes
 exactcli document download <document-id> --out ./attachments
+exactcli balance list --year 2026 --period 9 --type W
+exactcli profit-loss list
+exactcli aging-receivable list --search acme
+exactcli financial-period list --year 2026
+exactcli sales-order list --customer 1001 --from 2026-01-01
+exactcli quotation list --account 1001
+exactcli payment list --status 20 --due-to 2026-09-30
+exactcli bank-account list --account 1001 --main yes
+exactcli address list --city Brussels
+exactcli webhook list --topic Accounts
+exactcli currency list --search euro
+exactcli exchange-rate list --source USD --from 2026-01-01
 ```
 
 `--account`, `--customer` and `--supplier` take a GUID or a code; a code is looked up on
@@ -165,6 +178,11 @@ exactcli invoice create --customer 1001 --journal 700 --line Default:2:100 --dry
 exactcli invoice create --customer 1001 --journal 700 --line Default:2:100 --allow-writes
 exactcli journal-entry create --journal 800 --line 499000:50:Rent --line 580600:-50 --allow-writes
 exactcli document create --subject "Contract 2026" --type 183 --account 1001 --file contract.pdf --allow-writes
+exactcli account create --name Acme --code 1001 --customer true --status C --country BE --allow-writes
+exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100:Consulting --allow-writes
+exactcli purchase-entry create --supplier 2001 --journal 600 --line 611000:1250:Rent --allow-writes
+exactcli sales-order create --customer 1001 --line Default:2:100 --delivery-date 2026-09-10 --allow-writes
+exactcli webhook create --topic Accounts --url https://acme.example/hooks/exact --allow-writes
 ```
 
 `invoice create` needs a customer (`IsSales` true) and an item per line. `journal-entry

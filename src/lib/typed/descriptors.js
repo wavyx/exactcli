@@ -35,6 +35,20 @@ import journalEntry from './descriptors/journal-entry.js'
 import receivable from './descriptors/receivable.js'
 import paymentCondition from './descriptors/payment-condition.js'
 import documentType from './descriptors/document-type.js'
+import salesOrder from './descriptors/sales-order.js'
+import quotation from './descriptors/quotation.js'
+import webhook from './descriptors/webhook.js'
+import currency from './descriptors/currency.js'
+import exchangeRate from './descriptors/exchange-rate.js'
+import payment from './descriptors/payment.js'
+import bankAccount from './descriptors/bank-account.js'
+import address from './descriptors/address.js'
+import balance from './descriptors/balance.js'
+import financialPeriod from './descriptors/financial-period.js'
+import glClassification from './descriptors/gl-classification.js'
+import agingReceivable from './descriptors/aging-receivable.js'
+import agingPayable from './descriptors/aging-payable.js'
+import profitLoss from './descriptors/profit-loss.js'
 
 /**
  * One file per descriptor under ./descriptors/: a new typed command adds a
@@ -59,6 +73,20 @@ export const descriptors = {
   receivable,
   paymentCondition,
   documentType,
+  salesOrder,
+  quotation,
+  webhook,
+  currency,
+  exchangeRate,
+  payment,
+  bankAccount,
+  address,
+  balance,
+  financialPeriod,
+  glClassification,
+  agingReceivable,
+  agingPayable,
+  profitLoss,
 }
 
 /**
