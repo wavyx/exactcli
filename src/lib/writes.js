@@ -1,6 +1,7 @@
 import { Flags } from '@oclif/core'
 import { resolveBody } from './body.js'
 import { findResource, loadCatalog, mandatoryFields } from './catalog.js'
+import { getProfileConfig, loadConfig } from './config.js'
 import { CliError } from './errors.js'
 import { GUID_RE, resolveRef } from './refs.js'
 
@@ -24,12 +25,30 @@ export const writesAllowed = (flags) =>
   Boolean(flags['allow-writes']) || process.env.EXACTCLI_ALLOW_WRITES === '1'
 
 /**
+ * A profile with `read_only` set refuses every write, whatever the flags say.
+ * The belt for a production administration that must stay untouched.
+ * @param {{ profile?: string }} flags
+ * @returns {string | null} the profile name when it is locked
+ */
+export function readOnlyProfile(flags) {
+  const profile = loadConfig(flags.profile).activeProfile
+  return getProfileConfig(profile, 'read_only') === true ? profile : null
+}
+
+/**
  * Refuse before anything is read or sent: a refused write costs nothing.
- * @param {{ 'allow-writes'?: boolean, yes?: boolean }} flags
+ * @param {{ 'allow-writes'?: boolean, yes?: boolean, profile?: string }} flags
  * @param {string} method
  */
 export function assertWritesAllowed(flags, method) {
   if (!WRITE_METHODS.includes(method)) return
+  const locked = readOnlyProfile(flags)
+  if (locked) {
+    throw new CliError(
+      `Profile ${locked} is read-only (config set read_only false to change it).`,
+      { exitCode: 77 },
+    )
+  }
   if (!writesAllowed(flags)) {
     throw new CliError(
       'Writes are off. Add --allow-writes (and --yes for DELETE).',

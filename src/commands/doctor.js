@@ -97,7 +97,9 @@ export default class DoctorCommand extends BaseCommand {
 
     // Writes are off by default. A global switch in the environment deserves
     // a reminder: every command in this shell may write.
-    if (process.env.EXACTCLI_ALLOW_WRITES === '1') {
+    if (getProfileConfig(profile, 'read_only') === true) {
+      add('writes', true, 'locked: read-only profile')
+    } else if (process.env.EXACTCLI_ALLOW_WRITES === '1') {
       warn('writes', 'EXACTCLI_ALLOW_WRITES is set: every command may write')
     } else {
       add('writes', true, 'off (default)')

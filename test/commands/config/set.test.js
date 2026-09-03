@@ -30,7 +30,7 @@ describe('config set', () => {
 
     expect(err.exitCode ?? err.oclif?.exit).toBe(64)
     expect(err.message).toBe(
-      'Unknown config key bogus. Allowed: host, ngrok_domain, division, default_output',
+      'Unknown config key bogus. Allowed: host, ngrok_domain, division, default_output, read_only',
     )
     expect(getProfileConfig('default', 'bogus')).toBeUndefined()
   })
@@ -143,6 +143,24 @@ describe('config set', () => {
       expect(getProfileConfig('default', 'ngrok_domain')).toBe(
         'abc123.ngrok.app',
       )
+    })
+  })
+
+  describe('read_only', () => {
+    it('stores true or false as a boolean', async () => {
+      await runCmd(ConfigSetCommand, ['read_only', 'true'])
+      expect(getProfileConfig('default', 'read_only')).toBe(true)
+      await runCmd(ConfigSetCommand, ['read_only', 'false'])
+      expect(getProfileConfig('default', 'read_only')).toBe(false)
+    })
+
+    it('rejects any other value with exit 64', async () => {
+      process.stdout.isTTY = true
+      const err = await ConfigSetCommand.run(['read_only', 'yes']).catch(
+        (e) => e,
+      )
+      expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+      expect(err.message).toMatch(/read_only must be true or false/)
     })
   })
 })

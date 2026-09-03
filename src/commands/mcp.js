@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import BaseCommand from '../base-command.js'
 import { buildServer } from '../lib/mcp/server.js'
 import { makeExec } from '../lib/mcp/invoke.js'
+import { readOnlyProfile } from '../lib/writes.js'
 
 /**
  * Build and connect an MCP server. Extracted from run() so it can be tested
@@ -109,9 +110,16 @@ Or in .mcp.json / claude_desktop_config.json:
       env,
       timeout: flags['tool-timeout'] * 1000,
     })
+    // A read-only profile never exposes a write tool, whatever the flag says.
+    const locked = readOnlyProfile(flags)
+    if (locked && flags['allow-writes']) {
+      process.stderr.write(
+        `Profile ${locked} is read-only: writes stay hidden\n`,
+      )
+    }
     await startMcpServer({
       config: this.config,
-      allowWrites: flags['allow-writes'],
+      allowWrites: flags['allow-writes'] && !locked,
       allTools: flags['all-tools'],
       exec,
       connect: (server) => server.connect(new StdioServerTransport()),

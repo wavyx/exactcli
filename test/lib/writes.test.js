@@ -1,4 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import nock from 'nock'
 import { mockApi } from '../helpers.js'
@@ -11,10 +14,15 @@ import {
   describeRequest,
   parseSet,
   readBody,
+  readOnlyProfile,
   validateWrite,
   writeFlags,
   writesAllowed,
 } from '../../src/lib/writes.js'
+import { getConf, setProfileConfig } from '../../src/lib/config.js'
+
+const TMP_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'exactcli-writes-'))
+process.env.EXACTCLI_CONFIG_DIR = TMP_CONFIG_DIR
 
 const GUID = '11111111-1111-1111-1111-111111111111'
 
@@ -36,6 +44,37 @@ describe('writesAllowed', () => {
 
   it('is off by default', () => {
     expect(writesAllowed({})).toBe(false)
+  })
+})
+
+describe('read-only profile', () => {
+  afterEach(() => {
+    getConf().clear()
+  })
+
+  it('names the locked profile, or null', () => {
+    expect(readOnlyProfile({})).toBeNull()
+    setProfileConfig('default', 'read_only', true)
+    expect(readOnlyProfile({})).toBe('default')
+    setProfileConfig('prod', 'read_only', true)
+    expect(readOnlyProfile({ profile: 'prod' })).toBe('prod')
+  })
+
+  it('refuses a write even with the flag and the environment switch', () => {
+    setProfileConfig('default', 'read_only', true)
+    process.env.EXACTCLI_ALLOW_WRITES = '1'
+    const err = (() => {
+      try {
+        assertWritesAllowed({ 'allow-writes': true, yes: true }, 'POST')
+      } catch (e) {
+        return e
+      }
+    })()
+    expect(err.exitCode).toBe(77)
+    expect(err.message).toBe(
+      'Profile default is read-only (config set read_only false to change it).',
+    )
+    expect(() => assertWritesAllowed({}, 'GET')).not.toThrow()
   })
 })
 
@@ -293,3 +332,5 @@ describe('describeRequest and readBody', () => {
     expect(err.message).toMatch(/--body is not valid JSON/)
   })
 })
+
+rmSync(TMP_CONFIG_DIR, { recursive: true, force: true })

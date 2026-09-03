@@ -111,6 +111,23 @@ describe('doctor', () => {
     expect(process.exitCode).toBeUndefined()
   })
 
+  it('reports a read-only profile as locked, even with the environment switch', async () => {
+    profile({ ...FULL, read_only: true })
+    mocks.getOAuthTokens.mockResolvedValue(blob(10_000))
+    process.env.EXACTCLI_ALLOW_WRITES = '1'
+    let checks
+    try {
+      checks = await runJson()
+    } finally {
+      delete process.env.EXACTCLI_ALLOW_WRITES
+    }
+    expect(checks.writes).toEqual({
+      check: 'writes',
+      status: 'ok',
+      detail: 'locked: read-only profile',
+    })
+  })
+
   it('warns when EXACTCLI_ALLOW_WRITES is set in the environment', async () => {
     profile(FULL)
     mocks.getOAuthTokens.mockResolvedValue(blob(10_000))

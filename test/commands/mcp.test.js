@@ -28,6 +28,7 @@ const { makeExec } = await import('../../src/lib/mcp/invoke.js')
 const { default: Cmd, startMcpServer } =
   await import('../../src/commands/mcp.js')
 const { descriptors } = await import('../../src/lib/typed/descriptors.js')
+const { getConf, setProfileConfig } = await import('../../src/lib/config.js')
 
 const own = (id, extra = {}) => ({
   id,
@@ -125,6 +126,26 @@ describe('startMcpServer', () => {
 })
 
 describe('mcp command', () => {
+  it('never exposes writes on a read-only profile', async () => {
+    setProfileConfig('default', 'read_only', true)
+    const lines = []
+    const stderr = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation((chunk) => lines.push(String(chunk)) > 0)
+    try {
+      await Cmd.run(['--allow-writes'])
+    } finally {
+      stderr.mockRestore()
+      getConf().clear()
+    }
+
+    expect(buildServer.mock.calls[0][0].allowWrites).toBe(false)
+    expect(lines.join('')).toMatch(
+      /Profile default is read-only: writes stay hidden/,
+    )
+    expect(lines.join('')).toMatch(/\(read-only\)/)
+  })
+
   it('forwards the profile and the division to the child executor', async () => {
     const stderr = vi
       .spyOn(process.stderr, 'write')

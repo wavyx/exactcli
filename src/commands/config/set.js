@@ -5,7 +5,13 @@ import { normalizeDomain, setProfileConfig } from '../../lib/config.js'
 import { CliError } from '../../lib/errors.js'
 import { HOST_RE } from '../../lib/client.js'
 
-const ALLOWED_KEYS = ['host', 'ngrok_domain', 'division', 'default_output']
+const ALLOWED_KEYS = [
+  'host',
+  'ngrok_domain',
+  'division',
+  'default_output',
+  'read_only',
+]
 const OUTPUT_FORMATS = ['table', 'json', 'yaml', 'csv']
 
 /**
@@ -24,6 +30,13 @@ function normalizeValue(key, rawValue) {
       )
     }
     return rawValue
+  }
+
+  if (key === 'read_only') {
+    if (rawValue !== 'true' && rawValue !== 'false') {
+      throw new CliError('read_only must be true or false', { exitCode: 64 })
+    }
+    return rawValue === 'true'
   }
 
   if (key === 'division') {
@@ -57,6 +70,7 @@ export default class ConfigSetCommand extends BaseCommand {
   static examples = [
     '<%= config.bin %> config set host start.exactonline.be',
     '<%= config.bin %> config set division 123456',
+    '<%= config.bin %> config set read_only true',
   ]
 
   static args = {
