@@ -9,9 +9,7 @@ import {
   unwrap,
 } from '../lib/odata.js'
 import { keyType, resolvePath, warnUnknown } from '../lib/catalog.js'
-
-const GUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+import { GUID_RE } from '../lib/refs.js'
 
 /**
  * A plain Exact Online key: a number, a code, an enum value. The key travels
