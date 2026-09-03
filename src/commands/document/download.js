@@ -47,7 +47,7 @@ export default class DocumentDownloadCommand extends BaseCommand {
     const rows = await collectPages(
       this.apiClient.pageOData(path, {
         $filter: `Document eq guid'${args.id}'`,
-        $select: 'ID,FileName,FileSize,Attachment',
+        $select: 'ID,FileName,FileSize,Attachment,Url',
       }),
     )
     if (rows.length === 0) {
@@ -71,11 +71,26 @@ export default class DocumentDownloadCommand extends BaseCommand {
     }
 
     mkdirSync(out, { recursive: true })
-    const results = targets.map(({ row, fileName, target }) => {
-      const bytes = Buffer.from(row.Attachment ?? '', 'base64')
+    const results = []
+    for (const { row, fileName, target } of targets) {
+      const bytes = await this.bytesOf(row)
       writeFileSync(target, bytes)
-      return { fileName, size: bytes.length, path: target }
-    })
+      results.push({ fileName, size: bytes.length, path: target })
+    }
     await this.outputResults(results, COLUMNS)
+  }
+
+  /**
+   * The content of an attachment. A GET on DocumentAttachments answers
+   * `Attachment: null` and a `Url` (verified live); the bytes come from that
+   * URL with the bearer token and `Download=1`, which skips the HTML viewer.
+   * @param {{ Attachment?: string | null, Url?: string | null }} row
+   * @returns {Promise<Buffer>}
+   */
+  async bytesOf(row) {
+    if (row.Attachment) return Buffer.from(row.Attachment, 'base64')
+    if (!row.Url) return Buffer.alloc(0)
+    const { bytes } = await this.apiClient.download(`${row.Url}&Download=1`)
+    return bytes
   }
 }

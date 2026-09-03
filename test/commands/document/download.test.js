@@ -30,7 +30,7 @@ const ID = '11111111-1111-1111-1111-111111111111'
 const PATH = '/api/v1/123/documents/DocumentAttachments'
 const QUERY = {
   $filter: `Document eq guid'${ID}'`,
-  $select: 'ID,FileName,FileSize,Attachment',
+  $select: 'ID,FileName,FileSize,Attachment,Url',
 }
 const b64 = (text) => Buffer.from(text).toString('base64')
 
@@ -138,5 +138,32 @@ describe('document download', () => {
     const err = await Cmd.run(['700', '--out', outDir]).catch((e) => e)
     expect(err.exitCode ?? err.oclif?.exit).toBe(64)
     expect(err.message).toMatch(/must be a GUID/)
+  })
+
+  it('fetches the bytes from the Url with Download=1 when Attachment is null', async () => {
+    const url =
+      'https://start.exactonline.be/docs/SysAttachment.aspx?ID=a&_Division_=123&Stamp=BE001'
+    attachments([
+      {
+        ID: 'a',
+        FileName: 'probe.png',
+        FileSize: 4,
+        Attachment: null,
+        Url: url,
+      },
+    ])
+    const scope = mockApi()
+      .get('/docs/SysAttachment.aspx')
+      .query({ ID: 'a', _Division_: '123', Stamp: 'BE001', Download: '1' })
+      .matchHeader('authorization', 'Bearer test-token')
+      .reply(200, Buffer.from('PNG!'), { 'content-type': 'image/png' })
+
+    const out = JSON.parse(await runCmd(Cmd, [ID, '--out', outDir]))
+
+    expect(scope.isDone()).toBe(true)
+    expect(readFileSync(join(outDir, 'probe.png'), 'utf8')).toBe('PNG!')
+    expect(out).toEqual([
+      { fileName: 'probe.png', size: 4, path: join(outDir, 'probe.png') },
+    ])
   })
 })

@@ -532,3 +532,46 @@ describe('mock endpoint override (EXACTCLI_BASE_URL)', () => {
     expect(scope.isDone()).toBe(true)
   })
 })
+
+describe('download', () => {
+  const client = () => createClient({ token: 'test-token', retry: false })
+
+  it('fetches bytes from the locked host with the bearer token', async () => {
+    const scope = mockApi()
+      .get('/docs/SysAttachment.aspx')
+      .query({ ID: 'a', Download: '1' })
+      .matchHeader('authorization', 'Bearer test-token')
+      .reply(200, Buffer.from([1, 2, 3]), { 'content-type': 'image/png' })
+
+    const { bytes, contentType } = await client().download(
+      'https://start.exactonline.be/docs/SysAttachment.aspx?ID=a&Download=1',
+    )
+
+    expect(scope.isDone()).toBe(true)
+    expect([...bytes]).toEqual([1, 2, 3])
+    expect(contentType).toBe('image/png')
+  })
+
+  it('refuses an off-host URL, a redirect, and maps an error status', async () => {
+    await expect(
+      client().download('https://evil.example/x'),
+    ).rejects.toMatchObject({ exitCode: 78 })
+    mockApi()
+      .get('/docs/x')
+      .reply(302, '', { location: 'https://evil.example/' })
+    await expect(
+      client().download('https://start.exactonline.be/docs/x'),
+    ).rejects.toMatchObject({ exitCode: 78 })
+    mockApi().get('/docs/y').reply(404, 'gone')
+    await expect(
+      client().download('https://start.exactonline.be/docs/y'),
+    ).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it('reports a network failure with exit 69', async () => {
+    mockApi().get('/docs/z').replyWithError('socket hang up')
+    await expect(
+      client().download('https://start.exactonline.be/docs/z'),
+    ).rejects.toMatchObject({ exitCode: 69 })
+  })
+})

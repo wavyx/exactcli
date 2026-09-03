@@ -393,6 +393,41 @@ export function createClient({
     }
   }
 
+  /**
+   * Fetch a file from the locked host with the bearer token: the Url of a
+   * document attachment. No JSON, no retry, no redirect.
+   * @param {string} url absolute URL on the locked host
+   * @returns {Promise<{ bytes: Buffer, contentType: string | null }>}
+   */
+  async function download(url) {
+    const target = lockedUrl(url)
+    let res
+    try {
+      res = await fetch(target, {
+        headers: { ...headers(false), accept: '*/*' },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(timeout),
+      })
+    } catch (cause) {
+      throw new CliError(`Cannot reach ${baseOrigin}: ${cause.message}`, {
+        exitCode: 69,
+        cause,
+      })
+    }
+    if (res.status >= 300 && res.status < 400) {
+      throw new CliError(`Refusing to follow a redirect off ${baseOrigin}`, {
+        exitCode: 78,
+      })
+    }
+    if (!res.ok) {
+      throw ApiError.fromResponse(res.status, await res.text(), target.pathname)
+    }
+    return {
+      bytes: Buffer.from(await res.arrayBuffer()),
+      contentType: res.headers.get('content-type'),
+    }
+  }
+
   const api = {
     /** @param {string} path @param {{query?: object}} [opts] */
     get: (path, opts) => request('GET', path, opts),
@@ -402,6 +437,7 @@ export function createClient({
     put: (path, body, opts) => request('PUT', path, { ...opts, body }),
     /** @param {string} path @param {{query?: object}} [opts] */
     del: (path, opts) => request('DELETE', path, opts),
+    download,
     pageOData,
     /**
      * Rate-limit budget from the most recent response, undefined until the
