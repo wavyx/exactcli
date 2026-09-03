@@ -76,15 +76,19 @@ with `list`, `get` and `api`: pass the `service/Resource` path, for example
 
 ## Commands
 
-| Topic          | Commands                                        |
-| -------------- | ----------------------------------------------- |
-| auth           | `login`, `logout`, `status`                     |
-| profile        | `list`, `use`, `current`                        |
-| config         | `get`, `set`, `list`, `unset`                   |
-| division       | `list`                                          |
-| sales-entry    | `list`                                          |
-| purchase-entry | `list`                                          |
-| (root)         | `me`, `list`, `get`, `api`, `doctor`, `version` |
+| Topic            | Commands                                                                    |
+| ---------------- | --------------------------------------------------------------------------- |
+| auth             | `login`, `logout`, `status`                                                 |
+| profile          | `list`, `use`, `current`                                                    |
+| config           | `get`, `set`, `list`, `unset`                                               |
+| division         | `list`, `use`, `current`                                                    |
+| sales-entry      | `list`                                                                      |
+| purchase-entry   | `list`                                                                      |
+| transaction-line | `list`                                                                      |
+| account          | `list`                                                                      |
+| gl-account       | `list`                                                                      |
+| document         | `list`, `download`                                                          |
+| (root)           | `me`, `list`, `get`, `api`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
 
 Full reference with every flag: [docs/commands.md](docs/commands.md) or
 `exactcli <command> --help`.
@@ -94,6 +98,53 @@ Global flags on every command: `--output table|json|yaml|csv`, `--jq <expr>`,
 `--no-color`, `--verbose`, `--no-retry`, `--timeout <ms>`. Table output in a
 terminal, JSON when piped.
 
+## Catalogue and metadata
+
+The CLI ships a catalogue of the 435 REST resources of Exact Online: path, methods,
+fields, mandatory fields, filterable fields. It comes from the reference
+documentation and is refreshed with `npm run catalog:build`; the date of the
+catalogue is in the CHANGELOG.
+
+```sh
+exactcli metadata --search invoice          # which resources match a word
+exactcli metadata salesentry/SalesEntries   # fields, types, mandatory, filterable
+exactcli metadata crm/Accounts --methods    # summary: methods, keys, webhook
+```
+
+`list` and `get` read the catalogue too: a known resource gets readable default
+columns (and a lighter `$select`), and the key type of `get` follows the
+resource. A path that is not in the catalogue still goes out, with a warning.
+
+## Typed commands
+
+Typed commands add readable columns and filters that know the accounting fields:
+
+```sh
+exactcli transaction-line list --year 2026 --period 9 --gl-account 700000
+exactcli transaction-line list --from 2026-01-01 --to 2026-01-31 --account 1001
+exactcli account list --search acme --customer yes
+exactcli gl-account list --type 12
+exactcli document list --from 2026-01-01 --type 10
+exactcli document download <document-id> --out ./attachments
+exactcli sales-entry list --limit 200 --output json
+```
+
+`--account` takes a GUID or a code; a code is looked up on `crm/Accounts`. A free
+`--filter` combines with the typed filters. Every typed command is a small
+descriptor in `src/lib/typed/descriptors.js`; adding one is a matter of minutes.
+
+## Writes
+
+Writes are off by default. `api POST`, `api PUT` and `api DELETE` need
+`--allow-writes` (or `EXACTCLI_ALLOW_WRITES=1` in the shell), and a DELETE needs
+`--yes` as well. Without the flag nothing is read and nothing is sent, exit 77.
+`doctor` shows the state of the switch.
+
+```sh
+exactcli api POST crm/Accounts --body '{"Name":"Acme"}' --allow-writes
+exactcli api DELETE "crm/Accounts(guid'<id>')" --allow-writes --yes
+```
+
 ## Profiles and divisions
 
 A profile holds the host (`start.exactonline.be` by default), the ngrok domain and the
@@ -102,7 +153,8 @@ default division. Several administrations, several accounts: one profile each.
 ```sh
 exactcli profile use acme
 exactcli auth login --profile acme
-exactcli config set division 123456
+exactcli division use 123456                    # checks the access, then stores it
+exactcli division current
 exactcli list crm/Accounts --division 654321   # one-off override
 ```
 
@@ -129,16 +181,41 @@ sequentially.
 
 ## For agents
 
-- Self-describing: `exactcli --help`, `exactcli <command> --help`.
+- Self-describing: `exactcli --help`, `exactcli <command> --help`,
+  `exactcli metadata <resource>`.
 - Machine output: `--output json`, `--jq '.[] | .Name'`, `--fields`.
-- Deterministic exit codes; a 77 means "run `exactcli auth login`".
-- `exactcli doctor --output json` checks the setup before a run.
+- Deterministic exit codes; a 77 means "run `exactcli auth login`" or "add
+  `--allow-writes`".
+- `exactcli doctor --output json` checks the setup before a run,
+  `exactcli quota --output json` the budget.
+
+### MCP server
+
+`exactcli mcp` runs a Model Context Protocol server over stdio. It exposes six
+generic tools that cover every resource of the catalogue (`exact_resources`,
+`exact_metadata`, `exact_list`, `exact_get`, `exact_me`, `exact_quota`) plus one
+tool per typed command (`exact_transaction_line_list`, `exact_account_list`, ...).
+The server is read-only unless it starts with `--allow-writes`. Each tool call
+runs `exactcli` as a child process under the profile and the division of the
+server.
+
+```sh
+claude mcp add exact -- exactcli mcp
+claude mcp add exact -- exactcli mcp --division 123456
+```
+
+Or in `.mcp.json` or `claude_desktop_config.json`:
+
+```json
+{ "mcpServers": { "exact": { "command": "exactcli", "args": ["mcp"] } } }
+```
 
 ## Security
 
 - Client secret, access token and refresh token live only in the OS keychain.
 - Every request is locked to your Exact Online host; redirects are refused.
 - The raw `api` command cannot leave that host.
+- Writes are off unless you add `--allow-writes`; a DELETE needs `--yes` as well.
 - `--verbose` never prints credentials.
 
 ## Contributing

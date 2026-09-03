@@ -4,6 +4,30 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-09-03
+
+Catalogue date: 2026-08-19 (435 resources).
+
+### Added
+
+- An embedded catalogue of the Exact Online REST resources, and the `metadata`
+  command to search it and to show the fields of a resource.
+- `list` selects readable default columns for a known resource; `get` follows the
+  key type of the resource; an unknown path warns and still goes out.
+- `quota`, `division use`, `division current`; `division list` marks the active one.
+- Typed commands: `transaction-line list`, `account list`, `gl-account list`,
+  `document list`, `document download`. `sales-entry list` and `purchase-entry
+list` now share the same descriptor factory.
+- `mcp`: a read-only Model Context Protocol server with six generic tools and one
+  tool per typed command.
+- The api command routes `current/...` without a division.
+
+### Security
+
+- Writes are off by default: `api POST|PUT|DELETE` need `--allow-writes`, a DELETE
+  needs `--yes` as well. `doctor` reports the switch.
+- The OAuth callback requires the `state` echo.
+
 ## [0.1.0] - 2026-08-19
 
 First release.
@@ -25,4 +49,5 @@ First release.
 
 - The production launcher reads no `.env` file. Export the variables in your shell.
 
+[0.2.0]: https://github.com/wavyx/exactcli/releases/tag/v0.2.0
 [0.1.0]: https://github.com/wavyx/exactcli/releases/tag/v0.1.0
