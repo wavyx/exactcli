@@ -1,5 +1,8 @@
 import { Flags } from '@oclif/core'
+import { resolveBody } from './body.js'
+import { findResource, loadCatalog, mandatoryFields } from './catalog.js'
 import { CliError } from './errors.js'
+import { GUID_RE, resolveRef } from './refs.js'
 
 export const WRITE_METHODS = ['POST', 'PUT', 'DELETE']
 
@@ -35,5 +38,160 @@ export function assertWritesAllowed(flags, method) {
   }
   if (method === 'DELETE' && !flags.yes) {
     throw new CliError('DELETE needs --yes.', { exitCode: 77 })
+  }
+}
+
+const NUMBER_RE = /^-?\d+(\.\d+)?$/
+const REF_RE = /^@ref:([^:]+\/[^:]+):(.+)$/
+
+/**
+ * A `--set` value as JSON would carry it: null, booleans and numbers become
+ * themselves, markers force a type or name a reference, the rest is a string.
+ * @param {string} text
+ * @returns {unknown}
+ */
+export function coerce(text) {
+  if (text === 'null') return null
+  if (text === 'true') return true
+  if (text === 'false') return false
+  if (NUMBER_RE.test(text)) return Number(text)
+  if (text.startsWith('@str:')) return text.slice(5)
+  if (text.startsWith('@guid:')) {
+    const guid = text.slice(6)
+    if (!GUID_RE.test(guid)) {
+      throw new CliError(`@guid expects a GUID, received ${guid}`, {
+        exitCode: 64,
+      })
+    }
+    return guid
+  }
+  if (text.startsWith('@ref:')) {
+    const match = text.match(REF_RE)
+    if (!match) {
+      throw new CliError('@ref expects @ref:service/Resource:code', {
+        exitCode: 64,
+      })
+    }
+    return { $ref: match[1], code: match[2] }
+  }
+  return text
+}
+
+/**
+ * The repeatable `--set Key=value` flag as a body. The first `=` splits.
+ * @param {string[]} [pairs]
+ * @returns {object}
+ */
+export function parseSet(pairs = []) {
+  const body = {}
+  for (const pair of pairs) {
+    const separator = pair.indexOf('=')
+    if (separator < 1) {
+      throw new CliError(`--set expects Key=value, received: ${pair}`, {
+        exitCode: 64,
+      })
+    }
+    body[pair.slice(0, separator)] = coerce(pair.slice(separator + 1))
+  }
+  return body
+}
+
+/**
+ * Deep copy of a body where every `{ $ref, code }` marker becomes the GUID
+ * of that record. Lookups run one after the other.
+ * @param {{ apiClient: object, resolveDivision: () => number }} cmd
+ * @param {unknown} value
+ * @returns {Promise<unknown>}
+ */
+export async function applyRefs(cmd, value) {
+  if (Array.isArray(value)) {
+    const out = []
+    for (const item of value) out.push(await applyRefs(cmd, item))
+    return out
+  }
+  if (value !== null && typeof value === 'object') {
+    if (typeof value.$ref === 'string') {
+      return resolveRef(cmd, value.$ref, String(value.code))
+    }
+    const out = {}
+    for (const [key, item] of Object.entries(value)) {
+      out[key] = await applyRefs(cmd, item)
+    }
+    return out
+  }
+  return value
+}
+
+/**
+ * Check a write against the catalogue before anything is sent. Every
+ * problem lands in one message. Nested objects and arrays are not checked.
+ * @param {{ resource: string, body: object, method: string, force?: boolean, catalog?: object }} options
+ * @returns {object | undefined} the catalogue record when known
+ */
+export function validateWrite({
+  resource: ref,
+  body,
+  method,
+  force = false,
+  catalog = loadCatalog(),
+}) {
+  const res = findResource(ref, catalog)
+  const problems = []
+  if (!res) {
+    if (!force) problems.push(`unknown resource ${ref}`)
+  } else {
+    if (!res.methods.includes(method)) {
+      problems.push(
+        `method ${method} not allowed on ${ref} (allowed: ${res.methods.join(', ')})`,
+      )
+    }
+    const byName = new Map(res.properties.map((p) => [p.name, p]))
+    const keys = Object.keys(body)
+    if (method === 'POST') {
+      const missing = mandatoryFields(res).filter((f) => !(f in body))
+      if (missing.length) {
+        problems.push(`missing mandatory fields: ${missing.join(', ')}`)
+      }
+    }
+    const unknown = keys.filter((k) => !byName.has(k))
+    if (unknown.length && !force) {
+      problems.push(`unknown fields: ${unknown.join(', ')}`)
+    }
+    if (method === 'PUT') {
+      const readOnly = keys.filter((k) => byName.get(k)?.put === false)
+      if (readOnly.length) {
+        problems.push(`read-only fields on PUT: ${readOnly.join(', ')}`)
+      }
+    }
+  }
+  if (problems.length) {
+    throw new CliError(`${ref}: ${problems.join('; ')}`, { exitCode: 64 })
+  }
+  return res
+}
+
+/** What --dry-run prints. */
+export const describeRequest = ({ method, path, body }) => ({
+  method,
+  path,
+  body,
+})
+
+/**
+ * The JSON body of a write: `--body` (a string, @file, or piped stdin), or
+ * an empty object when `--set` carries the fields or nothing is piped.
+ * @param {{ body?: string, set?: string[] }} flags
+ * @returns {Promise<object>}
+ */
+export async function readBody(flags) {
+  const piped = !flags.body && !flags.set?.length && !process.stdin.isTTY
+  if (!flags.body && !piped) return {}
+  const text = await resolveBody(flags)
+  try {
+    return JSON.parse(text)
+  } catch (cause) {
+    throw new CliError(`--body is not valid JSON: ${cause.message}`, {
+      exitCode: 64,
+    })
   }
 }
