@@ -24,11 +24,11 @@ const AUTH_PATH = '/api/oauth2/auth'
 const TOKEN_PATH = '/api/oauth2/token'
 
 /**
- * Reject a callback that carries no `state`. Exact does not document `state`
- * and may not echo it, so the guard stays off until a live login proves that
- * it comes back.
+ * Reject a callback that carries no `state`. Exact does not document `state`,
+ * but a live login on start.exactonline.be (2026-09-03) echoed it verbatim,
+ * so the guard is on.
  */
-export const STATE_REQUIRED = false
+export const STATE_REQUIRED = true
 
 /** The documented lifetime of an access token, in seconds. */
 const DEFAULT_EXPIRES_IN = 600

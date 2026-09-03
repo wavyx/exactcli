@@ -69,8 +69,8 @@ afterEach(() => {
 })
 
 describe('STATE_REQUIRED', () => {
-  it('stays false until a live login shows that Exact echoes state', () => {
-    expect(STATE_REQUIRED).toBe(false)
+  it('is on: a live login showed that Exact echoes state', () => {
+    expect(STATE_REQUIRED).toBe(true)
   })
 })
 

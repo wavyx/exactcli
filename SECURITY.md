@@ -20,9 +20,8 @@ entry.
 - `--verbose` and error messages never contain credentials.
 - The OAuth callback server accepts only the registered callback path and answers with
   static HTML. It sends a `state` value, and it ignores a callback that echoes a
-  different state. A callback without a `state` parameter is accepted in this version,
-  because Exact Online does not document the parameter and may not echo it. The window
-  is the login itself, a few minutes, on your own ngrok domain.
+  different state or no state at all. Exact Online does not document the parameter,
+  but it echoes it back verbatim.
 - The localhost mock override (`EXACTCLI_BASE_URL`) accepts only `http://localhost`,
   `http://127.0.0.1` or `http://[::1]`, and requires an explicit `EXACTCLI_ACCESS_TOKEN`,
   so a stored credential never reaches a mock.

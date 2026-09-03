@@ -171,12 +171,15 @@ describe('authorizationCodeFlow', () => {
     expect((await outcome).accessToken).toBe('acc')
   })
 
-  it('accepts a callback without state while STATE_REQUIRED is false', async () => {
+  it('answers 400 on a callback without state and keeps listening', async () => {
     const { outcome, callback } = await startFlow({ state: 'st4te' })
     mockTokenExchange()
 
-    await callback('code=c')
+    const res = await callback('code=c')
+    expect(res.status).toBe(400)
+    expect(await res.text()).toMatch(/State mismatch/)
 
+    await callback('code=c&state=st4te')
     expect((await outcome).accessToken).toBe('acc')
   })
 
