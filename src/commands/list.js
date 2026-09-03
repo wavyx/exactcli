@@ -1,6 +1,7 @@
 import { Args, Flags } from '@oclif/core'
 import BaseCommand from '../base-command.js'
-import { autoColumns, divisionPath } from '../lib/odata.js'
+import { autoColumns, buildQuery } from '../lib/odata.js'
+import { defaultColumns, resolvePath, warnUnknown } from '../lib/catalog.js'
 import { collectListing, listingFlags } from '../lib/listing.js'
 
 export default class ListCommand extends BaseCommand {
@@ -27,10 +28,26 @@ export default class ListCommand extends BaseCommand {
 
   async run() {
     const { args } = await this.parse(ListCommand)
-    const path = divisionPath(this.resolveDivision(), args.resource, {
-      beta: this.flags.beta,
-    })
-    const data = await collectListing(this, path)
-    await this.outputResults(data, autoColumns(data))
+    const { path, resource } = resolvePath(
+      this.resolveDivision(),
+      args.resource,
+      { beta: this.flags.beta },
+    )
+    warnUnknown(args.resource, resource)
+
+    // A known resource without an explicit projection gets the catalogue
+    // columns as $select: lighter answers and a readable table. --raw keeps
+    // the envelope, --fields and --select already say what to fetch.
+    const { select, fields, raw } = this.flags
+    const query = buildQuery(this.flags)
+    let columns
+    const defaults = resource ? defaultColumns(resource) : []
+    if (defaults.length > 0 && !select && !fields && !raw) {
+      query.$select = defaults.join(',')
+      columns = Object.fromEntries(defaults.map((c) => [c, { header: c }]))
+    }
+
+    const data = await collectListing(this, path, query)
+    await this.outputResults(data, columns ?? autoColumns(data))
   }
 }

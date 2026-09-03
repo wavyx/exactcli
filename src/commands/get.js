@@ -4,11 +4,11 @@ import { CliError } from '../lib/errors.js'
 import {
   autoColumns,
   buildQuery,
-  divisionPath,
   normalize,
   odataFlags,
   unwrap,
 } from '../lib/odata.js'
+import { keyType, resolvePath, warnUnknown } from '../lib/catalog.js'
 
 const GUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -25,7 +25,7 @@ export default class GetCommand extends BaseCommand {
 
   static examples = [
     '<%= config.bin %> get crm/Accounts 8f4b0e2a-1c3d-4e5f-9a7b-2c1d3e4f5a6b',
-    '<%= config.bin %> get financial/GLAccounts 700',
+    '<%= config.bin %> get system/Divisions 123456',
     '<%= config.bin %> get crm/Accounts <id> --select Code,Name --output json',
   ]
 
@@ -36,7 +36,7 @@ export default class GetCommand extends BaseCommand {
     }),
     id: Args.string({
       required: true,
-      description: 'Record key: a GUID, or a plain key such as 700',
+      description: 'Record key: a GUID, or a plain key such as 123456',
     }),
   }
 
@@ -51,9 +51,29 @@ export default class GetCommand extends BaseCommand {
     const { args } = await this.parse(GetCommand)
     const { beta, expand, raw, select } = this.flags
 
+    const { path: basePath, resource } = resolvePath(
+      this.resolveDivision(),
+      args.resource,
+      { beta },
+    )
+    warnUnknown(args.resource, resource)
+
     // Exact Online keys a GUID column as guid'...'; every other key type
-    // (a number, an enum) goes into the parentheses as it is.
+    // (a number, an enum) goes into the parentheses as it is. The catalogue
+    // says which one the resource wants; an unknown resource keeps the guess.
     const isGuid = GUID_RE.test(args.id)
+    const wanted = resource ? keyType(resource) : undefined
+    if (wanted === 'guid' && !isGuid) {
+      throw new CliError(`Record key of ${args.resource} must be a GUID`, {
+        exitCode: 64,
+      })
+    }
+    if (wanted === 'plain' && isGuid) {
+      throw new CliError(
+        `Record key of ${args.resource} must be a plain key (letters, digits, _ . : -)`,
+        { exitCode: 64 },
+      )
+    }
     if (!isGuid && !PLAIN_KEY_RE.test(args.id)) {
       throw new CliError(
         'Record key must be a GUID or a plain key (letters, digits, _ . : -)',
@@ -61,11 +81,7 @@ export default class GetCommand extends BaseCommand {
       )
     }
     const key = isGuid ? `(guid'${args.id}')` : `(${args.id})`
-    const path = divisionPath(
-      this.resolveDivision(),
-      `${args.resource}${key}`,
-      { beta },
-    )
+    const path = `${basePath}${key}`
 
     const body = await this.apiClient.get(path, {
       query: buildQuery({ select, expand }),

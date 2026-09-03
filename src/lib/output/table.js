@@ -29,9 +29,10 @@ export function formatTable(data, columns) {
   for (const row of data) {
     table.push(
       entries.map(([fieldKey, col]) => {
-        if (col.get) return String(col.get(row) ?? '')
+        // Exact pads codes with spaces to a fixed width: trim for the eye.
+        if (col.get) return String(col.get(row) ?? '').trim()
         const value = row[col.key ?? fieldKey]
-        return value != null ? String(value) : ''
+        return value != null ? String(value).trim() : ''
       }),
     )
   }

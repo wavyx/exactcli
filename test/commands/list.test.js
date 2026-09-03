@@ -13,6 +13,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apiBase, mockApi, runCmd } from '../helpers.js'
+import { defaultColumns, findResource } from '../../src/lib/catalog.js'
 
 const TMP_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'exactcli-list-test-'))
 
@@ -21,6 +22,8 @@ const { default: ListCommand } = await import('../../src/commands/list.js')
 const BASE = apiBase()
 const ACCOUNTS_PATH = '/api/v1/123/crm/Accounts'
 const BETA_ACCOUNTS_PATH = '/api/v1/beta/123/crm/Accounts'
+/** The $select the command adds for a known resource without --select. */
+const SELECT = defaultColumns(findResource('crm/Accounts')).join(',')
 
 /** @param {object} [overrides] */
 function account(overrides = {}) {
@@ -73,6 +76,7 @@ describe('list', () => {
   it('reads one page and normalizes the rows', async () => {
     const scope = mockApi()
       .get(ACCOUNTS_PATH)
+      .query({ $select: SELECT })
       .reply(200, { d: { results: [account(), account({ Code: '1002' })] } })
 
     const stdout = await runCmd(ListCommand, [
@@ -99,6 +103,7 @@ describe('list', () => {
     // --limit the walk must stop after page one.
     const scope = mockApi()
       .get(ACCOUNTS_PATH)
+      .query({ $select: SELECT })
       .reply(200, {
         d: {
           results: [account()],
@@ -130,6 +135,7 @@ describe('list', () => {
   it('stays quiet on stderr when the collection is exhausted', async () => {
     mockApi()
       .get(ACCOUNTS_PATH)
+      .query({ $select: SELECT })
       .reply(200, { d: { results: [account()] } })
 
     const stderr = captureStderr()
@@ -184,7 +190,7 @@ describe('list', () => {
   it('--limit collects across pages and truncates to the limit', async () => {
     const scope = mockApi()
       .get(ACCOUNTS_PATH)
-      .query({ $top: '2' })
+      .query({ $top: '2', $select: SELECT })
       .reply(200, {
         d: {
           results: [account({ Code: '1' }), account({ Code: '2' })],
@@ -228,7 +234,7 @@ describe('list', () => {
     // out, so the second page must stay unrequested.
     mockApi()
       .get(ACCOUNTS_PATH)
-      .query({ $top: '2' })
+      .query({ $top: '2', $select: SELECT })
       .reply(200, {
         d: {
           results: [account({ Code: '1' }), account({ Code: '2' })],
@@ -267,6 +273,7 @@ describe('list', () => {
   it('--limit alone truncates inside the first page', async () => {
     const scope = mockApi()
       .get(ACCOUNTS_PATH)
+      .query({ $select: SELECT })
       .reply(200, {
         d: { results: [account({ Code: '1' }), account({ Code: '2' })] },
       })
@@ -289,7 +296,7 @@ describe('list', () => {
     // --limit 100 at a page size of 2 asks for 50 pages; --max-pages 1 wins.
     const scope = mockApi()
       .get(ACCOUNTS_PATH)
-      .query({ $top: '2' })
+      .query({ $top: '2', $select: SELECT })
       .reply(200, {
         d: {
           results: [account({ Code: '1' }), account({ Code: '2' })],
@@ -324,6 +331,7 @@ describe('list', () => {
   it('--all follows every page', async () => {
     const scope = mockApi()
       .get(ACCOUNTS_PATH)
+      .query({ $select: SELECT })
       .reply(200, {
         d: {
           results: [account({ Code: '1' })],
@@ -357,6 +365,7 @@ describe('list', () => {
   it('--all stops at --max-pages and reports the rest on stderr', async () => {
     const scope = mockApi()
       .get(ACCOUNTS_PATH)
+      .query({ $select: SELECT })
       .reply(200, {
         d: {
           results: [account({ Code: '1' })],
@@ -408,6 +417,7 @@ describe('list', () => {
   it('--beta reads the beta path', async () => {
     const scope = mockApi()
       .get(BETA_ACCOUNTS_PATH)
+      .query({ $select: SELECT })
       .reply(200, { d: { results: [account()] } })
 
     await runCmd(ListCommand, [
@@ -425,6 +435,7 @@ describe('list', () => {
   it('derives the table columns from the rows', async () => {
     mockApi()
       .get(ACCOUNTS_PATH)
+      .query({ $select: SELECT })
       .reply(200, { d: { results: [account()] } })
 
     const stdout = await runCmd(ListCommand, [
@@ -452,5 +463,64 @@ describe('list', () => {
     const err = await ListCommand.run(['crm/Accounts']).catch((e) => e)
     expect(err.exitCode ?? err.oclif?.exit).toBe(78)
     expect(err.message).toMatch(/No division configured/)
+  })
+  it('selects the default columns of a known resource and shows them', async () => {
+    const scope = mockApi()
+      .get(ACCOUNTS_PATH)
+      .query({ $select: SELECT })
+      .reply(200, { d: { results: [account()] } })
+    process.stdout.isTTY = true
+
+    const stdout = await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--division',
+      '123',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(stdout).toMatch(/Code/)
+    expect(stdout).toMatch(/Acme BE/)
+  })
+
+  it('keeps every field when --fields is given', async () => {
+    const scope = mockApi()
+      .get(ACCOUNTS_PATH)
+      .reply(200, { d: { results: [account()] } })
+
+    const stdout = await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--division',
+      '123',
+      '--fields',
+      'Code',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(JSON.parse(stdout)).toEqual([{ Code: '1001' }])
+  })
+
+  it('warns on stderr for an unknown resource and still sends the request', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/crm/Nope')
+      .reply(200, { d: { results: [] } })
+    const stderr = captureStderr()
+    try {
+      await runCmd(ListCommand, [
+        'crm/Nope',
+        '--division',
+        '123',
+        '--output',
+        'json',
+      ])
+    } finally {
+      stderr.restore()
+    }
+
+    expect(scope.isDone()).toBe(true)
+    expect(stderr.text()).toMatch(
+      /^Unknown resource crm\/Nope \(not in the catalogue of \d{4}-\d{2}-\d{2}\)\. Sending anyway\.\n/,
+    )
   })
 })

@@ -58,4 +58,12 @@ describe('formatTable', () => {
     const cols = { val: { header: 'Val', get: () => null } }
     expect(formatTable([{ id: 1 }], cols)).toContain('Val')
   })
+  it('trims padded string cells', () => {
+    const result = formatTable([{ id: 1, name: '                 2' }], {
+      id: { header: 'ID' },
+      name: { header: 'Name', get: (row) => row.name },
+    })
+    expect(result).not.toMatch(/ {17}2/)
+    expect(result).toMatch(/\u2502 2 +\u2502/)
+  })
 })

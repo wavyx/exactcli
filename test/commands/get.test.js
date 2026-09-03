@@ -79,11 +79,11 @@ describe('get', () => {
 
   it('passes a non-GUID key through unquoted', async () => {
     const scope = mockApi()
-      .get('/api/v1/123/financial/GLAccounts(700)')
+      .get('/api/v1/123/custom/Things(700)')
       .reply(200, { d: { ID: 700, Code: '700' } })
 
     await runCmd(GetCommand, [
-      'financial/GLAccounts',
+      'custom/Things',
       '700',
       '--division',
       '123',
@@ -202,7 +202,7 @@ describe('get', () => {
 
   it('rejects a key with unsafe characters with exit 64', async () => {
     const err = await GetCommand.run([
-      'crm/Accounts',
+      'custom/Things',
       "700') or 1 eq 1--",
       '--division',
       '123',
@@ -215,11 +215,11 @@ describe('get', () => {
 
   it('accepts a plain key that carries a dot, a colon or a dash', async () => {
     const scope = mockApi()
-      .get('/api/v1/123/financial/GLAccounts(7.0:0-1_2)')
+      .get('/api/v1/123/custom/Things(7.0:0-1_2)')
       .reply(200, { d: { ID: 1 } })
 
     await runCmd(GetCommand, [
-      'financial/GLAccounts',
+      'custom/Things',
       '7.0:0-1_2',
       '--division',
       '123',
@@ -234,5 +234,44 @@ describe('get', () => {
     const err = await GetCommand.run(['crm/Accounts', GUID]).catch((e) => e)
     expect(err.exitCode ?? err.oclif?.exit).toBe(78)
     expect(err.message).toMatch(/No division configured/)
+  })
+  it('rejects a non-GUID key for a GUID-keyed resource with exit 64', async () => {
+    const err = await GetCommand.run([
+      'crm/Accounts',
+      '700',
+      '--division',
+      '123',
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(/Record key of crm\/Accounts must be a GUID/)
+  })
+
+  it('sends a plain key unquoted for an integer-keyed resource', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/system/Divisions(123)')
+      .reply(200, { d: { Code: 123, Description: 'Acme' } })
+
+    const stdout = await runCmd(GetCommand, [
+      'system/Divisions',
+      '123',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(JSON.parse(stdout).Code).toBe(123)
+  })
+
+  it('rejects a GUID for an integer-keyed resource with exit 64', async () => {
+    const err = await GetCommand.run([
+      'system/Divisions',
+      GUID,
+      '--division',
+      '123',
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(/plain key/)
   })
 })

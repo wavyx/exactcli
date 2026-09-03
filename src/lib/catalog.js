@@ -211,3 +211,18 @@ export function resolvePath(
   }
   return { path: divisionPath(division, rest, { beta: isBeta }), resource }
 }
+
+/**
+ * Tell the user on stderr that a path is not in the catalogue. The request
+ * still goes out: Exact adds resources before the documentation follows.
+ * @param {string} ref
+ * @param {object | undefined} resource
+ * @param {object} [catalog]
+ */
+export function warnUnknown(ref, resource, catalog = loadCatalog()) {
+  if (resource) return
+  const date = catalog.generatedAt.slice(0, 10)
+  process.stderr.write(
+    `Unknown resource ${ref} (not in the catalogue of ${date}). Sending anyway.\n`,
+  )
+}
