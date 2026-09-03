@@ -24,6 +24,17 @@ import transactionLine from './descriptors/transaction-line.js'
 import account from './descriptors/account.js'
 import glAccount from './descriptors/gl-account.js'
 import document from './descriptors/document.js'
+import journal from './descriptors/journal.js'
+import vatCode from './descriptors/vat-code.js'
+import item from './descriptors/item.js'
+import contact from './descriptors/contact.js'
+import salesInvoice from './descriptors/sales-invoice.js'
+import purchaseInvoice from './descriptors/purchase-invoice.js'
+import bankEntry from './descriptors/bank-entry.js'
+import journalEntry from './descriptors/journal-entry.js'
+import receivable from './descriptors/receivable.js'
+import paymentCondition from './descriptors/payment-condition.js'
+import documentType from './descriptors/document-type.js'
 
 /**
  * One file per descriptor under ./descriptors/: a new typed command adds a
@@ -37,6 +48,17 @@ export const descriptors = {
   account,
   glAccount,
   document,
+  journal,
+  vatCode,
+  item,
+  contact,
+  salesInvoice,
+  purchaseInvoice,
+  bankEntry,
+  journalEntry,
+  receivable,
+  paymentCondition,
+  documentType,
 }
 
 /**

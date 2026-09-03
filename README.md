@@ -76,19 +76,32 @@ with `list`, `get` and `api`: pass the `service/Resource` path, for example
 
 ## Commands
 
-| Topic            | Commands                                                                    |
-| ---------------- | --------------------------------------------------------------------------- |
-| auth             | `login`, `logout`, `status`                                                 |
-| profile          | `list`, `use`, `current`                                                    |
-| config           | `get`, `set`, `list`, `unset`                                               |
-| division         | `list`, `use`, `current`                                                    |
-| sales-entry      | `list`                                                                      |
-| purchase-entry   | `list`                                                                      |
-| transaction-line | `list`                                                                      |
-| account          | `list`                                                                      |
-| gl-account       | `list`                                                                      |
-| document         | `list`, `download`                                                          |
-| (root)           | `me`, `list`, `get`, `api`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
+| Topic             | Commands                                                                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| auth              | `login`, `logout`, `status`                                                                                          |
+| profile           | `list`, `use`, `current`                                                                                             |
+| config            | `get`, `set`, `list`, `unset`                                                                                        |
+| division          | `list`, `use`, `current`                                                                                             |
+| account           | `list`                                                                                                               |
+| contact           | `list`                                                                                                               |
+| item              | `list`                                                                                                               |
+| gl-account        | `list`                                                                                                               |
+| journal           | `list`                                                                                                               |
+| vat-code          | `list`                                                                                                               |
+| payment-condition | `list`                                                                                                               |
+| sales-entry       | `list`                                                                                                               |
+| purchase-entry    | `list`                                                                                                               |
+| transaction-line  | `list`                                                                                                               |
+| journal-entry     | `list`, `create`                                                                                                     |
+| bank-entry        | `list`                                                                                                               |
+| sales-invoice     | `list`                                                                                                               |
+| purchase-invoice  | `list`                                                                                                               |
+| invoice           | `create`                                                                                                             |
+| receivable        | `list`                                                                                                               |
+| document          | `list`, `download`, `create`                                                                                         |
+| document-type     | `list`                                                                                                               |
+| sync              | `sync <resource>`, `timestamp`                                                                                       |
+| (root)            | `me`, `list`, `get`, `create`, `update`, `delete`, `deleted`, `api`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
 
 Full reference with every flag: [docs/commands.md](docs/commands.md) or
 `exactcli <command> --help`.
@@ -117,21 +130,46 @@ resource. A path that is not in the catalogue still goes out, with a warning.
 
 ## Typed commands
 
-Typed commands add readable columns and filters that know the accounting fields:
+Typed commands add readable columns and filters that know the accounting fields.
+Every one of them is a small descriptor in `src/lib/typed/descriptors/`; adding one is
+a matter of minutes. Reads:
 
 ```sh
-exactcli transaction-line list --year 2026 --period 9 --gl-account 700000
-exactcli transaction-line list --from 2026-01-01 --to 2026-01-31 --account 1001
 exactcli account list --search acme --customer yes
+exactcli contact list --account 1001 --since 2026-01-01
+exactcli item list --search widget --sales yes
 exactcli gl-account list --type 12
-exactcli document list --from 2026-01-01 --type 10
-exactcli document download <document-id> --out ./attachments
+exactcli journal list --type 20
+exactcli vat-code list --type E --blocked no
+exactcli payment-condition list --method B --days 30
+exactcli transaction-line list --year 2026 --period 9 --gl-account 700000
+exactcli transaction-line list --journal 800 --from 2026-01-01 --to 2026-01-31
 exactcli sales-entry list --limit 200 --output json
+exactcli journal-entry list --journal 800 --year 2026
+exactcli bank-entry list --journal 500 --year 2026
+exactcli sales-invoice list --customer 1001 --from 2026-01-01 --status 20
+exactcli purchase-invoice list --supplier 2001 --from 2026-01-01
+exactcli receivable list --status 20 --due-to 2026-09-30
+exactcli document list --from 2026-01-01 --type 10
+exactcli document-type list --creatable yes
+exactcli document download <document-id> --out ./attachments
 ```
 
-`--account` takes a GUID or a code; a code is looked up on `crm/Accounts`. A free
-`--filter` combines with the typed filters. Every typed command is a small
-descriptor in `src/lib/typed/descriptors.js`; adding one is a matter of minutes.
+`--account`, `--customer` and `--supplier` take a GUID or a code; a code is looked up on
+`crm/Accounts`. A free `--filter` combines with the typed filters.
+
+Typed writes build the nested bodies of Exact from codes (all behind `--allow-writes`):
+
+```sh
+exactcli invoice create --customer 1001 --journal 700 --line Default:2:100 --dry-run
+exactcli invoice create --customer 1001 --journal 700 --line Default:2:100 --allow-writes
+exactcli journal-entry create --journal 800 --line 499000:50:Rent --line 580600:-50 --allow-writes
+exactcli document create --subject "Contract 2026" --type 183 --account 1001 --file contract.pdf --allow-writes
+```
+
+`invoice create` needs a customer (`IsSales` true) and an item per line. `journal-entry
+create` checks that the lines balance before it sends anything; the amounts go to
+`AmountFC`. `document create` reads the files first and posts one attachment per file.
 
 ## Writes
 

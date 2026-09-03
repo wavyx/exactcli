@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-09-03
+
+Catalogue date: 2026-08-19 (435 resources).
+
+### Added
+
+- Typed lists: `journal`, `vat-code`, `item`, `contact`, `sales-invoice`,
+  `purchase-invoice`, `bank-entry`, `journal-entry`, `receivable`,
+  `payment-condition`, `document-type`. Each is an MCP tool too.
+- Typed writes from codes: `invoice create`, `journal-entry create` (balanced lines,
+  `AmountFC`), `document create --file` (document plus attachments).
+- `document download` fetches the bytes through the attachment Url with `Download=1`.
+
+### Fixed
+
+- `auth status` refreshes a token past its refresh point before the identity probe.
+- Reference lookups select the label field the resource has (`Description` on a
+  ledger account or an item).
+
 ## [0.3.0] - 2026-09-03
 
 Catalogue date: 2026-08-19 (435 resources).
@@ -68,6 +87,7 @@ First release.
 
 - The production launcher reads no `.env` file. Export the variables in your shell.
 
+[0.4.0]: https://github.com/wavyx/exactcli/releases/tag/v0.4.0
 [0.3.0]: https://github.com/wavyx/exactcli/releases/tag/v0.3.0
 [0.2.0]: https://github.com/wavyx/exactcli/releases/tag/v0.2.0
 [0.1.0]: https://github.com/wavyx/exactcli/releases/tag/v0.1.0

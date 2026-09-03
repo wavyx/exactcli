@@ -1,6 +1,6 @@
 {
   "name": "@wavyx/exactcli",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publishConfig": {
     "access": "public"
   },
@@ -82,6 +82,42 @@
       },
       "sync": {
         "description": "Incremental reads (the sync API)"
+      },
+      "journal": {
+        "description": "Journals (cash, bank, sales, purchase, general)"
+      },
+      "vat-code": {
+        "description": "VAT codes"
+      },
+      "item": {
+        "description": "Items (products and services)"
+      },
+      "contact": {
+        "description": "Contacts (the persons of an account)"
+      },
+      "sales-invoice": {
+        "description": "Sales invoices (invoices sent to customers)"
+      },
+      "purchase-invoice": {
+        "description": "Purchase invoices (invoices received from suppliers)"
+      },
+      "bank-entry": {
+        "description": "Bank entries (bank statement headers)"
+      },
+      "journal-entry": {
+        "description": "General journal entries (manual bookings, OD)"
+      },
+      "receivable": {
+        "description": "Receivables (outstanding customer items)"
+      },
+      "payment-condition": {
+        "description": "Payment conditions"
+      },
+      "document-type": {
+        "description": "Document types (the Type codes of documents)"
+      },
+      "invoice": {
+        "description": "Sales invoices (create from codes)"
       }
     },
     "hooks": {
