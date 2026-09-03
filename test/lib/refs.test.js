@@ -10,7 +10,7 @@ import {
 import nock from 'nock'
 import { mockApi } from '../helpers.js'
 import { createClient } from '../../src/lib/client.js'
-import { GUID_RE, padCode, resolveRef } from '../../src/lib/refs.js'
+import { GUID_RE, labelField, padCode, resolveRef } from '../../src/lib/refs.js'
 
 const GUID = '11111111-1111-1111-1111-111111111111'
 const PATH = '/api/v1/123/crm/Accounts'
@@ -43,6 +43,16 @@ describe('padCode', () => {
   it('right-aligns digits in 18 characters and leaves other codes alone', () => {
     expect(padCode('2')).toBe('                 2')
     expect(padCode('ACME')).toBe('ACME')
+  })
+})
+
+describe('labelField', () => {
+  it('names the field that labels a record, per the catalogue', () => {
+    expect(labelField('crm/Accounts')).toBe('Name')
+    expect(labelField('financial/GLAccounts')).toBe('Description')
+    expect(labelField('logistics/Items')).toBe('Description')
+    expect(labelField('crm/Contacts')).toBe('Code')
+    expect(labelField('custom/Things')).toBe('Name')
   })
 })
 
@@ -129,5 +139,21 @@ describe('resolveRef', () => {
     expect(err.message).toMatch(
       /Ambiguous code DUP on crm\/Accounts: Acme \(.*\), Globex/,
     )
+  })
+
+  it('selects Description instead of Name on a ledger account', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/financial/GLAccounts')
+      .query({
+        $filter: "Code eq '700000'",
+        $select: 'ID,Code,Description',
+        $top: '2',
+      })
+      .reply(200, {
+        d: { results: [{ ID: GUID, Code: '700000', Description: 'Sales' }] },
+      })
+
+    expect(await resolveRef(cmd, 'financial/GLAccounts', '700000')).toBe(GUID)
+    expect(scope.isDone()).toBe(true)
   })
 })

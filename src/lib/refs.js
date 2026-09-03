@@ -1,4 +1,4 @@
-import { keyType } from './catalog.js'
+import { findResource, keyType } from './catalog.js'
 import { CliError } from './errors.js'
 import { divisionPath, unwrap } from './odata.js'
 
@@ -57,13 +57,24 @@ export const padCode = (code) =>
 /** @param {string} value @returns {string} */
 export const quote = (value) => `'${String(value).replace(/'/g, "''")}'`
 
-async function lookup(cmd, path, code) {
+/**
+ * The field that names a record: `Name` on an account, `Description` on a
+ * ledger account or an item. Asking for a field a resource lacks is a 400.
+ * @param {string} resource
+ * @returns {string}
+ */
+export function labelField(resource) {
+  const names = new Set(
+    (findResource(resource)?.properties ?? []).map((p) => p.name),
+  )
+  if (names.size === 0 || names.has('Name')) return 'Name'
+  return names.has('Description') ? 'Description' : 'Code'
+}
+
+async function lookup(cmd, path, code, label) {
+  const select = [...new Set(['ID', 'Code', label])].join(',')
   const body = await cmd.apiClient.get(path, {
-    query: {
-      $filter: `Code eq ${quote(code)}`,
-      $select: 'ID,Code,Name',
-      $top: 2,
-    },
+    query: { $filter: `Code eq ${quote(code)}`, $select: select, $top: 2 },
   })
   const rows = unwrap(body)
   return Array.isArray(rows) ? rows : []
@@ -80,15 +91,16 @@ async function lookup(cmd, path, code) {
 export async function resolveRef(cmd, resource, value) {
   if (GUID_RE.test(value)) return value
   const path = divisionPath(cmd.resolveDivision(), resource)
-  let rows = await lookup(cmd, path, value)
+  const label = labelField(resource)
+  let rows = await lookup(cmd, path, value, label)
   if (rows.length === 0 && padCode(value) !== value) {
-    rows = await lookup(cmd, path, padCode(value))
+    rows = await lookup(cmd, path, padCode(value), label)
   }
   if (rows.length === 0) {
     throw new CliError(`No ${resource} with Code ${value}`, { exitCode: 65 })
   }
   if (rows.length > 1) {
-    const names = rows.map((r) => `${r.Name} (${r.ID})`).join(', ')
+    const names = rows.map((r) => `${r[label]} (${r.ID})`).join(', ')
     throw new CliError(`Ambiguous code ${value} on ${resource}: ${names}`, {
       exitCode: 65,
     })
