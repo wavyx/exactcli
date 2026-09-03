@@ -79,6 +79,9 @@
       },
       "document": {
         "description": "Documents and attachments"
+      },
+      "sync": {
+        "description": "Incremental reads (the sync API)"
       }
     },
     "hooks": {
