@@ -3,7 +3,7 @@ import BaseCommand from '../../base-command.js'
 import { CliError } from '../errors.js'
 import { buildQuery, divisionPath } from '../odata.js'
 import { collectListing, listingFlags, visibleColumns } from '../listing.js'
-import { quote, resolveRef } from '../refs.js'
+import { padCode, quote, resolveRef } from '../refs.js'
 import { columnsOf } from './descriptors.js'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -53,8 +53,10 @@ export function renderValue(type, value) {
  */
 export function renderClause(filter, value) {
   if (filter.type === 'search') {
+    // Digits mean a code. Exact stores numeric codes padded, so an exact
+    // match needs the padded form (verified live on crm/Accounts).
     return /^\d+$/.test(value)
-      ? `Code eq ${quote(value)}`
+      ? `Code eq ${quote(padCode(value))}`
       : `substringof(${quote(value)}, ${filter.field})`
   }
   return `${filter.field} ${filter.op ?? 'eq'} ${renderValue(filter.type, value)}`

@@ -10,7 +10,7 @@ import {
 import nock from 'nock'
 import { mockApi } from '../helpers.js'
 import { createClient } from '../../src/lib/client.js'
-import { GUID_RE, resolveRef } from '../../src/lib/refs.js'
+import { GUID_RE, padCode, resolveRef } from '../../src/lib/refs.js'
 
 const GUID = '11111111-1111-1111-1111-111111111111'
 const PATH = '/api/v1/123/crm/Accounts'
@@ -37,6 +37,13 @@ beforeEach(() => {
 afterEach(() => {
   nock.cleanAll()
   nock.enableNetConnect()
+})
+
+describe('padCode', () => {
+  it('right-aligns digits in 18 characters and leaves other codes alone', () => {
+    expect(padCode('2')).toBe('                 2')
+    expect(padCode('ACME')).toBe('ACME')
+  })
 })
 
 describe('resolveRef', () => {

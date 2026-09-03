@@ -92,7 +92,7 @@ describe('renderClause', () => {
       "substringof('acme', Name)",
     )
     expect(renderClause({ field: 'Name', type: 'search' }, '1001')).toBe(
-      "Code eq '1001'",
+      "Code eq '              1001'",
     )
   })
 })
@@ -205,7 +205,7 @@ describe('defineListCommand', () => {
       .query({
         $select: SELECT,
         $orderby: 'Name asc',
-        $filter: "Code eq '1001'",
+        $filter: "Code eq '              1001'",
       })
       .reply(200, { d: { results: [] } })
 

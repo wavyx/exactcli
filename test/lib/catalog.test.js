@@ -129,6 +129,26 @@ describe('field helpers', () => {
   })
 })
 
+describe('defaultColumns and dates', () => {
+  const res = (names) => ({
+    keys: [],
+    properties: names.map((name) => ({ name, type: 'Edm.DateTime' })),
+  })
+
+  it('takes the known dates in order and drops the others', () => {
+    expect(
+      defaultColumns(res(['EndDate', 'Modified', 'ControlledDate', 'Created'])),
+    ).toEqual(['Created', 'Modified', 'EndDate', 'ControlledDate'])
+  })
+
+  it('takes the first date only when none is known', () => {
+    expect(defaultColumns(res(['EndDate', 'StartDate']))).toEqual([
+      'EndDate',
+      'StartDate',
+    ])
+  })
+})
+
 describe('validateDescriptor', () => {
   it('accepts a descriptor whose columns and filter fields exist', () => {
     expect(() =>

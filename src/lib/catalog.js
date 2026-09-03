@@ -21,6 +21,16 @@ const NAME_ORDER = [
   'Status',
   'StatusDescription',
 ]
+/** Dates a reader wants when the resource has them; other dates are noise. */
+const DATE_ORDER = [
+  'Date',
+  'EntryDate',
+  'DocumentDate',
+  'InvoiceDate',
+  'OrderDate',
+  'Created',
+  'Modified',
+]
 const AMOUNT_RE = /Amount|Total|Price|Quantity/
 const MAX_COLUMNS = 8
 /** Search ranking: the family a user wants first when names tie. */
@@ -142,7 +152,8 @@ export const keyType = (res) =>
 
 /**
  * The columns a table shows by default: keys, then the names a reader looks
- * for, then dates, then amounts, then the rest, eight at most.
+ * for, then the known dates (or the first date when none is known), then
+ * amounts, then the rest, eight at most.
  * @param {object} res
  * @returns {string[]}
  */
@@ -155,7 +166,9 @@ export function defaultColumns(res) {
   }
   res.keys.forEach(take)
   NAME_ORDER.forEach(take)
-  props.filter((p) => p.type === DATE_TYPE).forEach((p) => take(p.name))
+  const dates = props.filter((p) => p.type === DATE_TYPE).map((p) => p.name)
+  const knownDates = DATE_ORDER.filter((d) => dates.includes(d))
+  ;(knownDates.length ? knownDates : dates.slice(0, 1)).forEach(take)
   props.filter((p) => AMOUNT_RE.test(p.name)).forEach((p) => take(p.name))
   names.forEach(take)
   return picked.slice(0, MAX_COLUMNS)

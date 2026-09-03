@@ -7,6 +7,15 @@ export const GUID_RE =
 /** Exact stores a numeric code right-aligned in a field this wide. */
 const CODE_WIDTH = 18
 
+/**
+ * A numeric code as Exact stores it: right-aligned in 18 characters. Any
+ * other code is returned as it is.
+ * @param {string} code
+ * @returns {string}
+ */
+export const padCode = (code) =>
+  /^\d+$/.test(code) ? code.padStart(CODE_WIDTH, ' ') : code
+
 /** @param {string} value @returns {string} */
 export const quote = (value) => `'${String(value).replace(/'/g, "''")}'`
 
@@ -34,8 +43,8 @@ export async function resolveRef(cmd, resource, value) {
   if (GUID_RE.test(value)) return value
   const path = divisionPath(cmd.resolveDivision(), resource)
   let rows = await lookup(cmd, path, value)
-  if (rows.length === 0 && /^\d+$/.test(value)) {
-    rows = await lookup(cmd, path, value.padStart(CODE_WIDTH, ' '))
+  if (rows.length === 0 && padCode(value) !== value) {
+    rows = await lookup(cmd, path, padCode(value))
   }
   if (rows.length === 0) {
     throw new CliError(`No ${resource} with Code ${value}`, { exitCode: 65 })
