@@ -28,11 +28,20 @@ export default class List extends BaseCommand {
   static flags = { ...listingFlags }
 
   async run() {
-    const path = divisionPath(this.resolveDivision(), 'hrm/Divisions')
+    const active = this.resolveDivision()
+    const path = divisionPath(active, 'hrm/Divisions')
     const data = await collectListing(this, path)
+    // The mark is a table column only: the rows stay as Exact sent them.
+    const columns = {
+      ...COLUMNS,
+      Active: {
+        header: 'Active',
+        get: (row) => (Number(row.Code) === active ? 'yes' : ''),
+      },
+    }
     await this.outputResults(
       data,
-      visibleColumns(COLUMNS, data, this.flags.select),
+      visibleColumns(columns, data, this.flags.select),
     )
   }
 }

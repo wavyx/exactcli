@@ -240,4 +240,24 @@ describe('division list', () => {
     expect(err.exitCode ?? err.oclif?.exit).toBe(78)
     expect(err.message).toMatch(/No division configured/)
   })
+  it('marks the active division in the table', async () => {
+    mockApi()
+      .get(DIVISIONS_PATH)
+      .reply(200, {
+        d: {
+          results: [
+            division(),
+            division({ Code: '124', Description: 'Acme NL' }),
+          ],
+        },
+      })
+    process.stdout.isTTY = true
+
+    const stdout = await runCmd(List, ['--division', '123'])
+
+    const rows = stdout.split('\n').filter((line) => /Acme/.test(line))
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatch(/Acme BE.*yes/)
+    expect(rows[1]).not.toMatch(/yes/)
+  })
 })
