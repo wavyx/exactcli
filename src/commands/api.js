@@ -56,7 +56,7 @@ export default class ApiCommand extends BaseCommand {
     path: Args.string({
       required: true,
       description:
-        'Resource path (crm/Accounts), a full /api/ path, or a path with {division}',
+        'Resource path (crm/Accounts or current/Me), a full /api/ path, or a path with {division}',
     }),
   }
 
@@ -81,7 +81,8 @@ export default class ApiCommand extends BaseCommand {
 
   /**
    * Where to send the request. `{division}` wins, a full `/api/` path travels
-   * as it is, and anything else is a resource path under the division.
+   * as it is, `current/...` has no division, and anything else is a resource
+   * path under the division.
    * @param {string} rawPath
    * @returns {string}
    */
@@ -90,6 +91,7 @@ export default class ApiCommand extends BaseCommand {
       return substituteDivision(rawPath, this.resolveDivision())
     }
     if (rawPath.startsWith('/api/')) return rawPath
+    if (rawPath.startsWith('current/')) return `/api/v1/${rawPath}`
     return divisionPath(this.resolveDivision(), rawPath)
   }
 

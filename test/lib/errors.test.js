@@ -145,6 +145,18 @@ describe('ApiError', () => {
     expect(new ApiError(410, {}, '/x').exitCode).toBe(1)
   })
 
+  it('adds a hint on 403 WrongDivision', () => {
+    const err = new ApiError(
+      403,
+      { message: 'Forbidden - WrongDivision' },
+      '/x',
+    )
+    expect(err.exitCode).toBe(77)
+    expect(err.message).toBe(
+      'Exact Online API 403: Forbidden - WrongDivision. Run: exactcli config set division <code> (see exactcli me)',
+    )
+  })
+
   describe('.fromResponse', () => {
     it('parses a JSON body and creates an ApiError', () => {
       const text = JSON.stringify({
@@ -162,6 +174,14 @@ describe('ApiError', () => {
       expect(err.statusCode).toBe(502)
       expect(err.body).toEqual({ message: 'Bad Gateway' })
       expect(err.message).toBe('Exact Online API 502: Bad Gateway')
+    })
+
+    it('trims a padded text body', () => {
+      const text = `Status Code: 404; Not Found${' '.repeat(300)}`
+      const err = ApiError.fromResponse(404, text, '/x')
+      expect(err.message).toBe(
+        'Exact Online API 404: Status Code: 404; Not Found',
+      )
     })
 
     it('truncates huge non-JSON bodies (e.g. HTML error pages)', () => {

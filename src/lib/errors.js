@@ -58,8 +58,13 @@ export class ApiError extends CliError {
       (typeof body?.error === 'string' ? body.error : undefined) ??
       body?.message ??
       `API error ${statusCode}`
+    // A stale profile division is the first live footgun: point at the fix.
+    const hint =
+      statusCode === 403 && message.includes('WrongDivision')
+        ? '. Run: exactcli config set division <code> (see exactcli me)'
+        : ''
 
-    super(`Exact Online API ${statusCode}: ${message}`, {
+    super(`Exact Online API ${statusCode}: ${message}${hint}`, {
       exitCode: exitCodeForStatus(statusCode),
     })
     this.statusCode = statusCode
@@ -77,8 +82,11 @@ export class ApiError extends CliError {
     try {
       body = JSON.parse(text)
     } catch {
-      // Non-JSON bodies (e.g. HTML error pages) can be huge - truncate.
-      const truncated = text.length > 200 ? `${text.slice(0, 200)}...` : text
+      // Non-JSON bodies (e.g. HTML error pages) can be huge - truncate. Exact
+      // pads its plain-text 404 with spaces to a fixed width - trim.
+      const trimmed = text.trim()
+      const truncated =
+        trimmed.length > 200 ? `${trimmed.slice(0, 200)}...` : trimmed
       body = { message: truncated }
     }
     return new ApiError(statusCode, body, path)

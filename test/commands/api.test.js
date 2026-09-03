@@ -79,6 +79,22 @@ describe('api', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('sends current/... without the division prefix', async () => {
+    const scope = mockApi()
+      .get('/api/v1/current/Me')
+      .reply(200, { d: { results: [{ CurrentDivision: 123 }] } })
+
+    const stdout = await runCmd(ApiCommand, [
+      'GET',
+      'current/Me',
+      '--output',
+      'json',
+    ])
+
+    expect(JSON.parse(stdout).d.results[0].CurrentDivision).toBe(123)
+    expect(scope.isDone()).toBe(true)
+  })
+
   it('sends an /api/ path as it is and needs no division', async () => {
     const scope = mockApi()
       .get('/api/v1/current/Me')
