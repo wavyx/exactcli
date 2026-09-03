@@ -390,6 +390,7 @@ describe('rate-limit snapshot', () => {
     expect(api.lastRateLimit).toEqual({
       minutelyLimit: 60,
       minutelyRemaining: 57,
+      minutelyReset: undefined,
       limit: 5000,
       remaining: 4321,
       reset: NOW + 30_000,
@@ -404,10 +405,21 @@ describe('rate-limit snapshot', () => {
     expect(api.lastRateLimit).toEqual({
       minutelyLimit: undefined,
       minutelyRemaining: undefined,
+      minutelyReset: undefined,
       limit: undefined,
       remaining: undefined,
       reset: undefined,
     })
+  })
+
+  it('records the minutely reset header', async () => {
+    mockApi()
+      .get(ME)
+      .reply(200, { d: {} }, { 'x-ratelimit-minutely-reset': '1788442200000' })
+
+    const api = client()
+    await api.get(ME)
+    expect(api.lastRateLimit.minutelyReset).toBe(1788442200000)
   })
 })
 

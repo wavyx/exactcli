@@ -276,9 +276,21 @@ export function createClient({
         minutelyRemaining: numHeader(
           res.headers.get('x-ratelimit-minutely-remaining'),
         ),
+        minutelyReset: numHeader(res.headers.get('x-ratelimit-minutely-reset')),
         limit: numHeader(res.headers.get('x-ratelimit-limit')),
         remaining: numHeader(res.headers.get('x-ratelimit-remaining')),
         reset: numHeader(res.headers.get('x-ratelimit-reset')),
+      }
+      // --verbose turns this namespace on: the budget shows on stderr.
+      if (api.lastRateLimit.minutelyLimit !== undefined) {
+        const b = api.lastRateLimit
+        debug(
+          'rate limit minute %s/%s day %s/%s',
+          b.minutelyRemaining,
+          b.minutelyLimit,
+          b.remaining,
+          b.limit,
+        )
       }
 
       if (res.status === 429) {
