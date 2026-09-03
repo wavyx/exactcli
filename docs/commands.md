@@ -700,17 +700,20 @@ exactcli sales-entry list --limit 200 --output json
 
 ### `exactcli sync timestamp`
 
-Show the current sync timestamp per endpoint (read/sync/Sync/SyncTimestamp)
+Find the sync timestamp of a date for one feed, to start a sync from that date
 
 ```
 exactcli sync timestamp [flags]
 ```
 
+- `--endpoint <value>` _(required)_ - Feed name, for example Accounts or TransactionLines (the list: metadata read/sync/Sync/SyncTimestamp)
+- `--modified <value>` _(required)_ - Date (YYYY-MM-DD): the first timestamp at or after it
+
 Examples:
 
 ```bash
-exactcli sync timestamp
-exactcli sync timestamp --output json
+exactcli sync timestamp --endpoint Accounts --modified 2026-01-01
+exactcli sync timestamp --endpoint TransactionLines --modified 2026-01-01 --output json
 ```
 
 ## exactcli transaction-line

@@ -171,11 +171,13 @@ exactcli list crm/Accounts --bulk --all --output csv
 exactcli sync crm/Accounts --since 0                     # full first load
 exactcli sync crm/Accounts --state ./sync.json           # then only the changes
 exactcli deleted --state ./sync.json                     # and the deletions
-exactcli sync timestamp                                  # the server timestamps
+exactcli sync timestamp --endpoint Accounts --modified 2026-01-01   # start from a date
 ```
 
 `--state` remembers the last timestamp per resource and is written only after a
-complete walk. The next timestamp also prints on stderr.
+complete walk. The next timestamp also prints on stderr. `sync timestamp` turns a
+date into the timestamp to pass as `--since` for one feed (`Accounts`,
+`TransactionLines`, ...; the list is in `metadata read/sync/Sync/SyncTimestamp`).
 
 ## Profiles and divisions
 

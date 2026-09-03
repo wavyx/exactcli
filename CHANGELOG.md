@@ -13,8 +13,8 @@ Catalogue date: 2026-08-19 (435 resources).
 - `create`, `update`, `delete`: generic writes validated against the catalogue,
   with `--body`, repeatable `--set Key=value`, `@ref:` markers that resolve a code
   to a GUID, and `--dry-run`.
-- `sync <resource>`, `deleted`, `sync timestamp`: incremental reads with a
-  `--state` file that remembers the last timestamp.
+- `sync <resource>`, `deleted`: incremental reads with a `--state` file that
+  remembers the last timestamp; `sync timestamp` turns a date into a timestamp.
 - `list --bulk`: the bulk API, 1000 rows per page.
 - `exact_write` MCP tool, registered only under `--allow-writes`.
 
