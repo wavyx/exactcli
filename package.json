@@ -107,6 +107,7 @@
   "scripts": {
     "build": "oclif manifest",
     "docs:commands": "npm run build && node scripts/gen-commands.mjs",
+    "catalog:build": "node scripts/build-catalog.mjs",
     "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint --fix . && prettier --write .",
     "test": "vitest run",
