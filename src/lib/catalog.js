@@ -119,6 +119,7 @@ export function searchResources(word, catalog = loadCatalog()) {
       (a, b) =>
         a.score - b.score ||
         FAMILY_ORDER.indexOf(a.r.family) - FAMILY_ORDER.indexOf(b.r.family) ||
+        a.r.resource.length - b.r.resource.length ||
         a.r.uri.localeCompare(b.r.uri),
     )
     .map(({ r }) => r)
