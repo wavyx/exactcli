@@ -66,6 +66,18 @@
       },
       "purchase-entry": {
         "description": "Purchase entries (accounting)"
+      },
+      "transaction-line": {
+        "description": "Transaction lines (general ledger detail)"
+      },
+      "account": {
+        "description": "Accounts (customers and suppliers)"
+      },
+      "gl-account": {
+        "description": "General ledger accounts"
+      },
+      "document": {
+        "description": "Documents and attachments"
       }
     },
     "hooks": {
