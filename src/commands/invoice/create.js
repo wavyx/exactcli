@@ -1,7 +1,7 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { resolvePath } from '../../lib/catalog.js'
-import { CliError } from '../../lib/errors.js'
+import { assertDate, parseLine, resolveLines } from '../../lib/lines.js'
 import { autoColumns, normalize, unwrap } from '../../lib/odata.js'
 import { resolveRef } from '../../lib/refs.js'
 import {
@@ -12,46 +12,13 @@ import {
 } from '../../lib/writes.js'
 
 const RESOURCE = 'salesinvoice/SalesInvoices'
-const LINE_SHAPE = 'item:quantity:unit price[:description]'
-const NUMBER_RE = /^-?\d+(\.\d+)?$/
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-
 /**
  * One `--line` as the API wants it. The item stays a code or a GUID here:
  * the lookup runs after the write gate.
- * @param {string} text
- * @returns {{ Item: string, Quantity: number, UnitPrice: number, Description?: string }}
  */
-function parseLine(text) {
-  const [item, quantity, price, ...rest] = text.split(':')
-  if (!item || !NUMBER_RE.test(quantity) || !NUMBER_RE.test(price)) {
-    throw new CliError(`--line expects ${LINE_SHAPE}, received: ${text}`, {
-      exitCode: 64,
-    })
-  }
-  const line = {
-    Item: item,
-    Quantity: Number(quantity),
-    UnitPrice: Number(price),
-  }
-  const description = rest.join(':')
-  if (description) line.Description = description
-  return line
-}
-
-/**
- * The lines with every item as a GUID. Lookups run one after the other.
- * @param {BaseCommand} cmd
- * @param {object[]} lines
- * @returns {Promise<object[]>}
- */
-async function resolveItems(cmd, lines) {
-  const out = []
-  for (const line of lines) {
-    const Item = await resolveRef(cmd, 'logistics/Items', line.Item)
-    out.push({ ...line, Item })
-  }
-  return out
+const LINE = {
+  shape: 'item:quantity:unit price[:description]',
+  fields: { Item: 'text', Quantity: 'number', UnitPrice: 'number' },
 }
 
 export default class InvoiceCreateCommand extends BaseCommand {
@@ -75,7 +42,7 @@ export default class InvoiceCreateCommand extends BaseCommand {
     line: Flags.string({
       required: true,
       multiple: true,
-      description: `Invoice line as ${LINE_SHAPE} (repeatable)`,
+      description: `Invoice line as ${LINE.shape} (repeatable)`,
     }),
     description: Flags.string({ description: 'Invoice description' }),
     date: Flags.string({ description: 'Invoice date (YYYY-MM-DD)' }),
@@ -90,15 +57,11 @@ export default class InvoiceCreateCommand extends BaseCommand {
     const dryRun = this.flags['dry-run']
     const { path } = resolvePath(this.resolveDivision(), RESOURCE)
 
-    if (date && !DATE_RE.test(date)) {
-      throw new CliError(`--date expects YYYY-MM-DD, received: ${date}`, {
-        exitCode: 64,
-      })
-    }
+    if (date) assertDate(date, 'date')
     const body = {
       Journal: journal,
       OrderedBy: customer,
-      SalesInvoiceLines: this.flags.line.map(parseLine),
+      SalesInvoiceLines: this.flags.line.map((text) => parseLine(text, LINE)),
     }
     if (description) body.Description = description
     if (date) body.InvoiceDate = date
@@ -110,7 +73,12 @@ export default class InvoiceCreateCommand extends BaseCommand {
     const resolved = {
       ...body,
       OrderedBy: await resolveRef(this, 'crm/Accounts', customer),
-      SalesInvoiceLines: await resolveItems(this, body.SalesInvoiceLines),
+      SalesInvoiceLines: await resolveLines(
+        this,
+        body.SalesInvoiceLines,
+        'Item',
+        'logistics/Items',
+      ),
     }
 
     if (dryRun) {

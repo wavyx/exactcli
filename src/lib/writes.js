@@ -3,6 +3,7 @@ import { resolveBody } from './body.js'
 import { findResource, loadCatalog, mandatoryFields } from './catalog.js'
 import { getProfileConfig, loadConfig } from './config.js'
 import { CliError } from './errors.js'
+import { NUMBER_RE } from './lines.js'
 import { GUID_RE, resolveRef } from './refs.js'
 
 export const WRITE_METHODS = ['POST', 'PUT', 'DELETE']
@@ -60,7 +61,6 @@ export function assertWritesAllowed(flags, method) {
   }
 }
 
-const NUMBER_RE = /^-?\d+(\.\d+)?$/
 const REF_RE = /^@ref:([^:]+\/[^:]+):(.+)$/
 
 /**

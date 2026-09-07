@@ -14,7 +14,7 @@ import {
 const RESOURCE = 'crm/Contacts'
 
 /** The text flags and the field each one fills. */
-const TEXT_FIELDS = {
+export const TEXT_FIELDS = {
   'first-name': 'FirstName',
   'last-name': 'LastName',
   email: 'Email',
@@ -24,7 +24,7 @@ const TEXT_FIELDS = {
 }
 
 /** The true-or-false flags and the field each one fills. */
-const BOOL_FIELDS = { main: 'IsMainContact' }
+export const BOOL_FIELDS = { main: 'IsMainContact' }
 
 export default class ContactCreateCommand extends BaseCommand {
   static description = `Create a contact, a person of an account (POST ${RESOURCE})`

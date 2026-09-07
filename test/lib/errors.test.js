@@ -145,6 +145,16 @@ describe('ApiError', () => {
     expect(new ApiError(410, {}, '/x').exitCode).toBe(1)
   })
 
+  it('adds a hint on a 400 that refuses the $filter', () => {
+    const err = new ApiError(
+      400,
+      { message: 'This $filter parameter is not supported for this resource.' },
+      '/x',
+    )
+    expect(err.exitCode).toBe(65)
+    expect(err.message).toMatch(/Hint: this resource accepts no substringof/)
+  })
+
   it('adds a hint on 403 WrongDivision', () => {
     const err = new ApiError(
       403,

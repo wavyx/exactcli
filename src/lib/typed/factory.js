@@ -1,13 +1,13 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { CliError } from '../errors.js'
+import { DATE_RE } from '../lines.js'
 import { buildQuery, divisionPath } from '../odata.js'
 import { collectListing, listingFlags, visibleColumns } from '../listing.js'
 import { padCode, quote, resolveRef } from '../refs.js'
 import { findResource, propertyNames } from '../catalog.js'
 import { columnsOf } from './descriptors.js'
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TRUE = new Set(['true', 'yes', '1'])
 const FALSE = new Set(['false', 'no', '0'])
 

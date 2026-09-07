@@ -125,6 +125,31 @@ describe('sales-order invoice', () => {
     })
   })
 
+  it('--async sets Mode 1 and prints the ProcessID of the queued run', async () => {
+    const scope = mockApi()
+      .post(INVOICE, {
+        CreateMode: 1,
+        InvoiceMode: 0,
+        JournalCode: '700',
+        Mode: 1,
+        SalesOrderIDs: [{ ID: ORDER_A }],
+      })
+      .reply(201, { d: { __metadata: { uri: 'x' }, ProcessID: PROCESS } })
+
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        ORDER_A,
+        '--journal',
+        '700',
+        '--async',
+        '--allow-writes',
+      ]),
+    )
+
+    expect(scope.isDone()).toBe(true)
+    expect(out).toEqual({ ProcessID: PROCESS })
+  })
+
   it('fails with 64 when an argument is not a GUID', async () => {
     for (const argv of [['42'], [ORDER_A, 'not-a-guid']]) {
       const err = await fail([...argv, '--journal', '700', '--allow-writes'])

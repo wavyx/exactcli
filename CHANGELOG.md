@@ -4,6 +4,30 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-09-07
+
+Catalogue date: 2026-09-07 (435 resources, plus the hand-written extras file).
+
+### Added
+
+- Payments: `payment approve`, `payment hold`, `payment process`, and the `--entry`
+  filter of `payment list` (the "Approve payments" flow of the documentation).
+- `sales-entry create --file` and `purchase-entry create --file`: an entry with an
+  attached document.
+- `sales-order invoice --async`.
+- Digital postbox: `mailbox list`, `mailbox upload` (scan service),
+  `mail-message list`, `bank-statement upload`.
+- Typed updates: `account update`, `item update`, `contact update`, `webhook update`,
+  `quotation update`.
+- `src/data/catalog-extras.json`: hand-written records for resources the reference
+  does not list (`financialtransaction/Transactions`).
+- A hint on the 400 that refuses OData functions in `$filter`.
+
+### Changed
+
+- Line, number and date parsing of the typed writes share `src/lib/lines.js`.
+- Catalogue refreshed from the reference of 2026-09-07.
+
 ## [0.6.0] - 2026-09-03
 
 Catalogue date: 2026-08-19 (435 resources).
@@ -122,6 +146,7 @@ First release.
 
 - The production launcher reads no `.env` file. Export the variables in your shell.
 
+[0.7.0]: https://github.com/wavyx/exactcli/releases/tag/v0.7.0
 [0.6.0]: https://github.com/wavyx/exactcli/releases/tag/v0.6.0
 [0.5.0]: https://github.com/wavyx/exactcli/releases/tag/v0.5.0
 [0.4.0]: https://github.com/wavyx/exactcli/releases/tag/v0.4.0

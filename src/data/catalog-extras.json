@@ -1,0 +1,103 @@
+{
+  "note": "Resources the Exact reference documentation does not list. Hand-written from live probes; keep the same record shape as the generated catalogue.",
+  "resources": [
+    {
+      "uri": "/api/v1/{division}/financialtransaction/Transactions",
+      "service": "FinancialTransaction",
+      "resource": "Transactions",
+      "family": "regular",
+      "methods": ["GET"],
+      "keys": ["EntryID"],
+      "scope": null,
+      "webhook": false,
+      "mandatoryFilters": null,
+      "source": "live probe 2026-09-03: the entry headers behind TransactionLines; the endpoint demands $select or $top=1",
+      "properties": [
+        {
+          "name": "EntryID",
+          "type": "Edm.Guid",
+          "key": true,
+          "mandatory": false,
+          "filter": null,
+          "post": false,
+          "put": false,
+          "navigation": false,
+          "hidden": false,
+          "description": "Primary key"
+        },
+        {
+          "name": "EntryNumber",
+          "type": "Edm.Int32",
+          "key": false,
+          "mandatory": false,
+          "filter": null,
+          "post": false,
+          "put": false,
+          "navigation": false,
+          "hidden": false,
+          "description": "Entry number"
+        },
+        {
+          "name": "JournalCode",
+          "type": "Edm.String",
+          "key": false,
+          "mandatory": false,
+          "filter": null,
+          "post": false,
+          "put": false,
+          "navigation": false,
+          "hidden": false,
+          "description": "Code of the journal"
+        },
+        {
+          "name": "Date",
+          "type": "Edm.DateTime",
+          "key": false,
+          "mandatory": false,
+          "filter": null,
+          "post": false,
+          "put": false,
+          "navigation": false,
+          "hidden": false,
+          "description": "Entry date"
+        },
+        {
+          "name": "Description",
+          "type": "Edm.String",
+          "key": false,
+          "mandatory": false,
+          "filter": null,
+          "post": false,
+          "put": false,
+          "navigation": false,
+          "hidden": false,
+          "description": "Description"
+        },
+        {
+          "name": "Status",
+          "type": "Edm.Int16",
+          "key": false,
+          "mandatory": false,
+          "filter": null,
+          "post": false,
+          "put": false,
+          "navigation": false,
+          "hidden": false,
+          "description": "Status: 20 open, 50 processed (as on the entry resources)"
+        },
+        {
+          "name": "Type",
+          "type": "Edm.Int32",
+          "key": false,
+          "mandatory": false,
+          "filter": null,
+          "post": false,
+          "put": false,
+          "navigation": false,
+          "hidden": false,
+          "description": "Transaction type"
+        }
+      ]
+    }
+  ]
+}

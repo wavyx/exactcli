@@ -6,6 +6,7 @@ const descriptor = {
   examples: [
     '<%= config.bin %> payment list --status 20 --due-to 2026-09-30',
     '<%= config.bin %> payment list --account 2001 --all --output csv',
+    '<%= config.bin %> payment list --entry <purchase-entry-id>',
   ],
   columns: [
     'AccountCode',
@@ -16,6 +17,8 @@ const descriptor = {
     'PaymentDateProposal',
     'AmountDC',
     'Status',
+    'PaymentMethod',
+    'PaymentSelected',
     'ID',
   ],
   orderBy: 'DueDate asc',
@@ -25,6 +28,11 @@ const descriptor = {
       type: 'guid',
       resolve: 'crm/Accounts',
       description: 'Supplier GUID or code',
+    },
+    entry: {
+      field: 'TransactionEntryID',
+      type: 'guid',
+      description: 'The purchase entry (GUID) that created the payment',
     },
     'due-from': {
       field: 'DueDate',

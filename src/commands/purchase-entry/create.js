@@ -9,4 +9,5 @@ export default defineEntryCreate({
   journalHint: 'Purchase journal code, for example 600',
   lines: 'PurchaseEntryLines',
   invoice: { field: 'InvoiceNumber', integer: true },
+  documentType: 20,
 })

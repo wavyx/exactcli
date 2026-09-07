@@ -1,6 +1,6 @@
 {
   "name": "@wavyx/exactcli",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "publishConfig": {
     "access": "public"
   },
@@ -202,6 +202,15 @@
       },
       "cash-entry": {
         "description": "Cash entries (cash book headers)"
+      },
+      "mailbox": {
+        "description": "Mailboxes (digital postbox and scan service)"
+      },
+      "mail-message": {
+        "description": "Sent mail messages (digital postbox and scan service)"
+      },
+      "bank-statement": {
+        "description": "Bank statement files (CODA, MT940, CAMT) sent to the bank import"
       }
     },
     "hooks": {

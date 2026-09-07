@@ -1,7 +1,7 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { resolvePath } from '../../lib/catalog.js'
-import { CliError } from '../../lib/errors.js'
+import { assertDate, parseLine, resolveLines } from '../../lib/lines.js'
 import { autoColumns, normalize, unwrap } from '../../lib/odata.js'
 import { resolveRef } from '../../lib/refs.js'
 import {
@@ -14,24 +14,13 @@ import {
 const RESOURCE = 'financialtransaction/BankEntries'
 const GL_ACCOUNTS = 'financial/GLAccounts'
 const ACCOUNTS = 'crm/Accounts'
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-const AMOUNT_RE = /^[+-]?\d+(\.\d+)?$/
-
 /**
- * One `--line` value: `<gl account>:<amount>[:description]`. The first two
- * colons split; the description keeps any colon after them.
- * @param {string} text
- * @returns {{ account: string, amount: number, description: string }}
+ * One `--line` as the API wants it. The account stays a code or a GUID
+ * here: the lookup runs after the write gate.
  */
-function parseLine(text) {
-  const [account, amount, ...rest] = text.split(':')
-  if (!account || !AMOUNT_RE.test(amount ?? '')) {
-    throw new CliError(
-      `--line expects <gl account>:<amount>[:description], received: ${text}`,
-      { exitCode: 64 },
-    )
-  }
-  return { account, amount: Number(amount), description: rest.join(':') }
+const LINE = {
+  shape: '<gl account>:<amount>[:description]',
+  fields: { GLAccount: 'text', AmountFC: 'amount' },
 }
 
 export default class BankEntryCreateCommand extends BaseCommand {
@@ -54,7 +43,7 @@ export default class BankEntryCreateCommand extends BaseCommand {
       required: true,
       multiple: true,
       description:
-        'Line as <gl account>:<amount>[:description] (repeatable, at least one). ' +
+        `Line as ${LINE.shape} (repeatable, at least one). ` +
         'The account is a code or a GUID. The amount is signed from the point ' +
         'of view of the bank: money received is positive, money paid negative',
     }),
@@ -78,21 +67,16 @@ export default class BankEntryCreateCommand extends BaseCommand {
     const dryRun = this.flags['dry-run']
     const { path } = resolvePath(this.resolveDivision(), RESOURCE)
 
-    const lines = this.flags.line.map(parseLine)
-    if (date !== undefined && !DATE_RE.test(date)) {
-      throw new CliError(`Expected YYYY-MM-DD, received ${date}`, {
-        exitCode: 64,
-      })
-    }
+    const lines = this.flags.line.map((text) => parseLine(text, LINE))
+    if (date !== undefined) assertDate(date, 'date')
 
     // Exact books the line of the bank account itself, so the lines need not
     // balance.
     const body = {
       JournalCode: journal,
       BankEntryLines: lines.map((line) => {
-        const out = { GLAccount: line.account, AmountFC: line.amount }
-        const text = line.description || description
-        if (text) out.Description = text
+        const out = { ...line }
+        if (!out.Description && description) out.Description = description
         if (date) out.Date = date
         return out
       }),
@@ -105,9 +89,12 @@ export default class BankEntryCreateCommand extends BaseCommand {
       const id = await resolveRef(this, ACCOUNTS, account)
       for (const line of body.BankEntryLines) line.Account = id
     }
-    for (const line of body.BankEntryLines) {
-      line.GLAccount = await resolveRef(this, GL_ACCOUNTS, line.GLAccount)
-    }
+    body.BankEntryLines = await resolveLines(
+      this,
+      body.BankEntryLines,
+      'GLAccount',
+      GL_ACCOUNTS,
+    )
 
     if (dryRun) {
       await this.outputResults(

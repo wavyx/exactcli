@@ -22,6 +22,7 @@ const { default: Cmd } = await import('../../../src/commands/payment/list.js')
 const PATH = '/api/v1/123/cashflow/Payments'
 const ACCOUNTS = '/api/v1/123/crm/Accounts'
 const GUID = '11111111-1111-1111-1111-111111111111'
+const ENTRY = '22222222-2222-2222-2222-222222222222'
 const SELECT = descriptor.columns.join(',')
 const ORDER = descriptor.orderBy
 
@@ -56,6 +57,11 @@ describe('payment list', () => {
     expect(descriptor.resource).toBe('cashflow/Payments')
     expect(descriptor.orderBy).toBe('DueDate asc')
     expect(descriptor.columns.at(-1)).toBe('ID')
+    expect(descriptor.filters.entry).toEqual({
+      field: 'TransactionEntryID',
+      type: 'guid',
+      description: 'The purchase entry (GUID) that created the payment',
+    })
   })
 
   it('selects the descriptor columns, orders by due date, normalizes rows', async () => {
@@ -91,7 +97,7 @@ describe('payment list', () => {
     ])
   })
 
-  it('renders its typed filters, resolves the account code', async () => {
+  it('renders its typed filters, resolves the account code, sends the entry GUID as it is', async () => {
     const lookup = mockApi()
       .get(ACCOUNTS)
       .query({ $filter: "Code eq '2001'", $select: 'ID,Code,Name', $top: '2' })
@@ -102,7 +108,8 @@ describe('payment list', () => {
         $select: SELECT,
         $orderby: ORDER,
         $filter:
-          `Account eq guid'${GUID}' and DueDate ge datetime'2026-01-01'` +
+          `Account eq guid'${GUID}' and TransactionEntryID eq guid'${ENTRY}'` +
+          " and DueDate ge datetime'2026-01-01'" +
           " and DueDate le datetime'2026-12-31' and Status eq 20" +
           " and substringof('rent', Description)",
       })
@@ -111,6 +118,8 @@ describe('payment list', () => {
     await runCmd(Cmd, [
       '--account',
       '2001',
+      '--entry',
+      ENTRY,
       '--due-from',
       '2026-01-01',
       '--due-to',

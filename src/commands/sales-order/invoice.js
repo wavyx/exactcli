@@ -2,6 +2,7 @@ import { Args, Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { resolvePath } from '../../lib/catalog.js'
 import { CliError } from '../../lib/errors.js'
+import { assertDate } from '../../lib/lines.js'
 import { autoColumns, normalize, unwrap } from '../../lib/odata.js'
 import { GUID_RE } from '../../lib/refs.js'
 import {
@@ -12,7 +13,6 @@ import {
 } from '../../lib/writes.js'
 
 const RESOURCE = 'salesinvoice/InvoiceSalesOrders'
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 export default class SalesOrderInvoiceCommand extends BaseCommand {
   static description = `Invoice sales orders (POST ${RESOURCE})`
@@ -20,6 +20,7 @@ export default class SalesOrderInvoiceCommand extends BaseCommand {
   static examples = [
     '<%= config.bin %> sales-order invoice <order-id> --journal 700 --dry-run',
     '<%= config.bin %> sales-order invoice <order-id> <order-id> --journal 700 --create-mode 0 --allow-writes',
+    '<%= config.bin %> sales-order invoice <order-id> --journal 700 --async --allow-writes',
   ]
 
   /** The command takes one GUID per argument, as many as needed. */
@@ -58,6 +59,13 @@ export default class SalesOrderInvoiceCommand extends BaseCommand {
         'Invoice date (YYYY-MM-DD, UserInvoiceDate). Exact applies it only ' +
         'in the QuickBooks integration',
     }),
+    async: Flags.boolean({
+      default: false,
+      description:
+        'Mode 1: Exact queues the run and answers a ProcessID for ' +
+        'InvoiceSalesOrdersResult. Exact keeps only this mode after October ' +
+        '2026; without the flag the run is synchronous (Mode 0)',
+    }),
     'dry-run': Flags.boolean({
       description: 'Show the validated request and send nothing',
       default: false,
@@ -77,12 +85,7 @@ export default class SalesOrderInvoiceCommand extends BaseCommand {
         exitCode: 64,
       })
     }
-    if (invoiceDate && !DATE_RE.test(invoiceDate)) {
-      throw new CliError(
-        `--invoice-date expects YYYY-MM-DD, received: ${invoiceDate}`,
-        { exitCode: 64 },
-      )
-    }
+    if (invoiceDate) assertDate(invoiceDate, 'invoice-date')
 
     const body = {
       CreateMode: this.flags['create-mode'],
@@ -91,6 +94,7 @@ export default class SalesOrderInvoiceCommand extends BaseCommand {
       SalesOrderIDs: argv.map((id) => ({ ID: id })),
     }
     if (invoiceDate) body.UserInvoiceDate = invoiceDate
+    if (this.flags.async) body.Mode = 1
     validateWrite({ resource: RESOURCE, body, method: 'POST' })
     // A refused write costs no call at all. A dry run needs no permission.
     if (!dryRun) assertWritesAllowed(this.flags, 'POST')

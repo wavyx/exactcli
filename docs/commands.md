@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.6.0 (91 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.7.0 (103 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -401,6 +401,38 @@ exactcli account list --search acme
 exactcli account list --customer yes --status C --all
 ```
 
+### `exactcli account update`
+
+Update the given fields of an account (PUT crm/Accounts)
+
+```
+exactcli account update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--name <value>` - Account name
+- `--code <value>` - Account code (numeric in Belgium; Exact pads it)
+- `--customer <value>` - Customer: true, false, yes, no, 1 or 0 (IsSales)
+- `--supplier <value>` - Supplier: true, false, yes, no, 1 or 0 (IsSupplier)
+- `--vat-number <value>` - VAT number, for example BE0123456789
+- `--email <value>` - E-mail address
+- `--phone <value>` - Phone number
+- `--website <value>` - Website
+- `--address <value>` - Visit address, first line
+- `--postcode <value>` - Visit address postcode
+- `--city <value>` - Visit address city
+- `--country <value>` - Country code, 2 letters, for example BE
+- `--status <value>` - Customer status: A none, S suspect, P prospect, C customer
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli account update 1001 --name "Acme NV" --city Ghent --dry-run
+exactcli account update <id> --status C --customer true --allow-writes
+```
+
 ## exactcli address
 
 ### `exactcli address list`
@@ -714,6 +746,29 @@ exactcli bank-entry list --journal 55 --year 2026
 exactcli bank-entry list --year 2026 --period 9 --all --output csv
 ```
 
+## exactcli bank-statement
+
+### `exactcli bank-statement upload`
+
+Upload a bank statement file (CODA, MT940, CAMT) to the bank import
+
+```
+exactcli bank-statement upload [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--file <value>` _(required)_ - Bank statement file to upload
+- `--subject <value>` - Document subject. Default: the file name
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli bank-statement upload --file statement.cod --dry-run
+exactcli bank-statement upload --file statement.cod --subject "September 2026" --allow-writes
+```
+
 ## exactcli budget
 
 ### `exactcli budget list`
@@ -889,6 +944,32 @@ Examples:
 ```bash
 exactcli contact list --search jane
 exactcli contact list --account 1001 --output json
+```
+
+### `exactcli contact update`
+
+Update the given fields of a contact (PUT crm/Contacts)
+
+```
+exactcli contact update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--first-name <value>` - First name
+- `--last-name <value>` - Last name
+- `--email <value>` - E-mail address
+- `--phone <value>` - Business phone number
+- `--mobile <value>` - Mobile phone number
+- `--job-title <value>` - Job title (JobTitleDescription)
+- `--main <value>` - Main contact of the account: true, false, yes, no, 1 or 0 (IsMainContact)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli contact update <id> --email jane@acme.example --dry-run
+exactcli contact update <id> --job-title CFO --main true --allow-writes
 ```
 
 ## exactcli cost-center
@@ -1365,6 +1446,35 @@ exactcli item list --search widget
 exactcli item list --sales yes --stock yes --all
 ```
 
+### `exactcli item update`
+
+Update the given fields of an item (PUT logistics/Items). The code is the key and stays as it is
+
+```
+exactcli item update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--description <value>` - Item description
+- `--sales-price <value>` - Standard sales price (StandardSalesPrice)
+- `--cost-price <value>` - Standard cost price (CostPriceStandard)
+- `--unit <value>` - Unit code, for example pc
+- `--sales <value>` - Sales item: true, false, yes, no, 1 or 0 (IsSalesItem)
+- `--purchase <value>` - Purchase item: true, false, yes, no, 1 or 0 (IsPurchaseItem)
+- `--stock <value>` - Stock item: true, false, yes, no, 1 or 0 (IsStockItem)
+- `--gl-revenue <value>` - Revenue ledger account code or GUID (GLRevenue)
+- `--gl-costs <value>` - Costs ledger account code or GUID (GLCosts)
+- `--group <value>` - Item group code or GUID (ItemGroup)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli item update WIDGET --description "Widget XL" --sales-price 120 --dry-run
+exactcli item update <id> --gl-revenue 700000 --stock false --allow-writes
+```
+
 ## exactcli item-group
 
 ### `exactcli item-group list`
@@ -1474,6 +1584,89 @@ exactcli journal-entry list --journal 800 --year 2026
 exactcli journal-entry list --year 2026 --period 9 --status 20 --all
 ```
 
+## exactcli mail-message
+
+### `exactcli mail-message list`
+
+List sent mail messages (digital postbox and scan service)
+
+```
+exactcli mail-message list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--operation <value>` - Scan service operation: 1 purchase invoice without details, 2 with details, 3 sales invoice, 4 bank statement
+- `--status <value>` - Recipient status: 5 rejected, 10 draft, 20 open, 25 prepared, 30 approved, 40 realized, 42 in process, 43 at the scanning service, 45 error, 46 blocked, 50 processed
+- `--from <value>` - Sent date from (YYYY-MM-DD)
+- `--to <value>` - Sent date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli mail-message list --from 2026-01-01
+exactcli mail-message list --operation 2 --status 50
+```
+
+## exactcli mailbox
+
+### `exactcli mailbox list`
+
+List mailboxes (the addresses of the digital postbox)
+
+```
+exactcli mailbox list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--search <value>` - Description contains
+- `--account <value>` - Account GUID or code (the owner of the mailbox)
+- `--type <value>` - Mailbox type: 0 unknown, 1 Exact, 2 government, 3 manual input
+
+Examples:
+
+```bash
+exactcli mailbox list --search postbox
+exactcli mailbox list --account 1001 --type 1
+```
+
+### `exactcli mailbox upload`
+
+Send files to the digital postbox or the scan service of the division
+
+```
+exactcli mailbox upload [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--file <value>` _(required)_ - File to send (repeatable)
+- `--to <value>` - Recipient mailbox GUID. Default: the scan service mailbox of the division, else its default mailbox
+- `--subject <value>` - Message subject. Default: the name of the first file
+- `--operation <value>` - Scan service operation: 1 purchase invoice without details, 2 with details, 3 sales invoice, 4 bank statement
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli mailbox upload --file invoice.pdf --operation 2 --dry-run
+exactcli mailbox upload --file invoice.pdf --file receipt.pdf --operation 1 --allow-writes
+exactcli mailbox upload --file statement.xml --to <mailbox-id> --subject "Bank export" --allow-writes
+```
+
 ## exactcli payables-list
 
 ### `exactcli payables-list list`
@@ -1506,6 +1699,46 @@ exactcli payables-list list --search acme --all --output csv
 
 ## exactcli payment
 
+### `exactcli payment approve`
+
+Approve a payment: set PaymentMethod B, electronic (PUT cashflow/Payments). The payment shows on the payments page again and can be processed
+
+```
+exactcli payment approve <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--method <B|I|K|V>` - PaymentMethod: B electronic (approved), I collection, K cash (held), V credit card
+- `--dry-run` - Show the request and send nothing
+
+Examples:
+
+```bash
+exactcli payment approve <payment-id> --dry-run
+exactcli payment approve <payment-id> --allow-writes
+exactcli payment approve <payment-id> --method K --allow-writes
+```
+
+### `exactcli payment hold`
+
+Hold a payment: set PaymentMethod K, cash (PUT cashflow/Payments). The payment leaves the payments page until "payment approve" puts it back
+
+```
+exactcli payment hold <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the request and send nothing
+
+Examples:
+
+```bash
+exactcli payment hold <payment-id> --dry-run
+exactcli payment hold <payment-id> --allow-writes
+```
+
 ### `exactcli payment list`
 
 List payments (outstanding supplier items to pay)
@@ -1523,6 +1756,7 @@ exactcli payment list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--account <value>` - Supplier GUID or code
+- `--entry <value>` - The purchase entry (GUID) that created the payment
 - `--due-from <value>` - Due date from (YYYY-MM-DD)
 - `--due-to <value>` - Due date to (YYYY-MM-DD)
 - `--status <value>` - Status: 20 open, 30 selected, 40 processed, 50 matched
@@ -1533,6 +1767,26 @@ Examples:
 ```bash
 exactcli payment list --status 20 --due-to 2026-09-30
 exactcli payment list --account 2001 --all --output csv
+exactcli payment list --entry <purchase-entry-id>
+```
+
+### `exactcli payment process`
+
+Process approved payments (POST cashflow/ProcessPayments). The answer carries SuccessMessage, ErrorMessage and the BankExportDocumentsUrl of the files to send to the bank
+
+```
+exactcli payment process <payment> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli payment process <payment-id> --dry-run
+exactcli payment process <payment-id> <payment-id> --allow-writes
 ```
 
 ## exactcli payment-condition
@@ -1683,6 +1937,7 @@ exactcli purchase-entry create [flags]
 - `--description <value>` - Entry description
 - `--date <value>` - Entry date (YYYY-MM-DD)
 - `--invoice <value>` - Invoice number (InvoiceNumber)
+- `--file <value>` - File to attach (repeatable). The files land on one new document of type 20, and the entry links that document
 - `--dry-run` - Show the validated request and send nothing
 
 Examples:
@@ -1690,6 +1945,7 @@ Examples:
 ```bash
 exactcli purchase-entry create --supplier 1001 --journal 600 --line 700000:100 --dry-run
 exactcli purchase-entry create --supplier 1001 --journal 600 --line 700000:100 --allow-writes
+exactcli purchase-entry create --supplier 1001 --journal 600 --line 700000:100 --file invoice.pdf --allow-writes
 ```
 
 ### `exactcli purchase-entry list`
@@ -1885,6 +2141,29 @@ exactcli quotation list --from 2026-01-01 --to 2026-01-31
 exactcli quotation list --account 1001 --status 25 --all
 ```
 
+### `exactcli quotation update`
+
+Update the header fields of a quotation (PUT crm/Quotations). Lines stay as they are
+
+```
+exactcli quotation update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--description <value>` - Quotation description
+- `--date <value>` - Quotation date (YYYY-MM-DD)
+- `--close-date <value>` - Date on which the customer accepted or rejected the quotation (YYYY-MM-DD)
+- `--reference <value>` - Reference of the customer (YourRef)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation update <id> --close-date 2026-09-30 --dry-run
+exactcli quotation update <id> --description "Spring offer" --reference PO-42 --allow-writes
+```
+
 ## exactcli receivable
 
 ### `exactcli receivable list`
@@ -1992,6 +2271,7 @@ exactcli sales-entry create [flags]
 - `--description <value>` - Entry description
 - `--date <value>` - Entry date (YYYY-MM-DD)
 - `--invoice <value>` - Invoice reference (YourRef)
+- `--file <value>` - File to attach (repeatable). The files land on one new document of type 10, and the entry links that document
 - `--dry-run` - Show the validated request and send nothing
 
 Examples:
@@ -1999,6 +2279,7 @@ Examples:
 ```bash
 exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100 --dry-run
 exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100 --allow-writes
+exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100 --file invoice.pdf --allow-writes
 ```
 
 ### `exactcli sales-entry list`
@@ -2098,6 +2379,7 @@ exactcli sales-order invoice <order> [flags]
 - `--create-mode <value>` - CreateMode: 0 one invoice per customer, 1 one invoice per sales order
 - `--invoice-mode <value>` - InvoiceMode: 0 invoice the quantity delivered (default), 1 the quantity ordered
 - `--invoice-date <value>` - Invoice date (YYYY-MM-DD, UserInvoiceDate). Exact applies it only in the QuickBooks integration
+- `--async` - Mode 1: Exact queues the run and answers a ProcessID for InvoiceSalesOrdersResult. Exact keeps only this mode after October 2026; without the flag the run is synchronous (Mode 0)
 - `--dry-run` - Show the validated request and send nothing
 
 Examples:
@@ -2105,6 +2387,7 @@ Examples:
 ```bash
 exactcli sales-order invoice <order-id> --journal 700 --dry-run
 exactcli sales-order invoice <order-id> <order-id> --journal 700 --create-mode 0 --allow-writes
+exactcli sales-order invoice <order-id> --journal 700 --async --allow-writes
 ```
 
 ### `exactcli sales-order list`
@@ -2317,5 +2600,26 @@ Examples:
 ```bash
 exactcli webhook list --topic Accounts
 exactcli webhook list --search acme --output json
+```
+
+### `exactcli webhook update`
+
+Update the callback URL or the description of a webhook subscription (PUT webhooks/WebhookSubscriptions)
+
+```
+exactcli webhook update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--url <value>` - Callback URL (https only)
+- `--description <value>` - Description of the subscription
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli webhook update <id> --url https://acme.example/hooks/exact-v2 --dry-run
+exactcli webhook update <id> --description "Production hook" --allow-writes
 ```
 

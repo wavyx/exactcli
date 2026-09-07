@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import { CliError } from './errors.js'
@@ -6,6 +6,10 @@ import { divisionPath } from './odata.js'
 
 const CATALOG_PATH = fileURLToPath(
   new URL('../data/catalog.json.gz', import.meta.url),
+)
+/** Hand-written records for resources the documentation does not list. */
+const EXTRAS_PATH = fileURLToPath(
+  new URL('../data/catalog-extras.json', import.meta.url),
 )
 const GUID_TYPE = 'Edm.Guid'
 const DATE_TYPE = 'Edm.DateTime'
@@ -40,18 +44,29 @@ let cached
 let cachedIndex
 
 /**
- * Load the shipped catalogue once. A path is for tests: a plain JSON fixture
- * loads too.
+ * Load the shipped catalogue once, plus the extras file. A path is for
+ * tests: a plain JSON fixture loads too; an empty extrasPath skips extras.
  * @param {string} [path]
+ * @param {string} [extrasPath]
  * @returns {{generatedAt: string, source: string, count: number, resources: object[]}}
  */
-export function loadCatalog(path = CATALOG_PATH) {
+export function loadCatalog(path = CATALOG_PATH, extrasPath = EXTRAS_PATH) {
   if (cached) return cached
   const raw = readFileSync(path)
   const text = path.endsWith('.gz')
     ? gunzipSync(raw).toString('utf8')
     : raw.toString('utf8')
-  cached = JSON.parse(text)
+  const catalog = JSON.parse(text)
+  // The extras file adds what the scrape cannot see; a scraped record wins.
+  if (extrasPath && existsSync(extrasPath)) {
+    const known = new Set(catalog.resources.map((r) => catalogKey(r.uri)))
+    const extras = JSON.parse(readFileSync(extrasPath, 'utf8')).resources
+    for (const r of extras) {
+      if (!known.has(catalogKey(r.uri))) catalog.resources.push(r)
+    }
+    catalog.count = catalog.resources.length
+  }
+  cached = catalog
   cachedIndex = buildIndex(cached)
   return cached
 }

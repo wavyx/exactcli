@@ -440,11 +440,11 @@ From the documentation: approve a purchase entry for payment. A payment with met
 approve it. Find the payment through the entry it belongs to.
 
 ```sh
-exactcli list cashflow/Payments \
-  --filter "TransactionEntryID eq guid'<purchase entry guid>'" \
-  --select ID,PaymentMethod,AmountDC,DueDate
-exactcli update cashflow/Payments <payment guid> --set PaymentMethod=K --dry-run
-exactcli update cashflow/Payments <payment guid> --set PaymentMethod=B --allow-writes
+exactcli payment list --entry <purchase entry guid>
+exactcli payment hold <payment guid> --dry-run
+exactcli payment hold <payment guid> --allow-writes      # method K: hidden from the payments page
+exactcli payment approve <payment guid> --allow-writes   # method B: back on the payments page
+exactcli payment process <payment guid> --allow-writes   # send to the bank export
 ```
 
 ## 11. Trial balance and aging

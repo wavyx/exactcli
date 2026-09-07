@@ -58,11 +58,19 @@ export class ApiError extends CliError {
       (typeof body?.error === 'string' ? body.error : undefined) ??
       body?.message ??
       `API error ${statusCode}`
-    // A stale profile division is the first live footgun: point at the fix.
-    const hint =
-      statusCode === 403 && message.includes('WrongDivision')
-        ? '. Run: exactcli config set division <code> (see exactcli me)'
-        : ''
+    // The first live footguns: a stale profile division, and a resource
+    // that refuses OData functions in $filter (Quotations, verified live).
+    let hint = ''
+    if (statusCode === 403 && message.includes('WrongDivision')) {
+      hint = '. Run: exactcli config set division <code> (see exactcli me)'
+    } else if (
+      statusCode === 400 &&
+      message.includes('$filter parameter is not supported')
+    ) {
+      hint =
+        ' Hint: this resource accepts no substringof or not in $filter; ' +
+        'use eq on a field, for example --filter "Description eq \'...\'".'
+    }
 
     super(`Exact Online API ${statusCode}: ${message}${hint}`, {
       exitCode: exitCodeForStatus(statusCode),

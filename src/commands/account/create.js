@@ -15,7 +15,7 @@ const RESOURCE = 'crm/Accounts'
 const COUNTRY_RE = /^[A-Za-z]{2}$/
 
 /** The text flags and the field each one fills. */
-const TEXT_FIELDS = {
+export const TEXT_FIELDS = {
   name: 'Name',
   code: 'Code',
   'vat-number': 'VATNumber',
@@ -30,7 +30,7 @@ const TEXT_FIELDS = {
 }
 
 /** The true-or-false flags and the field each one fills. */
-const BOOL_FIELDS = { customer: 'IsSales', supplier: 'IsSupplier' }
+export const BOOL_FIELDS = { customer: 'IsSales', supplier: 'IsSupplier' }
 
 export default class AccountCreateCommand extends BaseCommand {
   static description = `Create an account, customer or supplier (POST ${RESOURCE})`

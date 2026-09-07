@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   catalogKey,
@@ -28,7 +31,7 @@ const REAL = fileURLToPath(
 let catalog
 beforeEach(() => {
   resetCatalog()
-  catalog = loadCatalog(FIXTURE)
+  catalog = loadCatalog(FIXTURE, '')
 })
 
 describe('catalogKey', () => {
@@ -306,6 +309,55 @@ describe('resolvePath', () => {
     expect(() => resolvePath(123, 'nope', {}, catalog)).toThrow(
       /service\/Resource/,
     )
+  })
+})
+
+describe('the extras file', () => {
+  it('adds the undocumented resources to the shipped catalogue', () => {
+    resetCatalog()
+    const real = loadCatalog()
+    const tx = findResource('financialtransaction/Transactions', real)
+    expect(tx.family).toBe('regular')
+    expect(tx.keys).toEqual(['EntryID'])
+    expect(real.count).toBe(real.resources.length)
+  })
+
+  it('never overrides a scraped record, and skips a missing extras file', () => {
+    resetCatalog()
+    const dir = mkdtempSync(join(tmpdir(), 'exactcli-extras-'))
+    const extras = join(dir, 'extras.json')
+    writeFileSync(
+      extras,
+      JSON.stringify({
+        resources: [
+          {
+            uri: '/api/v1/{division}/crm/Accounts',
+            resource: 'Accounts',
+            service: 'CRM',
+            family: 'regular',
+            methods: [],
+            keys: [],
+            properties: [],
+          },
+          {
+            uri: '/api/v1/{division}/custom/Things',
+            resource: 'Things',
+            service: 'Custom',
+            family: 'regular',
+            methods: ['GET'],
+            keys: ['ID'],
+            properties: [],
+          },
+        ],
+      }),
+    )
+    const withExtras = loadCatalog(FIXTURE, extras)
+    expect(findResource('crm/Accounts', withExtras).methods).toContain('POST')
+    expect(findResource('custom/Things', withExtras).resource).toBe('Things')
+    resetCatalog()
+    const without = loadCatalog(FIXTURE, join(dir, 'absent.json'))
+    expect(findResource('custom/Things', without)).toBeUndefined()
+    rmSync(dir, { recursive: true, force: true })
   })
 })
 

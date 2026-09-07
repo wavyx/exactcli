@@ -1,7 +1,7 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { resolvePath } from '../../lib/catalog.js'
-import { CliError } from '../../lib/errors.js'
+import { assertDate, parseLine, resolveLines } from '../../lib/lines.js'
 import { autoColumns, normalize, unwrap } from '../../lib/odata.js'
 import { resolveRef } from '../../lib/refs.js'
 import {
@@ -12,51 +12,18 @@ import {
 } from '../../lib/writes.js'
 
 const RESOURCE = 'purchase/PurchaseInvoices'
-const LINE_SHAPE = 'item:quantity:unit price[:description]'
 /** The `Type` codes of the catalogue. 8033 is a regular purchase invoice. */
 const TYPES =
   '8030 direct purchase invoice, 8031 direct purchase invoice (credit), 8033 purchase invoice, 8034 purchase invoice (credit)'
 const PURCHASE_INVOICE = 8033
-const NUMBER_RE = /^-?\d+(\.\d+)?$/
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-
 /**
  * One `--line` as the API wants it. A purchase invoice line needs an item
  * (or a purchase order line): there is no ledger account on it. The item
  * stays a code or a GUID here: the lookup runs after the write gate.
- * @param {string} text
- * @returns {{ Item: string, Quantity: number, UnitPrice: number, Description?: string }}
  */
-function parseLine(text) {
-  const [item, quantity, price, ...rest] = text.split(':')
-  if (!item || !NUMBER_RE.test(quantity) || !NUMBER_RE.test(price)) {
-    throw new CliError(`--line expects ${LINE_SHAPE}, received: ${text}`, {
-      exitCode: 64,
-    })
-  }
-  const line = {
-    Item: item,
-    Quantity: Number(quantity),
-    UnitPrice: Number(price),
-  }
-  const description = rest.join(':')
-  if (description) line.Description = description
-  return line
-}
-
-/**
- * The lines with every item as a GUID. Lookups run one after the other.
- * @param {BaseCommand} cmd
- * @param {object[]} lines
- * @returns {Promise<object[]>}
- */
-async function resolveItems(cmd, lines) {
-  const out = []
-  for (const line of lines) {
-    const Item = await resolveRef(cmd, 'logistics/Items', line.Item)
-    out.push({ ...line, Item })
-  }
-  return out
+const LINE = {
+  shape: 'item:quantity:unit price[:description]',
+  fields: { Item: 'text', Quantity: 'number', UnitPrice: 'number' },
 }
 
 export default class PurchaseInvoiceCreateCommand extends BaseCommand {
@@ -84,7 +51,7 @@ export default class PurchaseInvoiceCreateCommand extends BaseCommand {
     line: Flags.string({
       required: true,
       multiple: true,
-      description: `Invoice line as ${LINE_SHAPE} (repeatable)`,
+      description: `Invoice line as ${LINE.shape} (repeatable)`,
     }),
     description: Flags.string({ description: 'Invoice description' }),
     date: Flags.string({ description: 'Invoice date (YYYY-MM-DD)' }),
@@ -102,16 +69,14 @@ export default class PurchaseInvoiceCreateCommand extends BaseCommand {
     const dryRun = this.flags['dry-run']
     const { path } = resolvePath(this.resolveDivision(), RESOURCE)
 
-    if (date && !DATE_RE.test(date)) {
-      throw new CliError(`--date expects YYYY-MM-DD, received: ${date}`, {
-        exitCode: 64,
-      })
-    }
+    if (date) assertDate(date, 'date')
     const body = {
       Journal: journal,
       Supplier: supplier,
       Type: type,
-      PurchaseInvoiceLines: this.flags.line.map(parseLine),
+      PurchaseInvoiceLines: this.flags.line.map((text) =>
+        parseLine(text, LINE),
+      ),
     }
     if (description) body.Description = description
     if (date) body.InvoiceDate = date
@@ -124,7 +89,12 @@ export default class PurchaseInvoiceCreateCommand extends BaseCommand {
     const resolved = {
       ...body,
       Supplier: await resolveRef(this, 'crm/Accounts', supplier),
-      PurchaseInvoiceLines: await resolveItems(this, body.PurchaseInvoiceLines),
+      PurchaseInvoiceLines: await resolveLines(
+        this,
+        body.PurchaseInvoiceLines,
+        'Item',
+        'logistics/Items',
+      ),
     }
 
     if (dryRun) {

@@ -82,21 +82,27 @@ with `list`, `get` and `api`: pass the `service/Resource` path, for example
 | profile                                                                                     | `list`, `use`, `current`                                                                                                      |
 | config                                                                                      | `get`, `set`, `list`, `unset`                                                                                                 |
 | division                                                                                    | `list`, `use`, `current`                                                                                                      |
-| account, contact, item                                                                      | `list`, `create`                                                                                                              |
+| account, contact, item                                                                      | `list`, `create`, `update`                                                                                                    |
 | address, bank-account, item-group, currency, exchange-rate                                  | `list`                                                                                                                        |
 | gl-account, gl-classification, journal, vat-code, payment-condition, cost-center, cost-unit | `list`                                                                                                                        |
 | financial-period, balance, budget, revenue, profit-loss                                     | `list`                                                                                                                        |
 | aging-receivable, aging-payable, aging-overview, receivables-list, payables-list            | `list`                                                                                                                        |
-| sales-entry, purchase-entry, journal-entry, bank-entry                                      | `list`, `create`                                                                                                              |
+| sales-entry, purchase-entry                                                                 | `list`, `create` (with `--file`)                                                                                              |
+| journal-entry, bank-entry                                                                   | `list`, `create`                                                                                                              |
 | transaction-line, cash-entry                                                                | `list`                                                                                                                        |
 | sales-invoice                                                                               | `list`                                                                                                                        |
 | invoice                                                                                     | `create`                                                                                                                      |
-| purchase-invoice, quotation, purchase-order                                                 | `list`, `create`                                                                                                              |
+| purchase-invoice, purchase-order                                                            | `list`, `create`                                                                                                              |
+| quotation                                                                                   | `list`, `create`, `update`                                                                                                    |
 | sales-order                                                                                 | `list`, `create`, `invoice`                                                                                                   |
-| goods-delivery, receivable, payment, project, asset, subscription                           | `list`                                                                                                                        |
+| payment                                                                                     | `list`, `approve`, `hold`, `process`                                                                                          |
+| goods-delivery, receivable, project, asset, subscription                                    | `list`                                                                                                                        |
 | document                                                                                    | `list`, `download`, `create`                                                                                                  |
 | document-type                                                                               | `list`                                                                                                                        |
-| webhook                                                                                     | `list`, `create`, `delete`                                                                                                    |
+| mailbox                                                                                     | `list`, `upload`                                                                                                              |
+| mail-message                                                                                | `list`                                                                                                                        |
+| bank-statement                                                                              | `upload`                                                                                                                      |
+| webhook                                                                                     | `list`, `create`, `update`, `delete`                                                                                          |
 | sync                                                                                        | `sync <resource>`, `timestamp`                                                                                                |
 | (root)                                                                                      | `me`, `list`, `get`, `create`, `update`, `delete`, `deleted`, `api`, `probe`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
 
@@ -179,6 +185,9 @@ exactcli budget list --year 2026 --gl-account 700000
 exactcli asset list --search laptop
 exactcli subscription list --account 1001
 exactcli cash-entry list --journal 570 --year 2026
+exactcli payment list --entry <purchase-entry-id>
+exactcli mailbox list --search postbox
+exactcli mail-message list --operation 2 --status 50
 ```
 
 `--account`, `--customer` and `--supplier` take a GUID or a code; a code is looked up on
@@ -202,8 +211,27 @@ exactcli quotation create --account 1001 --line Default:2:100 --close-date 2026-
 exactcli purchase-invoice create --supplier 2001 --journal 600 --line Default:2:100 --reference INV-2026-42 --allow-writes
 exactcli purchase-order create --supplier 2001 --line Default:2:100 --receipt-date 2026-09-10 --allow-writes
 exactcli bank-entry create --journal 500 --line 400000:121:"Invoice 26700001" --account 1001 --allow-writes
-exactcli sales-order invoice <order-id> --journal 700 --allow-writes
+exactcli sales-order invoice <order-id> --journal 700 --async --allow-writes
+exactcli purchase-entry create --supplier 2001 --journal 600 --line 611000:1250 --file invoice.pdf --allow-writes
+exactcli payment approve <payment-id> --allow-writes
+exactcli payment hold <payment-id> --allow-writes
+exactcli payment process <payment-id> <payment-id> --allow-writes
+exactcli account update 1001 --name "Acme NV" --city Ghent --allow-writes
+exactcli item update WIDGET --description "Widget XL" --sales-price 120 --allow-writes
+exactcli contact update <id> --email jane@acme.example --allow-writes
+exactcli webhook update <id> --url https://acme.example/hooks/exact-v2 --allow-writes
+exactcli quotation update <id> --close-date 2026-09-30 --allow-writes
+exactcli mailbox upload --file invoice.pdf --operation 2 --allow-writes
+exactcli bank-statement upload --file statement.cod --allow-writes
 ```
+
+`--file` on `sales-entry create` and `purchase-entry create` creates a document (type 10
+or 20), attaches the files and links the document to the entry, as the Exact
+documentation prescribes. `payment approve` and `payment hold` follow the "Approve
+payments" flow: the payment method B shows a purchase entry on the payments page, K
+hides it; `payment process` sends the selected payments to the bank export.
+`mailbox upload` sends files to the scan service of the division; `bank-statement
+upload` feeds the bank import.
 
 `invoice create` needs a customer (`IsSales` true) and an item per line. `journal-entry
 create` checks that the lines balance before it sends anything; the amounts go to

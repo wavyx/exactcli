@@ -63,6 +63,8 @@ import budget from './descriptors/budget.js'
 import asset from './descriptors/asset.js'
 import subscription from './descriptors/subscription.js'
 import cashEntry from './descriptors/cash-entry.js'
+import mailbox from './descriptors/mailbox.js'
+import mailMessage from './descriptors/mail-message.js'
 
 /**
  * One file per descriptor under ./descriptors/: a new typed command adds a
@@ -115,6 +117,8 @@ export const descriptors = {
   asset,
   subscription,
   cashEntry,
+  mailbox,
+  mailMessage,
 }
 
 /**

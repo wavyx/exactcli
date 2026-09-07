@@ -1,9 +1,7 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
-import { CliError } from '../../lib/errors.js'
+import { assertDate } from '../../lib/lines.js'
 import { divisionPath, normalize, unwrap } from '../../lib/odata.js'
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 const COLUMNS = {
   API: { header: 'API' },
@@ -34,14 +32,7 @@ export default class SyncTimestampCommand extends BaseCommand {
 
   async run() {
     const { endpoint, modified } = this.flags
-    if (!DATE_RE.test(modified)) {
-      throw new CliError(
-        `--modified expects YYYY-MM-DD, received ${modified}`,
-        {
-          exitCode: 64,
-        },
-      )
-    }
+    assertDate(modified, 'modified')
     // A function endpoint: the parameters travel as plain query values.
     const path = divisionPath(
       this.resolveDivision(),

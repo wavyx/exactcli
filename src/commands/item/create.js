@@ -1,7 +1,7 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { resolvePath } from '../../lib/catalog.js'
-import { CliError } from '../../lib/errors.js'
+import { parseNumber } from '../../lib/lines.js'
 import { autoColumns, normalize, unwrap } from '../../lib/odata.js'
 import { resolveRef } from '../../lib/refs.js'
 import { renderValue } from '../../lib/typed/factory.js'
@@ -13,26 +13,29 @@ import {
 } from '../../lib/writes.js'
 
 const RESOURCE = 'logistics/Items'
-const NUMBER_RE = /^-?\d+(\.\d+)?$/
 
 /** The text flags and the field each one fills. */
-const TEXT_FIELDS = { code: 'Code', description: 'Description', unit: 'Unit' }
+export const TEXT_FIELDS = {
+  code: 'Code',
+  description: 'Description',
+  unit: 'Unit',
+}
 
 /** The number flags and the field each one fills. */
-const NUMBER_FIELDS = {
+export const NUMBER_FIELDS = {
   'sales-price': 'StandardSalesPrice',
   'cost-price': 'CostPriceStandard',
 }
 
 /** The true-or-false flags and the field each one fills. */
-const BOOL_FIELDS = {
+export const BOOL_FIELDS = {
   sales: 'IsSalesItem',
   purchase: 'IsPurchaseItem',
   stock: 'IsStockItem',
 }
 
 /** The reference flags: the field each one fills and the resource of the code. */
-const REF_FIELDS = {
+export const REF_FIELDS = {
   'gl-revenue': { field: 'GLRevenue', resource: 'financial/GLAccounts' },
   'gl-costs': { field: 'GLCosts', resource: 'financial/GLAccounts' },
   group: { field: 'ItemGroup', resource: 'logistics/ItemGroups' },
@@ -95,14 +98,8 @@ export default class ItemCreateCommand extends BaseCommand {
       if (flags[flag] !== undefined) body[field] = flags[flag]
     }
     for (const [flag, field] of Object.entries(NUMBER_FIELDS)) {
-      if (flags[flag] === undefined) continue
-      if (!NUMBER_RE.test(flags[flag])) {
-        throw new CliError(
-          `--${flag} expects a number, received: ${flags[flag]}`,
-          { exitCode: 64 },
-        )
-      }
-      body[field] = Number(flags[flag])
+      if (flags[flag] !== undefined)
+        body[field] = parseNumber(flags[flag], flag)
     }
     for (const [flag, field] of Object.entries(BOOL_FIELDS)) {
       if (flags[flag] !== undefined) {
