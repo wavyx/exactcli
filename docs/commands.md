@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.7.1 (103 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.8.0 (118 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -547,6 +547,32 @@ exactcli aging-receivable list --search acme
 exactcli aging-receivable list --account 1001 --output json
 ```
 
+## exactcli assembly-order
+
+### `exactcli assembly-order finish`
+
+Finish an assembly order for a quantity (POST inventory/FinishAssemblyOrder)
+
+```
+exactcli assembly-order finish <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--quantity <value>` _(required)_ - Quantity finished
+- `--date <value>` - Assembly date (YYYY-MM-DD)
+- `--description <value>` - Description of the assembly order
+- `--notes <value>` - Notes
+- `--location <value>` - Storage location (GUID) of the assembled item
+
+Examples:
+
+```bash
+exactcli assembly-order finish <id> --quantity 10 --dry-run
+exactcli assembly-order finish <id> --quantity 10 --allow-writes
+```
+
 ## exactcli asset
 
 ### `exactcli asset list`
@@ -1053,6 +1079,33 @@ Examples:
 ```bash
 exactcli currency list
 exactcli currency list --search euro --output json
+```
+
+## exactcli custom-field
+
+### `exactcli custom-field set`
+
+Set the value of a custom field on one record (POST customfield/UpdateCustomField)
+
+```
+exactcli custom-field set <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--component <value>` _(required)_ - Business component, for example Account or Item
+- `--record <value>` _(required)_ - Record (GUID) that carries the field
+- `--value <value>` _(required)_ - Value to store
+- `--caption <value>` - Description of the custom field
+- `--type <value>` - Data type of the custom field
+- `--refers-to <value>` - Referenced entity, for example Item or Account
+
+Examples:
+
+```bash
+exactcli custom-field set Segment --component Account --record <account-id> --value North --dry-run
+exactcli custom-field set Segment --component Account --record <account-id> --value North --allow-writes
 ```
 
 ## exactcli division
@@ -2087,6 +2140,32 @@ exactcli purchase-order list --supplier 2001 --status 10 --all
 
 ## exactcli quotation
 
+### `exactcli quotation accept`
+
+Accept a quotation, with an optional follow-up (POST crm/AcceptQuotation)
+
+```
+exactcli quotation accept <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--action <value>` - Follow-up: 0 none, 1 sales order, 2 sales invoice, 3 project, 4 project WBS, 5 subscription
+- `--invoice-journal <value>` - Journal code of the sales invoice (action 2)
+- `--your-ref <value>` - Purchase order number of the customer
+- `--reason <value>` - Reason code (GUID) of the acceptance
+- `--opportunity-stage <value>` - Stage (GUID) of the linked opportunity afterwards
+- `--notification-layout <value>` - Email layout (GUID) of the notification
+
+Examples:
+
+```bash
+exactcli quotation accept <id> --dry-run
+exactcli quotation accept <id> --action 1 --allow-writes
+exactcli quotation accept <id> --action 2 --invoice-journal 70 --allow-writes
+```
+
 ### `exactcli quotation create`
 
 Create a quotation from codes (POST crm/Quotations)
@@ -2110,6 +2189,36 @@ Examples:
 ```bash
 exactcli quotation create --account 1001 --line Default:2:100 --dry-run
 exactcli quotation create --account 1001 --line Default:2:100 --close-date 2026-09-30 --allow-writes
+```
+
+### `exactcli quotation email`
+
+Email a quotation that the customer signs off online (POST crm/EmailWithSignOffQuotation)
+
+```
+exactcli quotation email <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--email-layout <value>` _(required)_ - Email layout (GUID) of the message text
+- `--layout <value>` - Document layout (GUID) of the PDF
+- `--subject <value>` - Subject of the email
+- `--extra-text <value>` - Extra text on the document and in the email
+- `--action <value>` - Follow-up: 0 none, 1 sales order, 2 sales invoice, 3 project, 4 project WBS, 5 subscription
+- `--invoice-journal <value>` - Journal code of the sales invoice (action 2)
+- `--your-ref <value>` - Purchase order number of the customer
+- `--allow-your-ref` - Let the customer enter a purchase order number
+- `--accept-layout <value>` - Email layout (GUID) sent on acceptance
+- `--reject-layout <value>` - Email layout (GUID) sent on rejection
+- `--date <value>` - Date printed on the quotation (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli quotation email <id> --email-layout <layout-id> --dry-run
+exactcli quotation email <id> --email-layout <layout-id> --action 1 --allow-writes
 ```
 
 ### `exactcli quotation list`
@@ -2139,6 +2248,96 @@ Examples:
 ```bash
 exactcli quotation list --from 2026-01-01 --to 2026-01-31
 exactcli quotation list --account 1001 --status 25 --all
+```
+
+### `exactcli quotation print`
+
+Print a quotation to a PDF document, and email it (POST crm/PrintQuotation)
+
+```
+exactcli quotation print <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--layout <value>` - Document layout (GUID) of the PDF
+- `--email-layout <value>` - Email layout (GUID) of the message text
+- `--extra-text <value>` - Extra text on the document and in the email
+- `--email` - Send the document to the customer by email
+- `--date <value>` - Date printed on the quotation (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli quotation print <id> --dry-run
+exactcli quotation print <id> --email --allow-writes
+```
+
+### `exactcli quotation reject`
+
+Reject a quotation (POST crm/RejectQuotation)
+
+```
+exactcli quotation reject <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--reason <value>` - Reason code (GUID) of the rejection
+- `--opportunity-stage <value>` - Stage (GUID) of the linked opportunity afterwards
+- `--notification-layout <value>` - Email layout (GUID) of the notification
+
+Examples:
+
+```bash
+exactcli quotation reject <id> --dry-run
+exactcli quotation reject <id> --allow-writes
+```
+
+### `exactcli quotation reopen`
+
+Reopen an accepted or rejected quotation (POST crm/ReopenQuotation)
+
+```
+exactcli quotation reopen <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation reopen <id> --dry-run
+exactcli quotation reopen <id> --allow-writes
+```
+
+### `exactcli quotation review`
+
+Review a quotation: a new version replaces it (POST crm/ReviewQuotation)
+
+```
+exactcli quotation review <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--description <value>` - Description of the new quotation
+- `--date <value>` - Date of the new quotation (YYYY-MM-DD)
+- `--copy-prices` - Copy the item prices of the original
+- `--account <value>` - Order account (code or GUID) of the new quotation
+- `--payment-condition <value>` - Payment condition code
+- `--document <value>` - Document (GUID) linked to the new quotation
+
+Examples:
+
+```bash
+exactcli quotation review <id> --dry-run
+exactcli quotation review <id> --allow-writes
 ```
 
 ### `exactcli quotation update`
@@ -2223,6 +2422,28 @@ Examples:
 ```bash
 exactcli receivables-list list --due-to 2026-09-30
 exactcli receivables-list list --account 1001 --output json
+```
+
+## exactcli return
+
+### `exactcli return process`
+
+Set the status of a return request (VAT or payroll declaration) (POST financial/ProcessReturn)
+
+```
+exactcli return process <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--status <value>` _(required)_ - New status: 5 rejected, 50 processed
+
+Examples:
+
+```bash
+exactcli return process <request-id> --status 50 --dry-run
+exactcli return process <request-id> --status 50 --allow-writes
 ```
 
 ## exactcli revenue
@@ -2338,7 +2559,81 @@ exactcli sales-invoice list --from 2026-01-01 --to 2026-01-31
 exactcli sales-invoice list --customer 1001 --status 20 --all
 ```
 
+### `exactcli sales-invoice print`
+
+Print a sales invoice to a PDF document, and send it by email, postbox or Peppol (POST salesinvoice/PrintedSalesInvoices)
+
+```
+exactcli sales-invoice print <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--layout <value>` - Document layout (GUID) of the PDF
+- `--email-layout <value>` - Email layout (GUID) of the message text
+- `--extra-text <value>` - Extra text on the document and in the email
+- `--email` - Send the document to the customer by email
+- `--sender <value>` - Email address of the sender
+- `--postbox` - Send the invoice to the postbox of the customer
+- `--postbox-sender <value>` - Postbox (GUID) that sends the message
+- `--peppol` - Send the invoice through Peppol
+- `--by-account` - Take the output preference of the account
+- `--date <value>` - Invoice date (YYYY-MM-DD)
+- `--reporting-year <value>` - Reporting year
+- `--reporting-period <value>` - Reporting period
+
+Examples:
+
+```bash
+exactcli sales-invoice print <id> --dry-run
+exactcli sales-invoice print <id> --email --allow-writes
+exactcli sales-invoice print <id> --peppol --allow-writes
+```
+
 ## exactcli sales-order
+
+### `exactcli sales-order complete`
+
+Complete a sales order: close what is not delivered or invoiced (POST salesorder/CompleteSalesOrder)
+
+```
+exactcli sales-order complete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--delivery` - Complete the remaining goods delivery
+- `--invoice` - Complete the outstanding invoice amount
+
+Examples:
+
+```bash
+exactcli sales-order complete <id> --dry-run
+exactcli sales-order complete <id> --delivery --invoice --allow-writes
+```
+
+### `exactcli sales-order complete-line`
+
+Complete one sales order line (POST salesorder/CompleteSalesOrderLine)
+
+```
+exactcli sales-order complete-line <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--delivery` - Complete the remaining goods delivery
+- `--invoice` - Complete the outstanding invoice amount
+
+Examples:
+
+```bash
+exactcli sales-order complete-line <id> --dry-run
+exactcli sales-order complete-line <id> --allow-writes
+```
 
 ### `exactcli sales-order create`
 
@@ -2417,6 +2712,51 @@ Examples:
 ```bash
 exactcli sales-order list --from 2026-01-01 --to 2026-01-31
 exactcli sales-order list --customer 1001 --status 12 --all
+```
+
+### `exactcli sales-order print`
+
+Print a sales order to a PDF document, and email it (POST salesorder/PrintedSalesOrders)
+
+```
+exactcli sales-order print <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--layout <value>` - Document layout (GUID) of the PDF
+- `--email-layout <value>` - Email layout (GUID) of the message text
+- `--extra-text <value>` - Extra text on the document and in the email
+- `--email` - Send the document to the customer by email
+- `--sender <value>` - Email address of the sender
+
+Examples:
+
+```bash
+exactcli sales-order print <id> --dry-run
+exactcli sales-order print <id> --allow-writes
+```
+
+## exactcli stock-count
+
+### `exactcli stock-count process`
+
+Process a stock count (POST inventory/ProcessStockCount)
+
+```
+exactcli stock-count process <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli stock-count process <id> --dry-run
+exactcli stock-count process <id> --allow-writes
 ```
 
 ## exactcli subscription
@@ -2530,6 +2870,28 @@ Examples:
 ```bash
 exactcli vat-code list
 exactcli vat-code list --type E --blocked no
+```
+
+## exactcli warehouse-transfer
+
+### `exactcli warehouse-transfer process`
+
+Process a warehouse transfer (POST inventory/ProcessWarehouseTransfer)
+
+```
+exactcli warehouse-transfer process <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--date <value>` - Transfer date (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli warehouse-transfer process <id> --dry-run
+exactcli warehouse-transfer process <id> --allow-writes
 ```
 
 ## exactcli webhook

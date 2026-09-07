@@ -1,6 +1,6 @@
 {
   "name": "@wavyx/exactcli",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "publishConfig": {
     "access": "public"
   },
@@ -50,6 +50,21 @@
     },
     "topicSeparator": " ",
     "topics": {
+      "stock-count": {
+        "description": "Stock counts (inventory)"
+      },
+      "warehouse-transfer": {
+        "description": "Warehouse transfers (inventory)"
+      },
+      "assembly-order": {
+        "description": "Assembly orders (manufacturing)"
+      },
+      "return": {
+        "description": "Return requests: VAT and payroll declarations"
+      },
+      "custom-field": {
+        "description": "Custom fields on records"
+      },
       "auth": {
         "description": "Authenticate with Exact Online (OAuth 2.0)"
       },

@@ -225,6 +225,32 @@ exactcli mailbox upload --file invoice.pdf --operation 2 --allow-writes
 exactcli bank-statement upload --file statement.cod --allow-writes
 ```
 
+Actions act on one record through the POST-only resources of Exact Online. Each one
+takes the record GUID, the flags of the action, `--dry-run` and the write gate:
+
+```sh
+exactcli quotation accept <id> --action 1 --allow-writes        # 1 = create a sales order
+exactcli quotation reject <id> --reason <reason-id> --allow-writes
+exactcli quotation reopen <id> --allow-writes
+exactcli quotation review <id> --description "v2" --copy-prices --allow-writes
+exactcli quotation print <id> --email --allow-writes
+exactcli quotation email <id> --email-layout <layout-id> --allow-writes
+exactcli sales-order complete <id> --delivery --invoice --allow-writes
+exactcli sales-order complete-line <line-id> --invoice --allow-writes
+exactcli sales-order print <id> --email --allow-writes
+exactcli sales-invoice print <id> --peppol --allow-writes
+exactcli stock-count process <id> --allow-writes
+exactcli warehouse-transfer process <id> --date 2026-09-10 --allow-writes
+exactcli assembly-order finish <id> --quantity 10 --allow-writes
+exactcli return process <request-id> --status 50 --allow-writes
+exactcli custom-field set Segment --component Account --record <account-id> --value North --allow-writes
+```
+
+The answer of an action carries `SuccessMessage` or `ErrorMessage`, and the id of what
+it created (`Document`, `NewQuotationID`). The remaining fields of an action (project
+and subscription follow-ups of `quotation accept`, for example) go through
+`create crm/AcceptQuotation --set ...`, which validates them against the catalogue.
+
 `--file` on `sales-entry create` and `purchase-entry create` creates a document (type 10
 or 20), attaches the files and links the document to the entry, as the Exact
 documentation prescribes. `payment approve` and `payment hold` follow the "Approve

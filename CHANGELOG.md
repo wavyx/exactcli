@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-09-07
+
+### Added
+
+- Actions: 15 commands on the POST-only resources, from one factory
+  (`src/lib/typed/action.js`) and one descriptor file: `quotation accept|reject|
+reopen|review|print|email`, `sales-order complete|complete-line|print`,
+  `sales-invoice print`, `stock-count process`, `warehouse-transfer process`,
+  `assembly-order finish`, `return process`, `custom-field set`. Each takes the
+  record GUID, typed flags (int, number, date, GUID, code lookup), `--dry-run`
+  and the write gate; the descriptors are checked against the catalogue.
+  Every POST-only resource of the catalogue now has a typed command, except
+  the two navigation sub-entities.
+
 ## [0.7.1] - 2026-09-07
 
 Adversarial review of 0.7.0 (five lenses, two skeptics per finding): 7 confirmed
