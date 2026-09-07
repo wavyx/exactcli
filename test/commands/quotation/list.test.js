@@ -104,7 +104,7 @@ describe('quotation list', () => {
         $orderby: ORDER,
         $filter:
           `OrderAccount eq guid'${GUID}' and QuotationDate ge datetime'2026-01-01'` +
-          " and QuotationDate le datetime'2026-01-31' and Status eq 25" +
+          " and QuotationDate le datetime'2026-01-31T23:59:59' and Status eq 25" +
           " and substringof('acme', Description)",
       })
       .reply(200, { d: { results: [] } })

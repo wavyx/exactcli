@@ -135,6 +135,53 @@ describe('origin lock', () => {
   })
 })
 
+describe('path lock', () => {
+  it.each([
+    '/api/v1/123/%2e%2e/456/crm/Accounts',
+    '/api/v1/123/.%2e/456/crm/Accounts',
+    '/api/v1/123/%2E%2E/456/crm/Accounts',
+    '/api/v1/123/crm\\Accounts',
+  ])('refuses a path the parser rewrites: %s', async (path) => {
+    const err = await client()
+      .get(path)
+      .catch((e) => e)
+    expect(err).toBeInstanceOf(CliError)
+    expect(err.exitCode).toBe(64)
+    expect(err.message).toBe('Request path changed under normalisation')
+  })
+
+  it.each([
+    "/api/v1/123/crm/Accounts(guid'11111111-1111-1111-1111-111111111111')",
+    "/api/v1/123/general/Currencies('EUR')",
+    "/api/v1/123/general/Currencies('O''Neil')",
+    '/api/v1/123/crm/Acc%zz',
+  ])('sends a key path unchanged: %s', async (path) => {
+    const scope = mockApi().get(path).reply(200, { d: {} })
+
+    await client().get(path)
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('tolerates the percent-encoding the parser adds to a space', async () => {
+    const scope = mockApi()
+      .get("/api/v1/123/general/Currencies('A%20B')")
+      .reply(200, { d: {} })
+
+    await client().get("/api/v1/123/general/Currencies('A B')")
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('checks the path part only, not the query', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/crm/Accounts')
+      .query({ $top: '1' })
+      .reply(200, { d: [] })
+
+    await client().get('/api/v1/123/crm/Accounts?$top=1')
+    expect(scope.isDone()).toBe(true)
+  })
+})
+
 describe('query building', () => {
   it('sends string and number values', async () => {
     const scope = mockApi()

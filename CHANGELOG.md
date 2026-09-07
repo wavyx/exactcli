@@ -4,6 +4,54 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] - 2026-09-07
+
+Adversarial review of 0.7.0 (five lenses, two skeptics per finding): 7 confirmed
+findings and 15 smaller ones, all fixed here. No live behaviour was reported
+by a user.
+
+### Fixed
+
+- MCP: `exact_write` put the resource before the flags, so a resource such as
+  `--division=999999` reached the child as a flag and escaped the division the
+  server pinned. The positionals now follow a `--` separator and the resource is
+  pattern-checked.
+- MCP: with `--all-tools --allow-writes` the per-command write tools never
+  passed `--allow-writes` (every call exited 77) and forced `--yes` on every
+  tool. The server now passes `--allow-writes` to write tools and `--yes` only
+  to a destructive tool called with `confirm: true`.
+- MCP: the agent surface no longer carries the flags that read or write local
+  files (`file`, `state`, `body`, `out`); the upload commands that need a file
+  are not exposed. A success answer now carries the stderr notes (truncation,
+  next sync timestamp) as a second text block. `key` accepts an integer.
+- The `read_only` lock is stored in the keychain credential as well as in the
+  config store, so an `EXACTCLI_CONFIG_DIR` that points elsewhere cannot unlock
+  a profile whose token is still in use. `auth status` shows the lock.
+- A resource path with percent-encoded dot segments (`%2e%2e/456/...`) could
+  read another division; the resource check now refuses `%` and a decoded
+  `..`, and the client refuses a path that URL normalisation changes.
+- `--top` returned no rows: Exact answers a bare `{"d":[...]}` with `$top`,
+  and the page walker read only `d.results`.
+- A forced refresh after a 401 no longer rejects the profile when a sibling
+  process rotated the token in the meantime; `doctor` refreshes an old token
+  before its API probe instead of reporting a false failure.
+- `sync` and `bulk` variants fall back to another service only under
+  `Financial` (the accounting feeds); `crm/BankAccounts` no longer maps to the
+  payroll feed. A full `/api/v1/<division>/...` path is no longer prefixed
+  twice.
+- A string key is quoted: `get general/Currencies EUR` sends
+  `Currencies('EUR')`. A `to` date filter includes the whole last day. A guid
+  filter without lookup refuses a value that is not a GUID.
+- `--expand` on a list adds the navigation names to the default `$select`, so
+  the expanded rows are returned.
+- The OAuth callback checks the state before the `error` parameter; the token
+  request times out after 30 s (below the stale-lock threshold); `auth logout`
+  takes the refresh lock; `auth login` stores the host only after it succeeds;
+  `sync timestamp --endpoint` is validated.
+- `bin/dev.js` no longer loads `EXACTCLI_ALLOW_WRITES` or `EXACTCLI_CONFIG_DIR`
+  from a `.env` file. Docs: seven generic MCP tools (with `exact_probe`), the
+  `bank-entry create` example is quoted.
+
 ## [0.7.0] - 2026-09-07
 
 Catalogue date: 2026-09-07 (435 resources, plus the hand-written extras file).

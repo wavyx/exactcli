@@ -28,10 +28,16 @@ export const writesAllowed = (flags) =>
 /**
  * A profile with `read_only` set refuses every write, whatever the flags say.
  * The belt for a production administration that must stay untouched.
- * @param {{ profile?: string }} flags
+ *
+ * The lock has two carriers. The config store follows EXACTCLI_CONFIG_DIR,
+ * so an empty config directory would unlock it; the keychain blob does not,
+ * so BaseCommand.init sets `flags.readOnlyCredential` to the profile name
+ * when the blob carries the lock, and that carrier wins.
+ * @param {{ profile?: string, readOnlyCredential?: string }} flags
  * @returns {string | null} the profile name when it is locked
  */
 export function readOnlyProfile(flags) {
+  if (flags.readOnlyCredential) return flags.readOnlyCredential
   const profile = loadConfig(flags.profile).activeProfile
   return getProfileConfig(profile, 'read_only') === true ? profile : null
 }

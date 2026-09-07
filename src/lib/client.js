@@ -49,6 +49,23 @@ function clamp(value, min, max) {
 }
 
 /**
+ * The URL parser percent-encodes a space or a double quote but leaves a key
+ * such as `(guid'...')` alone. Compare the decoded forms, so only a real
+ * rewrite counts: a dot segment or a backslash. A sequence that does not
+ * decode is compared as typed.
+ * @param {string} parsed the pathname the parser produced
+ * @param {string} given the path part of the request
+ * @returns {boolean}
+ */
+function samePath(parsed, given) {
+  try {
+    return decodeURIComponent(parsed) === decodeURIComponent(given)
+  } catch {
+    return parsed === given
+  }
+}
+
+/**
  * Resolve the `EXACTCLI_BASE_URL` mock-endpoint override, a guarded escape
  * hatch for pointing exactcli at a local mock server. It ONLY accepts a
  * localhost origin. Anything else hard-fails (78) to reaffirm the host lock,
@@ -142,7 +159,11 @@ export function createClient({
     onRefresh = undefined
   }
 
-  /** Every URL, including a `__next` link, passes this origin lock. */
+  /**
+   * Every URL, including a `__next` link, passes this origin lock. A path
+   * must also survive the parser unchanged: `%2e%2e` or a backslash would
+   * otherwise resolve into another division on the locked host.
+   */
   function lockedUrl(path) {
     const url = new URL(path, baseOrigin)
     if (url.origin !== baseOrigin) {
@@ -150,6 +171,11 @@ export function createClient({
         `Refusing to send request outside ${baseOrigin}: ${url.origin}`,
         { exitCode: 78 },
       )
+    }
+    if (path.startsWith('/') && !samePath(url.pathname, path.split('?')[0])) {
+      throw new CliError('Request path changed under normalisation', {
+        exitCode: 64,
+      })
     }
     return url
   }
@@ -383,12 +409,15 @@ export function createClient({
         : await request('GET', path, { query })
       pages++
       const envelope = body?.d
+      // With $top in the query Exact answers a bare array: no results, no
+      // __next.
+      const bare = Array.isArray(envelope)
       // Recorded before the rows go out: a consumer that stops early (a
       // --limit inside the page) still learns that more data exists, and the
       // value stays set when maxPages stops the walk.
-      next = envelope?.__next ?? null
+      next = bare ? null : (envelope?.__next ?? null)
       api.lastNext = next
-      yield* envelope?.results ?? []
+      yield* bare ? envelope : (envelope?.results ?? [])
       if (!next) break
     }
   }

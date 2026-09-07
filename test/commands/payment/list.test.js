@@ -110,7 +110,7 @@ describe('payment list', () => {
         $filter:
           `Account eq guid'${GUID}' and TransactionEntryID eq guid'${ENTRY}'` +
           " and DueDate ge datetime'2026-01-01'" +
-          " and DueDate le datetime'2026-12-31' and Status eq 20" +
+          " and DueDate le datetime'2026-12-31T23:59:59' and Status eq 20" +
           " and substringof('rent', Description)",
       })
       .reply(200, { d: { results: [] } })

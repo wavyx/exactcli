@@ -98,7 +98,7 @@ describe('mail-message list', () => {
         $filter:
           'Operation eq 2 and RecipientStatus eq 50' +
           " and SenderDateSent ge datetime'2026-01-01'" +
-          " and SenderDateSent le datetime'2026-01-31'",
+          " and SenderDateSent le datetime'2026-01-31T23:59:59'",
       })
       .reply(200, { d: { results: [] } })
 

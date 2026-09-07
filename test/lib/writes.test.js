@@ -76,6 +76,26 @@ describe('read-only profile', () => {
     )
     expect(() => assertWritesAllowed({}, 'GET')).not.toThrow()
   })
+
+  it('takes the lock that the credential carries over the config', () => {
+    // BaseCommand.init marks the flags when the keychain blob is locked. The
+    // config store may sit in an empty EXACTCLI_CONFIG_DIR and know nothing.
+    expect(readOnlyProfile({ readOnlyCredential: 'prod' })).toBe('prod')
+    const err = (() => {
+      try {
+        assertWritesAllowed(
+          { 'allow-writes': true, yes: true, readOnlyCredential: 'prod' },
+          'DELETE',
+        )
+      } catch (e) {
+        return e
+      }
+    })()
+    expect(err.exitCode).toBe(77)
+    expect(err.message).toBe(
+      'Profile prod is read-only (config set read_only false to change it).',
+    )
+  })
 })
 
 describe('assertWritesAllowed', () => {

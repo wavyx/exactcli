@@ -75,7 +75,7 @@ describe('document list', () => {
         $select: SELECT,
         $orderby: ORDER,
         $filter:
-          "Type eq 10 and DocumentDate ge datetime'2026-01-01' and DocumentDate le datetime'2026-12-31'",
+          "Type eq 10 and DocumentDate ge datetime'2026-01-01' and DocumentDate le datetime'2026-12-31T23:59:59'",
       })
       .reply(200, { d: { results: [] } })
 

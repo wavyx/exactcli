@@ -83,7 +83,7 @@ describe('transaction-line list', () => {
         $select: SELECT,
         $orderby: ORDER,
         $filter:
-          "FinancialYear eq 2026 and FinancialPeriod eq 9 and Date ge datetime'2026-09-01' and Date le datetime'2026-09-30' and GLAccountCode eq '700000' and JournalCode eq '70'",
+          "FinancialYear eq 2026 and FinancialPeriod eq 9 and Date ge datetime'2026-09-01' and Date le datetime'2026-09-30T23:59:59' and GLAccountCode eq '700000' and JournalCode eq '70'",
       })
       .reply(200, { d: { results: [] } })
 

@@ -83,6 +83,19 @@ describe('sync timestamp', () => {
     expect(out).toMatch(/9/)
   })
 
+  it('rejects an endpoint that is not a resource name with 64', async () => {
+    process.stdout.isTTY = true
+    const err = await Cmd.run([
+      '--endpoint',
+      "Accounts'",
+      '--modified',
+      '2026-09-01',
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toBe('Expected a resource name such as Accounts')
+    expect(nock.pendingMocks()).toEqual([])
+  })
+
   it('rejects a date that is not YYYY-MM-DD with 64', async () => {
     process.stdout.isTTY = true
     const err = await Cmd.run([

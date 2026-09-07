@@ -1,5 +1,6 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
+import { CliError } from '../../lib/errors.js'
 import { assertDate } from '../../lib/lines.js'
 import { divisionPath, normalize, unwrap } from '../../lib/odata.js'
 
@@ -33,6 +34,13 @@ export default class SyncTimestampCommand extends BaseCommand {
   async run() {
     const { endpoint, modified } = this.flags
     assertDate(modified, 'modified')
+    // The feed name travels quoted in the query. Letters only, so a quote
+    // cannot close it and add its own OData.
+    if (!/^[A-Za-z]+$/.test(endpoint)) {
+      throw new CliError('Expected a resource name such as Accounts', {
+        exitCode: 64,
+      })
+    }
     // A function endpoint: the parameters travel as plain query values.
     const path = divisionPath(
       this.resolveDivision(),

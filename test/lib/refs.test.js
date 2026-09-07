@@ -10,7 +10,14 @@ import {
 import nock from 'nock'
 import { mockApi } from '../helpers.js'
 import { createClient } from '../../src/lib/client.js'
-import { GUID_RE, labelField, padCode, resolveRef } from '../../src/lib/refs.js'
+import { findResource } from '../../src/lib/catalog.js'
+import {
+  GUID_RE,
+  labelField,
+  padCode,
+  renderKey,
+  resolveRef,
+} from '../../src/lib/refs.js'
 
 const GUID = '11111111-1111-1111-1111-111111111111'
 const PATH = '/api/v1/123/crm/Accounts'
@@ -43,6 +50,43 @@ describe('padCode', () => {
   it('right-aligns digits in 18 characters and leaves other codes alone', () => {
     expect(padCode('2')).toBe('                 2')
     expect(padCode('ACME')).toBe('ACME')
+  })
+})
+
+describe('renderKey', () => {
+  const currencies = findResource('general/Currencies')
+  const BAD = 'Record key of general/Currencies must not contain ? # / \\ %'
+
+  it('quotes a string key and doubles an embedded quote', () => {
+    expect(renderKey(currencies, 'general/Currencies', 'EUR')).toBe("('EUR')")
+    expect(renderKey(currencies, 'general/Currencies', "O'Neil")).toBe(
+      "('O''Neil')",
+    )
+  })
+
+  it.each(['a?b', 'a/b', 'a%b', 'a\\b', 'a#b', ''])(
+    'refuses a string key that cannot travel in a path: %s',
+    (id) => {
+      let err
+      try {
+        renderKey(currencies, 'general/Currencies', id)
+      } catch (e) {
+        err = e
+      }
+      expect(err.exitCode).toBe(64)
+      expect(err.message).toBe(BAD)
+    },
+  )
+
+  it('keeps a GUID key and an integer key as they are', () => {
+    expect(renderKey(findResource('crm/Accounts'), 'crm/Accounts', GUID)).toBe(
+      `(guid'${GUID}')`,
+    )
+    expect(
+      renderKey(findResource('system/Divisions'), 'system/Divisions', '123'),
+    ).toBe('(123)')
+    expect(renderKey(undefined, 'custom/Things', GUID)).toBe(`(guid'${GUID}')`)
+    expect(renderKey(undefined, 'custom/Things', '700')).toBe('(700)')
   })
 })
 

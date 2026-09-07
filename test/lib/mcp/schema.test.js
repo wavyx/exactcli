@@ -29,13 +29,18 @@ const entry = {
     division: { type: 'option' },
     'allow-writes': { type: 'boolean' },
     yes: { type: 'boolean' },
+    // local files - the agent surface never reads or writes one:
+    file: { type: 'option', multiple: true },
+    state: { type: 'option' },
+    body: { type: 'option' },
+    out: { type: 'option' },
   },
 }
 
 describe('buildInputSchema', () => {
   const shape = buildInputSchema(entry)
 
-  it('drops global/noise flags (including yes, division and allow-writes)', () => {
+  it('drops global/noise flags (including yes, division, allow-writes and local files)', () => {
     for (const n of [
       'output',
       'jq',
@@ -49,6 +54,10 @@ describe('buildInputSchema', () => {
       'division',
       'allow-writes',
       'yes',
+      'file',
+      'state',
+      'body',
+      'out',
     ]) {
       expect(Object.keys(shape)).not.toContain(n)
       expect(NOISE_FLAGS.has(n)).toBe(true)
@@ -104,6 +113,18 @@ describe('buildInputSchema', () => {
   it('maps a multiple option flag to an array', () => {
     expect(shape.include.safeParse(['deal', 'person']).success).toBe(true)
     expect(shape.include.safeParse('deal').success).toBe(false)
+  })
+
+  it('gives a destructive tool an optional confirm boolean, other kinds none', () => {
+    const destructive = buildInputSchema({ ...entry, kind: 'destructive' })
+    expect(destructive.confirm.safeParse(true).success).toBe(true)
+    expect(destructive.confirm.safeParse('yes').success).toBe(false)
+    expect(destructive.confirm.safeParse(undefined).success).toBe(true)
+    expect(destructive.confirm.description).toBe('Must be true to delete')
+    expect(buildInputSchema({ ...entry, kind: 'write' })).not.toHaveProperty(
+      'confirm',
+    )
+    expect(shape).not.toHaveProperty('confirm')
   })
 })
 

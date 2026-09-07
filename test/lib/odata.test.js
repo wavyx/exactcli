@@ -118,6 +118,27 @@ describe('divisionPath', () => {
     )
   })
 
+  it.each([
+    '%2e%2e/456/crm/Accounts',
+    '.%2e/456/crm/Accounts',
+    '%2E%2E/456/crm/Accounts',
+    'crm/Acc%20ounts',
+    'crm/Acc%zz',
+    'crm\\Accounts/x',
+  ])(
+    'throws CliError 64 for the encoded or escaped resource %s',
+    (resource) => {
+      let err
+      try {
+        divisionPath(123, resource)
+      } catch (e) {
+        err = e
+      }
+      expect(err.exitCode).toBe(64)
+      expect(err.message).toBe('Resource must look like service/Resource')
+    },
+  )
+
   it('validates the resource before checking the division', () => {
     try {
       divisionPath(undefined, 'Accounts')

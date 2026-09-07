@@ -50,6 +50,20 @@ describe('pageOData', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('reads the bare array Exact answers when $top is in the query', async () => {
+    const scope = mockApi()
+      .get(ACCOUNTS)
+      .query({ $top: '2' })
+      .reply(200, { d: [{ ID: 'g1' }, { ID: 'g2' }] })
+
+    const api = client()
+    const items = await collect(api.pageOData(ACCOUNTS, { $top: 2 }))
+
+    expect(items).toEqual([{ ID: 'g1' }, { ID: 'g2' }])
+    expect(api.lastNext).toBeNull()
+    expect(scope.isDone()).toBe(true)
+  })
+
   it('stops on a single page and clears lastNext', async () => {
     const scope = mockApi()
       .get(ACCOUNTS)

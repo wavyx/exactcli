@@ -81,6 +81,20 @@ const buildIndex = (catalog) =>
   new Map(catalog.resources.map((r) => [catalogKey(r.uri), r]))
 
 /**
+ * Split a reference into its beta marker and its `service/Resource` part.
+ * Leading slashes, `api/v1/`, `beta/`, a division code or `{division}` go.
+ * @param {string} ref
+ * @returns {{beta: boolean, rest: string}}
+ */
+function splitRef(ref) {
+  const match = String(ref)
+    .replace(/^\/+/, '')
+    .replace(/^api\/v1\//i, '')
+    .match(/^(beta\/)?(?:(?:\d+|\{division\})\/)?(.*)$/is)
+  return { beta: Boolean(match[1]), rest: match[2] }
+}
+
+/**
  * Normalise any accepted reference to the lookup key of the catalogue:
  * lowercase, no /api/v1 prefix, the division replaced by `{division}`, no
  * key suffix, no query string.
@@ -88,25 +102,15 @@ const buildIndex = (catalog) =>
  * @returns {string}
  */
 export function catalogKey(ref) {
-  let s = String(ref)
-    .trim()
-    .split('?')[0]
-    .replace(/\([^)]*\)$/, '')
-    .replace(/^\/+/, '')
-    .replace(/^api\/v1\//i, '')
-    .replace(
-      /^(beta\/)?(\d+|\{division\})\//i,
-      (_m, beta) => `${beta ? 'beta/' : ''}{division}/`,
-    )
-    .toLowerCase()
+  const { beta, rest } = splitRef(
+    String(ref)
+      .trim()
+      .split('?')[0]
+      .replace(/\([^)]*\)$/, ''),
+  )
+  const s = rest.toLowerCase()
   if (s.startsWith('current/')) return s
-  if (s.startsWith('beta/') && !s.startsWith('beta/{division}/')) {
-    s = `beta/{division}/${s.slice(5)}`
-  }
-  if (!s.startsWith('{division}/') && !s.startsWith('beta/')) {
-    s = `{division}/${s}`
-  }
-  return s
+  return `${beta ? 'beta/' : ''}{division}/${s}`
 }
 
 const indexOf = (catalog) =>
@@ -139,13 +143,18 @@ export function variantOf(resource, family, catalog = loadCatalog()) {
   )
   const direct = indexOf(catalog).get(target)
   if (direct) return direct
-  // Some feeds live under another service (sync/Financial/SalesEntries for
-  // salesentry/SalesEntries): a unique resource name in the family is it.
-  // The scrape names a feed 'CRM/Accounts': compare the last segment only.
+  // The accounting feeds live under Financial (sync/Financial/SalesEntries
+  // for salesentry/SalesEntries): there, a unique resource name is the
+  // variant. Elsewhere a name clash is another resource: sync/Payroll/
+  // BankAccounts is not crm/BankAccounts. The scrape names a feed
+  // 'CRM/Accounts': compare the last segment only.
   const last = (r) => r.resource.split('/').pop().toLowerCase()
   const name = last(resource)
   const byName = catalog.resources.filter(
-    (r) => r.family === family && last(r) === name,
+    (r) =>
+      r.family === family &&
+      shortName(r).split('/')[1].toLowerCase() === 'financial' &&
+      last(r) === name,
   )
   return byName.length === 1 ? byName[0] : undefined
 }
@@ -218,9 +227,15 @@ export const mandatoryFields = (res) =>
 export const filterableFields = (res) =>
   res.properties.filter((p) => p.filter === 'yes').map((p) => p.name)
 
-/** @param {object} res @returns {'guid' | 'plain'} */
+/** The key kinds a record path renders differently. */
+const KEY_TYPES = new Map([
+  [GUID_TYPE, 'guid'],
+  ['Edm.String', 'string'],
+])
+
+/** @param {object} res @returns {'guid' | 'string' | 'plain'} */
 export const keyType = (res) =>
-  res.properties.find((p) => p.key)?.type === GUID_TYPE ? 'guid' : 'plain'
+  KEY_TYPES.get(res.properties.find((p) => p.key)?.type) ?? 'plain'
 
 /**
  * The columns a table shows by default: keys, then the names a reader looks
@@ -285,16 +300,17 @@ export function resolvePath(
   catalog = loadCatalog(),
 ) {
   const resource = findResource(ref, catalog)
-  const clean = String(ref).replace(/^\/+/, '')
-  if (/^current\//i.test(clean)) return { path: `/api/v1/${clean}`, resource }
-  const isBeta = beta || /^beta\//i.test(clean)
-  const rest = clean.replace(/^beta\//i, '')
+  const { beta: isBeta, rest } = splitRef(ref)
+  if (/^current\//i.test(rest)) return { path: `/api/v1/${rest}`, resource }
   if (!rest.includes('/')) {
     throw new CliError('Resource must look like service/Resource', {
       exitCode: 64,
     })
   }
-  return { path: divisionPath(division, rest, { beta: isBeta }), resource }
+  return {
+    path: divisionPath(division, rest, { beta: beta || isBeta }),
+    resource,
+  }
 }
 
 /**

@@ -16,6 +16,7 @@ import { descriptors } from '../../../src/lib/typed/descriptors.js'
 import {
   buildTypedFilter,
   defineListCommand,
+  expandedSelect,
   renderClause,
   renderValue,
 } from '../../../src/lib/typed/factory.js'
@@ -58,11 +59,20 @@ describe('renderValue', () => {
     expect(renderValue('string', "O'Neil")).toBe("'O''Neil'")
   })
 
-  it('rejects a bad int, bool or date with 64', () => {
+  it('closes a le date at the end of its day, keeps the other operators', () => {
+    expect(renderValue('date', '2026-01-31', 'le')).toBe(
+      "datetime'2026-01-31T23:59:59'",
+    )
+    expect(renderValue('date', '2026-01-31', 'ge')).toBe("datetime'2026-01-31'")
+    expect(renderValue('date', '2026-01-31', 'lt')).toBe("datetime'2026-01-31'")
+  })
+
+  it('rejects a bad int, bool, date or guid with 64', () => {
     for (const [type, value] of [
       ['int', 'x'],
       ['bool', 'maybe'],
       ['date', '31/01/2026'],
+      ['guid', `${GUID}' or true or ID eq guid'${GUID}`],
     ]) {
       const err = (() => {
         try {
@@ -85,6 +95,9 @@ describe('renderClause', () => {
     expect(
       renderClause({ field: 'Date', type: 'date', op: 'ge' }, '2026-01-01'),
     ).toBe("Date ge datetime'2026-01-01'")
+    expect(
+      renderClause({ field: 'Date', type: 'date', op: 'le' }, '2026-01-31'),
+    ).toBe("Date le datetime'2026-01-31T23:59:59'")
   })
 
   it('searches the text field for digits when the resource has no Code', () => {
@@ -142,6 +155,15 @@ describe('buildTypedFilter', () => {
       `Account eq guid'${GUID}'`,
     )
     expect(scope.isDone()).toBe(true)
+  })
+})
+
+describe('expandedSelect', () => {
+  it('appends the trimmed --expand names to the columns', () => {
+    expect(expandedSelect(['ID', 'Code'], 'Contacts, BankAccounts')).toBe(
+      'ID,Code,Contacts,BankAccounts',
+    )
+    expect(expandedSelect(['ID', 'Code'])).toBe('ID,Code')
   })
 })
 
@@ -232,6 +254,32 @@ describe('defineListCommand', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('names the --expand properties in the default $select', async () => {
+    const scope = mockApi()
+      .get(ACCOUNTS)
+      .query({
+        $select: `${SELECT},Contacts,BankAccounts`,
+        $orderby: 'Name asc',
+        $expand: 'Contacts, BankAccounts',
+      })
+      .reply(200, { d: { results: [] } })
+
+    await runCmd(Account, ['--expand', 'Contacts, BankAccounts'])
+
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('keeps an explicit --select as typed next to --expand', async () => {
+    const scope = mockApi()
+      .get(ACCOUNTS)
+      .query({ $select: 'Code', $orderby: 'Name asc', $expand: 'Contacts' })
+      .reply(200, { d: { results: [] } })
+
+    await runCmd(Account, ['--select', 'Code', '--expand', 'Contacts'])
+
+    expect(scope.isDone()).toBe(true)
+  })
+
   it('lets --select narrow the columns and --orderby override the sort', async () => {
     const scope = mockApi()
       .get(ACCOUNTS)
@@ -257,5 +305,16 @@ describe('defineListCommand', () => {
     const err = await Doc.run(['--from', 'yesterday']).catch((e) => e)
     expect(err.exitCode ?? err.oclif?.exit).toBe(64)
     expect(err.message).toMatch(/Expected YYYY-MM-DD, received yesterday/)
+  })
+
+  it('fails with 64 on a guid flag that is not a GUID before any request', async () => {
+    const Payment = defineListCommand(descriptors.payment)
+    process.stdout.isTTY = true
+    const err = await Payment.run([
+      '--entry',
+      `${GUID}' or true or ID eq guid'${GUID}`,
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(/Expected a GUID, received/)
   })
 })

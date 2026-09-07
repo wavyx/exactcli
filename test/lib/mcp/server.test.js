@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import { z } from 'zod'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import {
+  WRITE_SHAPE,
   annotationsFor,
   buildServer,
   selectTools,
@@ -27,6 +29,22 @@ const commands = [
     flags: {},
   },
   { id: 'division:list', summary: 'Divisions', args: {}, flags: {} },
+  {
+    id: 'webhook:create',
+    summary: 'Hook',
+    args: {},
+    flags: {
+      url: { type: 'option' },
+      'allow-writes': { type: 'boolean' },
+      yes: { type: 'boolean' },
+    },
+  },
+  {
+    id: 'webhook:delete',
+    summary: 'Unhook',
+    args: { id: { required: true } },
+    flags: { 'allow-writes': { type: 'boolean' }, yes: { type: 'boolean' } },
+  },
   { id: 'create', summary: 'Create', args: {}, flags: {} },
   { id: 'update', summary: 'Update', args: {}, flags: {} },
   { id: 'delete', summary: 'Delete', args: {}, flags: {} },
@@ -45,6 +63,43 @@ describe('selectTools', () => {
 
   it('keeps everything with allowWrites', () => {
     expect(selectTools(catalog, { allowWrites: true })).toHaveLength(3)
+  })
+})
+
+describe('WRITE_SHAPE', () => {
+  const shape = z.object(WRITE_SHAPE)
+  const base = { operation: 'update', key: 'k' }
+
+  it('accepts a resource path and refuses a flag or odd characters in it', () => {
+    for (const resource of [
+      'crm/Accounts',
+      'beta/crm/Accounts',
+      'sync/CRM/Accounts',
+      'financialtransaction/TransactionLines',
+    ]) {
+      expect(shape.safeParse({ ...base, resource }).success).toBe(true)
+    }
+    for (const resource of [
+      '--division=999999',
+      '-x',
+      'crm/Accounts;rm',
+      'crm Accounts',
+      'crm/Accounts?$top=1',
+      '',
+    ]) {
+      expect(shape.safeParse({ ...base, resource }).success).toBe(false)
+    }
+  })
+
+  it('accepts a string or an integer key', () => {
+    const resource = 'system/Divisions'
+    expect(shape.safeParse({ ...base, resource, key: 'abc' }).success).toBe(
+      true,
+    )
+    expect(shape.safeParse({ ...base, resource, key: 5 }).success).toBe(true)
+    expect(shape.safeParse({ ...base, resource, key: true }).success).toBe(
+      false,
+    )
   })
 })
 
@@ -146,11 +201,12 @@ describe('buildServer', () => {
     expect(calls).toEqual([
       [
         'create',
-        'crm/Accounts',
         '--set=Name=@str:Acme',
         '--dry-run',
         '--allow-writes',
         '--output=json',
+        '--',
+        'crm/Accounts',
       ],
     ])
     expect(result.structuredContent).toEqual({ method: 'POST' })
@@ -161,6 +217,81 @@ describe('buildServer', () => {
     })
     expect(refused.isError).toBe(true)
     expect(calls).toHaveLength(1)
+
+    const injected = await writes.client.callTool({
+      name: 'exact_write',
+      arguments: {
+        operation: 'update',
+        resource: '--division=999999',
+        key: 'crm/Accounts',
+      },
+    })
+    expect(injected.isError).toBe(true)
+    expect(calls).toHaveLength(1)
+
+    const integerKey = await writes.client.callTool({
+      name: 'exact_write',
+      arguments: {
+        operation: 'update',
+        resource: 'system/Divisions',
+        key: 5,
+        set: { Description: 'Acme' },
+      },
+    })
+    expect(integerKey.isError).toBeFalsy()
+    expect(calls[1].slice(-3)).toEqual(['--', 'system/Divisions', '5'])
+  })
+
+  it('runs a per-command write tool with --allow-writes, a delete only with confirm', async () => {
+    const exec = vi.fn(async () => ({ stdout: '{}', stderr: '', code: 0 }))
+    const { client } = await connect({
+      allTools: true,
+      allowWrites: true,
+      exec,
+    })
+
+    await client.callTool({
+      name: 'exact_webhook_create',
+      arguments: { url: 'https://acme.example' },
+    })
+    expect(exec).toHaveBeenLastCalledWith([
+      'webhook',
+      'create',
+      '--url=https://acme.example',
+      '--output=json',
+      '--allow-writes',
+    ])
+
+    const listed = await client.listTools()
+    const remove = listed.tools.find((t) => t.name === 'exact_webhook_delete')
+    expect(remove.inputSchema.properties.confirm).toMatchObject({
+      type: 'boolean',
+      description: 'Must be true to delete',
+    })
+    expect(remove.inputSchema.properties).not.toHaveProperty('allow-writes')
+    expect(remove.inputSchema.properties).not.toHaveProperty('yes')
+
+    const refused = await client.callTool({
+      name: 'exact_webhook_delete',
+      arguments: { id: '7' },
+    })
+    expect(refused.isError).toBe(true)
+    expect(refused.content[0].text).toBe('delete needs confirm: true')
+    expect(exec).toHaveBeenCalledTimes(1)
+
+    await client.callTool({
+      name: 'exact_webhook_delete',
+      arguments: { id: '7', confirm: true },
+    })
+    expect(exec).toHaveBeenLastCalledWith([
+      'webhook',
+      'delete',
+      '--output=json',
+      '--allow-writes',
+      '--yes',
+      '--',
+      '7',
+    ])
   })
 
   it('adds writes only with allowWrites and allTools', async () => {

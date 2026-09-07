@@ -29,7 +29,7 @@ export default class BankEntryCreateCommand extends BaseCommand {
     `${RESOURCE})`
 
   static examples = [
-    '<%= config.bin %> bank-entry create --journal 500 --line 400000:121:Invoice 26700001 --account 1001 --dry-run',
+    '<%= config.bin %> bank-entry create --journal 500 --line "400000:121:Invoice 26700001" --account 1001 --dry-run',
     '<%= config.bin %> bank-entry create --journal 500 --line 656000:-12.5:Fees --date 2026-09-03 --allow-writes',
   ]
 

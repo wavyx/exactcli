@@ -146,6 +146,7 @@ describe('auth login --manual', () => {
       refreshToken: 'rt-1',
       clientId: 'cid',
       clientSecret: 'csec',
+      readOnly: false,
     })
     expect(blob.obtainedAt).toBeGreaterThanOrEqual(before)
     expect(blob.expiresAt).toBe(blob.obtainedAt + 600_000)
@@ -212,6 +213,60 @@ describe('auth login --manual', () => {
     expect(mocks.manualCodeFlow).toHaveBeenCalledWith(
       expect.objectContaining({ host: 'start.exactonline.nl' }),
     )
+  })
+
+  it('stores the read-only lock of the profile in the blob', async () => {
+    // A lock set before the login must survive it: the blob is the carrier
+    // that an empty config directory cannot drop.
+    profile({ ngrok_domain: DOMAIN, read_only: true })
+
+    await runCmd(LoginCommand, ['--manual', '--client-id', 'cid'])
+
+    expect(mocks.setOAuthTokens.mock.calls[0][1].readOnly).toBe(true)
+  })
+
+  it('writes the host and the domain only after the tokens are stored', async () => {
+    profile({})
+    mocks.input.mockResolvedValue(DOMAIN)
+
+    await runCmd(LoginCommand, [
+      '--manual',
+      '--client-id',
+      'cid',
+      '--host',
+      'start.exactonline.nl',
+    ])
+
+    const stored = mocks.setOAuthTokens.mock.invocationCallOrder[0]
+    for (const key of ['host', 'ngrok_domain']) {
+      const index = mocks.setProfileConfig.mock.calls.findIndex(
+        ([, k]) => k === key,
+      )
+      expect(index).toBeGreaterThanOrEqual(0)
+      expect(
+        mocks.setProfileConfig.mock.invocationCallOrder[index],
+      ).toBeGreaterThan(stored)
+    }
+  })
+
+  it('leaves the stored host untouched when the login is aborted', async () => {
+    // An aborted login on .nl must not re-point a working .be session.
+    profile({ host: 'start.exactonline.be', ngrok_domain: DOMAIN })
+    mocks.manualCodeFlow.mockRejectedValue(
+      new Error('No authorization code provided'),
+    )
+
+    const err = await runCmd(LoginCommand, [
+      '--manual',
+      '--client-id',
+      'cid',
+      '--host',
+      'start.exactonline.nl',
+    ]).catch((e) => e)
+
+    expect(err.message).toMatch(/No authorization code provided/)
+    expect(mocks.setProfileConfig).not.toHaveBeenCalled()
+    expect(mocks.setOAuthTokens).not.toHaveBeenCalled()
   })
 
   it('keeps the stored host and the stored division', async () => {

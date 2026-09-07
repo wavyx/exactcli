@@ -1,6 +1,7 @@
 import chalk from 'chalk'
 import BaseCommand from '../../base-command.js'
 import { deleteOAuthTokens } from '../../lib/keychain.js'
+import { withLock } from '../../lib/lock.js'
 
 export default class LogoutCommand extends BaseCommand {
   static skipAuth = true
@@ -14,8 +15,11 @@ export default class LogoutCommand extends BaseCommand {
 
   async run() {
     await this.parse(LogoutCommand)
+    const profile = this.activeProfile
 
-    await deleteOAuthTokens(this.activeProfile)
-    this.log(chalk.green(`Logged out of profile ${this.activeProfile}`))
+    // A refresh in a sibling process would write fresh credentials back
+    // after the delete, so the delete waits for the oauth lock.
+    await withLock(`oauth-${profile}`, () => deleteOAuthTokens(profile))
+    this.log(chalk.green(`Logged out of profile ${profile}`))
   }
 }

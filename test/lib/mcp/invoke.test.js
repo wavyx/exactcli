@@ -22,8 +22,15 @@ const readEntry = {
 }
 const writeEntry = {
   id: 'deal:product:remove',
-  flags: { yes: { type: 'boolean' } },
+  kind: 'destructive',
+  flags: { 'allow-writes': { type: 'boolean' }, yes: { type: 'boolean' } },
   args: { id: { required: true } },
+}
+const mutatingEntry = {
+  id: 'webhook:create',
+  kind: 'write',
+  flags: { 'allow-writes': { type: 'boolean' }, url: { type: 'option' } },
+  args: {},
 }
 
 describe('toArgv', () => {
@@ -69,9 +76,8 @@ describe('toArgv', () => {
     ])
   })
 
-  it('passes positional args after -- and auto-appends --yes', () => {
-    const argv = toArgv(writeEntry, { id: '42' })
-    expect(argv).toEqual([
+  it('appends --yes to a destructive tool only with confirm: true', () => {
+    expect(toArgv(writeEntry, { id: '42', confirm: true })).toEqual([
       'deal',
       'product',
       'remove',
@@ -80,6 +86,74 @@ describe('toArgv', () => {
       '--',
       '42',
     ])
+    expect(toArgv(writeEntry, { id: '42' })).not.toContain('--yes')
+    expect(toArgv(writeEntry, { id: '42', confirm: 'yes' })).not.toContain(
+      '--yes',
+    )
+  })
+
+  it('never appends --yes to a non-destructive tool', () => {
+    const argv = toArgv(mutatingEntry, { confirm: true, url: 'https://a' })
+    expect(argv).toEqual([
+      'webhook',
+      'create',
+      '--url=https://a',
+      '--output=json',
+    ])
+  })
+
+  it('appends --allow-writes to a mutating tool only when the server allows writes', () => {
+    expect(toArgv(mutatingEntry, {}, { allowWrites: true })).toEqual([
+      'webhook',
+      'create',
+      '--output=json',
+      '--allow-writes',
+    ])
+    expect(toArgv(mutatingEntry, {}, { allowWrites: false })).not.toContain(
+      '--allow-writes',
+    )
+    expect(
+      toArgv(writeEntry, { id: '42', confirm: true }, { allowWrites: true }),
+    ).toEqual([
+      'deal',
+      'product',
+      'remove',
+      '--output=json',
+      '--allow-writes',
+      '--yes',
+      '--',
+      '42',
+    ])
+  })
+
+  it('never appends --allow-writes to a read tool or to a command without the flag', () => {
+    expect(
+      toArgv({ ...readEntry, kind: 'read' }, {}, { allowWrites: true }),
+    ).not.toContain('--allow-writes')
+    // division:use mutates local state and has no --allow-writes flag.
+    expect(
+      toArgv(
+        { id: 'division:use', kind: 'write', args: { code: {} }, flags: {} },
+        { code: '1' },
+        { allowWrites: true },
+      ),
+    ).toEqual(['division', 'use', '--output=json', '--', '1'])
+  })
+
+  it('drops a noise flag that slipped into the input', () => {
+    const entry = {
+      id: 'sync',
+      kind: 'write',
+      flags: {
+        since: { type: 'option' },
+        state: { type: 'option' },
+        'allow-writes': { type: 'boolean' },
+      },
+      args: {},
+    }
+    expect(
+      toArgv(entry, { since: 0, state: '/etc/passwd', 'allow-writes': true }),
+    ).toEqual(['sync', '--since=0', '--output=json'])
   })
 
   it('omits an optional arg that was not provided (no -- separator)', () => {
@@ -149,10 +223,64 @@ describe('runTool', () => {
     expect(res.structuredContent).toEqual({ value: null })
   })
 
+  it('refuses a destructive tool without confirm and spawns nothing', async () => {
+    const exec = vi.fn()
+    const res = await runTool(writeEntry, { id: '42' }, exec)
+    expect(res).toEqual({
+      content: [{ type: 'text', text: 'delete needs confirm: true' }],
+      isError: true,
+    })
+    expect(exec).not.toHaveBeenCalled()
+  })
+
+  it('hands the server context to the argv builder', async () => {
+    const exec = vi.fn(async () => ({ stdout: '{}', stderr: '', code: 0 }))
+    await runTool(writeEntry, { id: '42', confirm: true }, exec, {
+      allowWrites: true,
+    })
+    expect(exec).toHaveBeenCalledWith([
+      'deal',
+      'product',
+      'remove',
+      '--output=json',
+      '--allow-writes',
+      '--yes',
+      '--',
+      '42',
+    ])
+  })
+
+  it('appends a non-empty stderr as a second text block on success', async () => {
+    const res = await runTool(
+      readEntry,
+      {},
+      fakeExec({
+        stdout: '[{"a":1}]',
+        stderr: 'More results available. Use --all or --limit.\n',
+        code: 0,
+      }),
+    )
+    expect(res.isError).toBeFalsy()
+    expect(res.content).toEqual([
+      { type: 'text', text: '[{"a":1}]' },
+      { type: 'text', text: 'More results available. Use --all or --limit.' },
+    ])
+    expect(res.structuredContent).toEqual({ results: [{ a: 1 }] })
+  })
+
+  it('adds no second block for a blank stderr', async () => {
+    const res = await runTool(
+      readEntry,
+      {},
+      fakeExec({ stdout: '[]', stderr: '  \n', code: 0 }),
+    )
+    expect(res.content).toHaveLength(1)
+  })
+
   it('returns plain text with no structuredContent for non-JSON output', async () => {
     const res = await runTool(
       writeEntry,
-      { id: '42' },
+      { id: '42', confirm: true },
       fakeExec({ stdout: 'Removed product 42', stderr: '', code: 0 }),
     )
     expect(res.structuredContent).toBeUndefined()
@@ -377,7 +505,6 @@ describe('writeArgv', () => {
       }).argv,
     ).toEqual([
       'create',
-      'crm/Accounts',
       '--body={"Name":"Acme"}',
       '--set=Code=@str:1001',
       '--set=IsSales=true',
@@ -386,6 +513,49 @@ describe('writeArgv', () => {
       '--set=Customer=@ref:crm/Accounts:1',
       '--allow-writes',
       '--output=json',
+      '--',
+      'crm/Accounts',
+    ])
+  })
+
+  it('puts the resource and the key after -- so neither can become a flag', () => {
+    const { argv } = writeArgv({
+      operation: 'update',
+      resource: '--division=999999',
+      key: '--profile=other',
+      set: { Name: 'X' },
+    })
+    expect(argv).toEqual([
+      'update',
+      '--set=Name=@str:X',
+      '--allow-writes',
+      '--output=json',
+      '--',
+      '--division=999999',
+      '--profile=other',
+    ])
+  })
+
+  it('accepts an integer key', () => {
+    expect(
+      writeArgv({ operation: 'delete', resource: 'system/Divisions', key: 5 })
+        .argv,
+    ).toBeUndefined()
+    expect(
+      writeArgv({
+        operation: 'update',
+        resource: 'system/Divisions',
+        key: 5,
+        set: { Description: 'Acme' },
+      }).argv,
+    ).toEqual([
+      'update',
+      '--set=Description=@str:Acme',
+      '--allow-writes',
+      '--output=json',
+      '--',
+      'system/Divisions',
+      '5',
     ])
   })
 
@@ -400,12 +570,13 @@ describe('writeArgv', () => {
       }).argv,
     ).toEqual([
       'update',
-      'crm/Accounts',
-      'abc',
       '--set=Name=@str:X',
       '--dry-run',
       '--allow-writes',
       '--output=json',
+      '--',
+      'crm/Accounts',
+      'abc',
     ])
   })
 
@@ -421,11 +592,12 @@ describe('writeArgv', () => {
       }).argv,
     ).toEqual([
       'delete',
-      'crm/Accounts',
-      'abc',
       '--allow-writes',
       '--yes',
       '--output=json',
+      '--',
+      'crm/Accounts',
+      'abc',
     ])
     expect(
       writeArgv({
@@ -436,20 +608,22 @@ describe('writeArgv', () => {
       }).argv,
     ).toEqual([
       'delete',
-      'crm/Accounts',
-      'abc',
       '--dry-run',
       '--allow-writes',
       '--output=json',
+      '--',
+      'crm/Accounts',
+      'abc',
     ])
   })
 
   it('builds a bare create without body or set', () => {
     expect(writeArgv({ operation: 'create', resource: 'r' }).argv).toEqual([
       'create',
-      'r',
       '--allow-writes',
       '--output=json',
+      '--',
+      'r',
     ])
   })
 
@@ -489,10 +663,11 @@ describe('runWrite and runArgv', () => {
     )
     expect(exec).toHaveBeenCalledWith([
       'create',
-      'r',
       '--set=A=1',
       '--allow-writes',
       '--output=json',
+      '--',
+      'r',
     ])
     expect(result.structuredContent).toEqual({ ok: true })
     const plain = await runArgv(['x'], async () => ({

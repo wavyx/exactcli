@@ -101,7 +101,7 @@ describe('exchange-rate list', () => {
         $filter:
           "SourceCurrency eq 'USD' and TargetCurrency eq 'EUR'" +
           " and StartDate ge datetime'2026-01-01'" +
-          " and StartDate le datetime'2026-03-31'",
+          " and StartDate le datetime'2026-03-31T23:59:59'",
       })
       .reply(200, { d: { results: [] } })
 

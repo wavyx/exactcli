@@ -22,12 +22,19 @@ vi.mock('../../src/lib/mcp/invoke.js', async (importOriginal) => {
   return { ...mod, makeExec: vi.fn(mod.makeExec) }
 })
 
+// The credential lock is read from the keychain: answer from a stub.
+vi.mock('../../src/lib/auth.js', async (importOriginal) => {
+  const mod = await importOriginal()
+  return { ...mod, readOnlyCredential: vi.fn(async () => null) }
+})
+
 const TMP_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'exactcli-mcp-'))
 const { buildServer } = await import('../../src/lib/mcp/server.js')
 const { makeExec } = await import('../../src/lib/mcp/invoke.js')
 const { default: Cmd, startMcpServer } =
   await import('../../src/commands/mcp.js')
 const { descriptors } = await import('../../src/lib/typed/descriptors.js')
+const { readOnlyCredential } = await import('../../src/lib/auth.js')
 const { getConf, setProfileConfig } = await import('../../src/lib/config.js')
 
 const own = (id, extra = {}) => ({
@@ -126,6 +133,11 @@ describe('startMcpServer', () => {
 })
 
 describe('mcp command', () => {
+  it('describes the seven generic tools, exact_probe included', () => {
+    expect(Cmd.description).toMatch(/seven generic tools/)
+    expect(Cmd.description).toMatch(/exact_probe/)
+  })
+
   it('never exposes writes on a read-only profile', async () => {
     setProfileConfig('default', 'read_only', true)
     const lines = []
@@ -144,6 +156,23 @@ describe('mcp command', () => {
       /Profile default is read-only: writes stay hidden/,
     )
     expect(lines.join('')).toMatch(/\(read-only\)/)
+  })
+
+  it('never exposes writes when the credential carries the lock', async () => {
+    readOnlyCredential.mockResolvedValueOnce('default')
+    const lines = []
+    const stderr = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation((chunk) => lines.push(String(chunk)) > 0)
+    try {
+      await Cmd.run(['--allow-writes'])
+    } finally {
+      stderr.mockRestore()
+    }
+
+    expect(readOnlyCredential).toHaveBeenCalledWith('default')
+    expect(buildServer.mock.calls.at(-1)[0].allowWrites).toBe(false)
+    expect(lines.join('')).toMatch(/Profile default is read-only/)
   })
 
   it('forwards the profile and the division to the child executor', async () => {
@@ -179,9 +208,13 @@ describe('mcp command', () => {
       stderr.mockRestore()
     }
 
+    // The write gate travels as an argv flag per call, never as environment.
     expect(makeExec.mock.calls[0][0].env).toEqual({
       EXACTCLI_PROFILE: 'default',
     })
+    expect(makeExec.mock.calls[0][0].env).not.toHaveProperty(
+      'EXACTCLI_ALLOW_WRITES',
+    )
     expect(buildServer.mock.calls[0][0].allowWrites).toBe(true)
     expect(buildServer.mock.calls[0][0].allTools).toBe(true)
     expect(lines.join('')).toMatch(

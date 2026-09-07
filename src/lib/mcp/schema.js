@@ -1,10 +1,12 @@
 import { z } from 'zod'
 
 /**
- * Global/output-shaping flags that are noise for an MCP tool - the server
- * forces `--output json` and runs under its own profile, so these never
- * belong in a tool's input schema. `limit` stays: an agent legitimately
- * sizes list results.
+ * Flags that never belong in a tool's input schema, and that toArgv never
+ * emits: the server forces `--output json` and runs under its own profile,
+ * the write gate travels as `--allow-writes` only when the server allows
+ * writes, and `--yes` only with `confirm: true` on a destructive tool. The
+ * agent surface never reads or writes a local file, so the file flags are
+ * noise too. `limit` stays: an agent legitimately sizes list results.
  */
 export const NOISE_FLAGS = new Set([
   'output',
@@ -19,10 +21,16 @@ export const NOISE_FLAGS = new Set([
   'division',
   'allow-writes',
   'help',
-  // `yes` is force-injected for destructive tools (no TTY); exposing it as a
-  // settable input would be inert and misleading.
   'yes',
+  // Local files: --file (uploads), --state (sync), --body (@file), --out.
+  'file',
+  'state',
+  'body',
+  'out',
 ])
+
+/** The gate of a destructive tool: the handler refuses a call without it. */
+const CONFIRM = z.boolean().optional().describe('Must be true to delete')
 
 function flagSchema(flag) {
   let s
@@ -52,8 +60,9 @@ function argSchema(arg) {
 
 /**
  * Build a zod raw shape (the object MCP's registerTool expects as
- * `inputSchema`) from a catalog entry's args + flags.
- * @param {{args?: object, flags?: object}} entry
+ * `inputSchema`) from a catalog entry's args + flags. A destructive entry
+ * gets a `confirm` boolean on top.
+ * @param {{args?: object, flags?: object, kind?: string}} entry
  * @returns {Record<string, import('zod').ZodTypeAny>}
  */
 export function buildInputSchema(entry) {
@@ -65,5 +74,6 @@ export function buildInputSchema(entry) {
     if (NOISE_FLAGS.has(name)) continue
     shape[name] = flagSchema(flag)
   }
+  if (entry.kind === 'destructive') shape.confirm = CONFIRM
   return shape
 }

@@ -264,6 +264,36 @@ describe('get', () => {
     expect(JSON.parse(stdout).Code).toBe(123)
   })
 
+  it('quotes a string key for a string-keyed resource', async () => {
+    const scope = mockApi()
+      .get("/api/v1/123/general/Currencies('EUR')")
+      .reply(200, { d: { Code: 'EUR', Description: 'Euro' } })
+
+    const stdout = await runCmd(GetCommand, [
+      'general/Currencies',
+      'EUR',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(JSON.parse(stdout).Code).toBe('EUR')
+  })
+
+  it('rejects a string key that cannot travel in a path with exit 64', async () => {
+    const err = await GetCommand.run([
+      'general/Currencies',
+      'EU?R',
+      '--division',
+      '123',
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(/must not contain/)
+    expect(nock.pendingMocks()).toEqual([])
+  })
+
   it('rejects a GUID for an integer-keyed resource with exit 64', async () => {
     const err = await GetCommand.run([
       'system/Divisions',

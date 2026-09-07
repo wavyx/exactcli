@@ -96,7 +96,7 @@ describe('receivable list', () => {
         $orderby: ORDER,
         $filter:
           `substringof('rent', Description) and Account eq guid'${GUID}'` +
-          " and DueDate ge datetime'2026-01-01' and DueDate le datetime'2026-12-31'" +
+          " and DueDate ge datetime'2026-01-01' and DueDate le datetime'2026-12-31T23:59:59'" +
           ' and Status eq 20',
       })
       .reply(200, { d: { results: [] } })

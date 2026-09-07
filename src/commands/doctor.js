@@ -7,7 +7,12 @@ import { getConf, getProfileConfig } from '../lib/config.js'
 import { getOAuthTokens, isKeychainAvailable } from '../lib/keychain.js'
 import { DEFAULT_HOST, HOST_RE, createClient } from '../lib/client.js'
 import { jqBinaryExists, jqBinaryPath } from '../lib/jq.js'
-import { REFRESH_FLOOR_MS, fetchMe } from '../lib/auth.js'
+import {
+  REFRESH_AFTER_MS,
+  REFRESH_FLOOR_MS,
+  fetchMe,
+  getValidOAuthAccess,
+} from '../lib/auth.js'
 
 const MIN_NODE_MAJOR = 20
 
@@ -124,14 +129,14 @@ export default class DoctorCommand extends BaseCommand {
       }
     }
 
-    const token = envToken ?? blob?.accessToken
     if (offline) {
       add('api', true, 'skipped (--offline)')
-    } else if (!token) {
+    } else if (!envToken && !blob) {
       // The token check already reports the missing login. Do not count it twice.
       add('api', true, 'skipped: no token')
     } else {
       try {
+        const token = envToken ?? (await this.#probeToken(profile, blob))
         const me = await fetchMe(
           createClient({
             host,
@@ -169,5 +174,18 @@ export default class DoctorCommand extends BaseCommand {
       return
     }
     await this.outputResults(results, COLUMNS)
+  }
+
+  /**
+   * The access token of the probe. A stored token past its refresh point
+   * answers 401 and turns the probe into a false failure, so it is refreshed
+   * first, as any command refreshes it.
+   * @param {string} profile
+   * @param {import('../lib/keychain.js').OAuthTokens} blob
+   * @returns {Promise<string>}
+   */
+  async #probeToken(profile, blob) {
+    if (Date.now() - blob.obtainedAt < REFRESH_AFTER_MS) return blob.accessToken
+    return (await getValidOAuthAccess(profile)).accessToken
   }
 }

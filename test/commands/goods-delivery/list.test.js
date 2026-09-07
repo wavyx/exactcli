@@ -104,7 +104,7 @@ describe('goods-delivery list', () => {
         $filter:
           `DeliveryAccount eq guid'${GUID}'` +
           " and DeliveryDate ge datetime'2026-01-01'" +
-          " and DeliveryDate le datetime'2026-01-31'" +
+          " and DeliveryDate le datetime'2026-01-31T23:59:59'" +
           " and substringof('acme', Description)",
       })
       .reply(200, { d: { results: [] } })

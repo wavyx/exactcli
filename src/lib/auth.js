@@ -37,6 +37,12 @@ const DEFAULT_EXPIRES_IN = 600
 export const REFRESH_AFTER_MS = 575_000
 /** Exact answers 401 "Access Token not expired" below this age. */
 export const REFRESH_FLOOR_MS = 570_000
+/**
+ * A stalled token endpoint must give up well before the 60 s stale-lock
+ * threshold of lock.js: past that point a second process claims the lock and
+ * spends the same single-use refresh token.
+ */
+export const TOKEN_TIMEOUT_MS = 30_000
 
 /** @param {string} profile */
 function profileHost(profile) {
@@ -95,9 +101,16 @@ export async function tokenRequest(host, params) {
         accept: 'application/json',
       },
       body: new URLSearchParams(params),
+      signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
     })
     text = await res.text()
   } catch (err) {
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      throw new ServiceUnavailableError(
+        `Token endpoint timed out after ${TOKEN_TIMEOUT_MS / 1000} s`,
+        { cause: err },
+      )
+    }
     throw new ServiceUnavailableError(
       `Cannot reach the Exact Online token endpoint on ${host}: ${err.message}`,
       { cause: err },
@@ -197,15 +210,27 @@ export async function refreshAccessToken({
 /**
  * Return a usable token blob for the profile, refreshed when needed.
  * @param {string} profile
- * @param {{ force?: boolean }} [options] force refreshes after a 401
+ * @param {{ force?: boolean, rejected?: string }} [options] `force` refreshes
+ *   after a 401; `rejected` is the access token that the API refused. When
+ *   the keychain holds another token by now, a sibling process rotated it
+ *   already and that token is the answer.
  * @returns {Promise<import('./keychain.js').OAuthTokens>}
  */
-export async function getValidOAuthAccess(profile, { force = false } = {}) {
+export async function getValidOAuthAccess(
+  profile,
+  { force = false, rejected } = {},
+) {
   const blob = await getOAuthTokens(profile)
   if (!blob) throw new AuthRequiredError()
 
   const age = Date.now() - blob.obtainedAt
   if (!force && age < REFRESH_AFTER_MS) return blob
+  if (force && rejected !== undefined && blob.accessToken !== rejected) {
+    debug('another process rotated the rejected token')
+    return blob
+  }
+  // The floor applies to the rejected token only: a young token that the
+  // API refused is not going to pass on a refresh either.
   if (force && age < REFRESH_FLOOR_MS) {
     throw new CliError(
       'Access token rejected before its refresh window. Run: exactcli auth login',
@@ -255,6 +280,7 @@ export async function getValidOAuthAccess(profile, { force = false } = {}) {
  * @property {string} token bearer token for the API
  * @property {'env' | 'profile'} source
  * @property {string} host
+ * @property {boolean} readOnly the credential itself refuses every write
  * @property {import('./keychain.js').OAuthTokens} [oauth] absent on the env path
  */
 
@@ -269,11 +295,29 @@ export async function resolveCredentials({ profile }) {
   const envToken = process.env.EXACTCLI_ACCESS_TOKEN
   if (envToken) {
     debug('token from EXACTCLI_ACCESS_TOKEN')
-    return { token: envToken, source: 'env', host }
+    return { token: envToken, source: 'env', host, readOnly: false }
   }
 
   const blob = await getValidOAuthAccess(profile)
-  return { token: blob.accessToken, source: 'profile', host, oauth: blob }
+  return {
+    token: blob.accessToken,
+    source: 'profile',
+    host,
+    readOnly: blob.readOnly === true,
+    oauth: blob,
+  }
+}
+
+/**
+ * The read-only lock that travels with the credential. The config store
+ * follows EXACTCLI_CONFIG_DIR, the keychain blob does not, so an empty config
+ * directory cannot change this answer.
+ * @param {string} profile
+ * @returns {Promise<string | null>} the profile name when its blob is locked
+ */
+export async function readOnlyCredential(profile) {
+  const blob = await getOAuthTokens(profile)
+  return blob?.readOnly === true ? profile : null
 }
 
 /**
@@ -363,6 +407,17 @@ export function authorizationCodeFlow({
         return
       }
 
+      // A stray or replayed callback must not end the login: answer it and
+      // keep waiting for the real one. The state check comes first, so a
+      // request from outside cannot end the login with a bare `error`.
+      const echoed = url.searchParams.get('state')
+      const stateOk = echoed === null ? !STATE_REQUIRED : echoed === state
+      if (!stateOk) {
+        debug('callback with an unexpected state')
+        await respond(res, 400, PAGE.state)
+        return
+      }
+
       const failure = url.searchParams.get('error')
       if (failure) {
         await respond(res, 400, PAGE.failed)
@@ -373,16 +428,6 @@ export function authorizationCodeFlow({
             { exitCode: 77 },
           ),
         )
-        return
-      }
-
-      // A stray or replayed callback must not end the login: answer it and
-      // keep waiting for the real one.
-      const echoed = url.searchParams.get('state')
-      const stateOk = echoed === null ? !STATE_REQUIRED : echoed === state
-      if (!stateOk) {
-        debug('callback with an unexpected state')
-        await respond(res, 400, PAGE.state)
         return
       }
 

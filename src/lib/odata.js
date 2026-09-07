@@ -51,16 +51,21 @@ export function requireDivision(value) {
 }
 
 /**
+ * A resource travels as path segments. A percent sign or a backslash could
+ * smuggle a dot segment past the URL parser (`%2e%2e`, `\..`), so both are
+ * refused, and the decoded form must carry no `..` either.
  * @param {string} resource
  * @returns {boolean}
  */
 function isValidResource(resource) {
-  return (
-    typeof resource === 'string' &&
-    resource.includes('/') &&
-    !resource.includes('..') &&
-    !resource.includes('?')
-  )
+  if (typeof resource !== 'string' || !resource.includes('/')) return false
+  let decoded
+  try {
+    decoded = decodeURIComponent(resource)
+  } catch {
+    return false
+  }
+  return !/[?%\\]/.test(resource) && !decoded.includes('..')
 }
 
 /**

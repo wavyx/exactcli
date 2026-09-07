@@ -13,9 +13,18 @@ export const GUID_RE =
 const PLAIN_KEY_RE = /^[A-Za-z0-9_.:-]+$/
 
 /**
- * The key suffix of a record path: `(guid'...')` for a GUID column, `(123)`
- * for any other key. The catalogue says which one the resource wants; an
- * unknown resource keeps the guess.
+ * A string key travels quoted, so only the quote itself needs care: it is
+ * doubled. What the URL parser would split or rewrite is refused instead.
+ */
+const STRING_KEY_RE = /^[^?#/\\%]+$/
+
+/** @param {string} value @returns {string} */
+export const quote = (value) => `'${String(value).replace(/'/g, "''")}'`
+
+/**
+ * The key suffix of a record path: `(guid'...')` for a GUID column, `('...')`
+ * for a string column, `(123)` for any other key. The catalogue says which
+ * one the resource wants; an unknown resource keeps the guess.
  * @param {object | undefined} resource catalogue record
  * @param {string} ref what the user typed, for the message
  * @param {string} id
@@ -24,6 +33,14 @@ const PLAIN_KEY_RE = /^[A-Za-z0-9_.:-]+$/
 export function renderKey(resource, ref, id) {
   const isGuid = GUID_RE.test(id)
   const wanted = resource ? keyType(resource) : undefined
+  if (wanted === 'string') {
+    if (!STRING_KEY_RE.test(id)) {
+      throw new CliError(`Record key of ${ref} must not contain ? # / \\ %`, {
+        exitCode: 64,
+      })
+    }
+    return `(${quote(id)})`
+  }
   if (wanted === 'guid' && !isGuid) {
     throw new CliError(`Record key of ${ref} must be a GUID`, { exitCode: 64 })
   }
@@ -53,9 +70,6 @@ const CODE_WIDTH = 18
  */
 export const padCode = (code) =>
   /^\d+$/.test(code) ? code.padStart(CODE_WIDTH, ' ') : code
-
-/** @param {string} value @returns {string} */
-export const quote = (value) => `'${String(value).replace(/'/g, "''")}'`
 
 /**
  * The field that names a record: `Name` on an account, `Description` on a

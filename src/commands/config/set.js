@@ -4,6 +4,8 @@ import BaseCommand from '../../base-command.js'
 import { normalizeDomain, setProfileConfig } from '../../lib/config.js'
 import { CliError } from '../../lib/errors.js'
 import { HOST_RE } from '../../lib/client.js'
+import { getOAuthTokens, setOAuthTokens } from '../../lib/keychain.js'
+import { withLock } from '../../lib/lock.js'
 
 const ALLOWED_KEYS = [
   'host',
@@ -91,9 +93,26 @@ export default class ConfigSetCommand extends BaseCommand {
     const value = normalizeValue(args.key, args.value)
 
     setProfileConfig(this.activeProfile, args.key, value)
+    if (args.key === 'read_only') await this.#lockCredential(value)
     await this.outputAction(
       { profile: this.activeProfile, key: args.key, value },
       `Set ${chalk.cyan(args.key)} = ${chalk.green(value)} for profile ${chalk.cyan(this.activeProfile)}`,
     )
+  }
+
+  /**
+   * The lock lives in the keychain blob too: the config store follows
+   * EXACTCLI_CONFIG_DIR, the credential does not, so a config-only lock falls
+   * away with an empty config directory. The write takes the oauth lock: a
+   * refresh in a sibling process rotates the same blob, and a stale copy
+   * written over it would spend the refresh token twice.
+   * @param {boolean} readOnly
+   */
+  async #lockCredential(readOnly) {
+    const profile = this.activeProfile
+    await withLock(`oauth-${profile}`, async () => {
+      const blob = await getOAuthTokens(profile)
+      if (blob) await setOAuthTokens(profile, { ...blob, readOnly })
+    })
   }
 }

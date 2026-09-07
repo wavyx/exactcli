@@ -97,6 +97,17 @@ const commands = [
   cmd('create', { resource: { required: true } }, { body: opt(), set: opt() }),
   cmd('update', { resource: { required: true }, id: { required: true } }),
   cmd('delete', { resource: { required: true }, id: { required: true } }),
+  cmd(
+    'mailbox:upload',
+    {},
+    { file: { ...opt(), required: true, multiple: true }, to: opt() },
+  ),
+  cmd(
+    'bank-statement:upload',
+    {},
+    { file: { ...opt(), required: true }, subject: opt() },
+  ),
+  cmd('document:create', {}, { file: { ...opt(), multiple: true } }),
   cmd('division:list', {}, listing),
   cmd('division:use', { code: { required: true } }),
   cmd('division:current'),
@@ -121,12 +132,14 @@ describe('classifyKind and helpers', () => {
     expect(classifyKind('config:unset')).toBe('destructive')
   })
 
-  it('excludes the escape hatch, diagnostics, the server, downloads and local state', () => {
+  it('excludes the escape hatch, diagnostics, the server, file commands and local state', () => {
     for (const id of [
       'api',
       'doctor',
       'mcp',
       'document:download',
+      'mailbox:upload',
+      'bank-statement:upload',
       'auth:login',
       'config:set',
       'profile:use',
@@ -134,6 +147,8 @@ describe('classifyKind and helpers', () => {
       expect(isExcluded(id)).toBe(true)
     }
     expect(isExcluded('division:use')).toBe(false)
+    // document:create can create a document without a file.
+    expect(isExcluded('document:create')).toBe(false)
   })
 
   it('builds tool names with the exact_ prefix', () => {
@@ -269,6 +284,7 @@ describe('buildCatalog', () => {
     const all = buildCatalog(commands, descriptors, { allTools: true })
     expect(names(all)).toEqual([
       ...base,
+      'exact_document_create',
       'exact_division_list',
       'exact_division_use',
       'exact_division_current',

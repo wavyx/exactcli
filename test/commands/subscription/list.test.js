@@ -107,7 +107,7 @@ describe('subscription list', () => {
         $orderby: ORDER,
         $filter:
           `InvoiceTo eq guid'${GUID}' and StartDate ge datetime'2026-01-01'` +
-          " and StartDate le datetime'2026-12-31'" +
+          " and StartDate le datetime'2026-12-31T23:59:59'" +
           " and substringof('hosting', Description)",
       })
       .reply(200, { d: { results: [] } })

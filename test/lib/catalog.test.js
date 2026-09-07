@@ -44,6 +44,8 @@ describe('catalogKey', () => {
     ['beta/crm/Accounts', 'beta/{division}/crm/accounts'],
     ['current/Me', 'current/me'],
     ['/api/v1/123/crm/Accounts', '{division}/crm/accounts'],
+    ['api/v1/123/crm/Accounts', '{division}/crm/accounts'],
+    ['123/crm/Accounts', '{division}/crm/accounts'],
     ['/api/v1/beta/123/crm/Accounts', 'beta/{division}/crm/accounts'],
     ['/api/v1/{division}/crm/Accounts', '{division}/crm/accounts'],
     ["crm/Accounts(guid'x')", '{division}/crm/accounts'],
@@ -117,6 +119,12 @@ describe('field helpers', () => {
   it('reports the key type', () => {
     expect(keyType(findResource('crm/Accounts', catalog))).toBe('guid')
     expect(keyType(findResource('system/Divisions', catalog))).toBe('plain')
+    expect(
+      keyType({
+        properties: [{ name: 'Code', key: true, type: 'Edm.String' }],
+      }),
+    ).toBe('string')
+    expect(keyType({ properties: [] })).toBe('plain')
   })
 
   it('derives default columns: keys, names, dates, amounts, 8 at most, no hidden', () => {
@@ -186,6 +194,60 @@ describe('variants and families', () => {
     )
     expect(
       variantOf(findResource('system/Divisions', real), 'sync', real),
+    ).toBeUndefined()
+    expect(
+      variantOf(
+        findResource('financialtransaction/TransactionLines', real),
+        'bulk',
+        real,
+      ).uri,
+    ).toBe('/api/v1/{division}/bulk/Financial/TransactionLines')
+    // A name clash under another service is another resource.
+    expect(
+      variantOf(findResource('crm/BankAccounts', real), 'sync', real),
+    ).toBeUndefined()
+    expect(
+      variantOf(findResource('documents/Documents', real), 'read', real),
+    ).toBeUndefined()
+  })
+
+  it('takes the fallback under Financial only', () => {
+    const copy = structuredClone(catalog)
+    const record = (uri, resource, service, family) => ({
+      uri,
+      resource,
+      service,
+      family,
+      methods: ['GET'],
+      keys: [],
+      properties: [],
+    })
+    copy.resources.push(
+      record(
+        '/api/v1/{division}/crm/BankAccounts',
+        'BankAccounts',
+        'CRM',
+        'regular',
+      ),
+      record(
+        '/api/v1/{division}/sync/Payroll/BankAccounts',
+        'Payroll/BankAccounts',
+        'Sync',
+        'sync',
+      ),
+      record(
+        '/api/v1/{division}/sync/Financial/SalesEntries',
+        'Financial/SalesEntries',
+        'Sync',
+        'sync',
+      ),
+    )
+    expect(
+      variantOf(findResource('salesentry/SalesEntries', copy), 'sync', copy)
+        .uri,
+    ).toBe('/api/v1/{division}/sync/Financial/SalesEntries')
+    expect(
+      variantOf(findResource('crm/BankAccounts', copy), 'sync', copy),
     ).toBeUndefined()
   })
 
@@ -296,6 +358,25 @@ describe('resolvePath', () => {
     )
     expect(resolvePath(123, 'sync/CRM/Accounts', {}, catalog).path).toBe(
       '/api/v1/123/sync/CRM/Accounts',
+    )
+  })
+
+  it('strips an api prefix so the path and the lookup agree', () => {
+    const full = resolvePath(123, '/api/v1/123/crm/Accounts', {}, catalog)
+    expect(full.path).toBe('/api/v1/123/crm/Accounts')
+    expect(full.resource.resource).toBe('Accounts')
+    // The configured division wins over the one in the reference.
+    expect(resolvePath(123, '/api/v1/456/crm/Accounts', {}, catalog).path).toBe(
+      '/api/v1/123/crm/Accounts',
+    )
+    expect(
+      resolvePath(123, '/api/v1/{division}/crm/Accounts', {}, catalog).path,
+    ).toBe('/api/v1/123/crm/Accounts')
+    expect(
+      resolvePath(123, '/api/v1/beta/123/crm/Accounts', {}, catalog).path,
+    ).toBe('/api/v1/beta/123/crm/Accounts')
+    expect(resolvePath(123, 'api/v1/current/Me', {}, catalog).path).toBe(
+      '/api/v1/current/Me',
     )
   })
 

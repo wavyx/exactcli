@@ -117,13 +117,17 @@ export const WRITE_TOOL = {
 const WRITE_COMMANDS = ['create', 'update', 'delete']
 
 // Never exposed one by one: the raw escape hatch, local diagnostics, the
-// server itself, a command that writes files, the three write commands
-// (exact_write covers them), and the commands that manage local state.
+// server itself, the commands that cannot work without a local file (their
+// --file flag is required, and the agent surface never touches a local
+// file), the three write commands (exact_write covers them), and the
+// commands that manage local state.
 export const EXCLUDED = new Set([
   'api',
   'doctor',
   'mcp',
   'document:download',
+  'mailbox:upload',
+  'bank-statement:upload',
   ...WRITE_COMMANDS,
 ])
 const EXCLUDED_PREFIXES = ['auth:', 'config:', 'profile:']

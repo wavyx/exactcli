@@ -61,8 +61,8 @@ describe('currency list', () => {
     expect(descriptor.orderBy).toBe('Code asc')
   })
 
-  it('lists a resource with a plain string key, Code', () => {
-    expect(keyType(findResource(descriptor.resource))).toBe('plain')
+  it('lists a resource with a string key, Code', () => {
+    expect(keyType(findResource(descriptor.resource))).toBe('string')
     expect(descriptor.columns[0]).toBe('Code')
   })
 

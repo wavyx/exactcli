@@ -4,7 +4,7 @@ import { CliError } from '../errors.js'
 import { DATE_RE } from '../lines.js'
 import { buildQuery, divisionPath } from '../odata.js'
 import { collectListing, listingFlags, visibleColumns } from '../listing.js'
-import { padCode, quote, resolveRef } from '../refs.js'
+import { GUID_RE, padCode, quote, resolveRef } from '../refs.js'
 import { findResource, propertyNames } from '../catalog.js'
 import { columnsOf } from './descriptors.js'
 
@@ -15,9 +15,10 @@ const FALSE = new Set(['false', 'no', '0'])
  * Render a flag value as an OData v3 literal.
  * @param {string} type
  * @param {string} value
+ * @param {string} [op] the comparison the literal serves
  * @returns {string}
  */
-export function renderValue(type, value) {
+export function renderValue(type, value, op) {
   if (type === 'int') {
     if (!/^-?\d+$/.test(value)) {
       throw new CliError(`Expected an integer, received ${value}`, {
@@ -40,9 +41,18 @@ export function renderValue(type, value) {
         exitCode: 64,
       })
     }
-    return `datetime'${value}'`
+    // A `le` must keep the whole last day: a field such as Created carries
+    // a time, and midnight would exclude the day itself.
+    return op === 'le' ? `datetime'${value}T23:59:59'` : `datetime'${value}'`
   }
-  if (type === 'guid') return `guid'${value}'`
+  if (type === 'guid') {
+    // The value lands unquoted inside guid'...': anything but a GUID could
+    // close the literal and append its own $filter.
+    if (!GUID_RE.test(value)) {
+      throw new CliError(`Expected a GUID, received ${value}`, { exitCode: 64 })
+    }
+    return `guid'${value}'`
+  }
   return quote(value)
 }
 
@@ -62,7 +72,21 @@ export function renderClause(filter, value, { hasCode = true } = {}) {
       ? `(Code eq ${quote(value)} or Code eq ${quote(padCode(value))})`
       : `substringof(${quote(value)}, ${filter.field})`
   }
-  return `${filter.field} ${filter.op ?? 'eq'} ${renderValue(filter.type, value)}`
+  const literal = renderValue(filter.type, value, filter.op)
+  return `${filter.field} ${filter.op ?? 'eq'} ${literal}`
+}
+
+/**
+ * The default `$select` of a listing: the columns plus the navigation
+ * properties of `--expand`. OData v3 drops an expanded entity that `$select`
+ * does not name.
+ * @param {string[]} columns
+ * @param {string} [expand] the --expand flag
+ * @returns {string}
+ */
+export function expandedSelect(columns, expand) {
+  const names = expand ? expand.split(',').map((name) => name.trim()) : []
+  return [...columns, ...names].join(',')
 }
 
 /**
@@ -117,7 +141,7 @@ export function defineListCommand(descriptor) {
       const base = buildQuery(this.flags)
       const typed = await buildTypedFilter(this, descriptor)
       const query = {
-        $select: descriptor.columns.join(','),
+        $select: expandedSelect(descriptor.columns, this.flags.expand),
         $orderby: descriptor.orderBy,
         ...base,
       }

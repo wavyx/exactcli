@@ -11,6 +11,7 @@ import {
   warnUnknown,
 } from '../lib/catalog.js'
 import { BULK_PAGE_SIZE, collectListing, listingFlags } from '../lib/listing.js'
+import { expandedSelect } from '../lib/typed/factory.js'
 
 export default class ListCommand extends BaseCommand {
   static description = 'List the records of any Exact Online resource'
@@ -50,12 +51,12 @@ export default class ListCommand extends BaseCommand {
     // A known resource without an explicit projection gets the catalogue
     // columns as $select: lighter answers and a readable table. --raw keeps
     // the envelope, --fields and --select already say what to fetch.
-    const { select, fields, raw, bulk } = this.flags
+    const { select, fields, raw, bulk, expand } = this.flags
     const query = buildQuery(this.flags)
     let columns
     const defaults = resource ? defaultColumns(resource) : []
     if (defaults.length > 0 && !select && !fields && !raw) {
-      query.$select = defaults.join(',')
+      query.$select = expandedSelect(defaults, expand)
       columns = Object.fromEntries(defaults.map((c) => [c, { header: c }]))
     }
 
@@ -65,7 +66,7 @@ export default class ListCommand extends BaseCommand {
       // columns stand in; --raw has no columns to offer.
       if (!query.$select) {
         if (raw) throw new CliError('--bulk needs --select', { exitCode: 64 })
-        query.$select = defaults.join(',')
+        query.$select = expandedSelect(defaults, expand)
       }
       const data = await collectListing(this, bulkPath, query, {
         pageSize: BULK_PAGE_SIZE,

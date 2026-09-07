@@ -1,16 +1,23 @@
 import { spawn } from 'node:child_process'
+import { NOISE_FLAGS } from './schema.js'
+
+const CONFIRM_ERROR = 'delete needs confirm: true'
 
 /**
  * Turn a validated tool input into an argv for the exactcli CLI: flags as
  * `--name=value` (so a value can never be reinterpreted as a flag), then a
- * forced `--output=json` and `--yes` (no TTY for confirms), then positional
- * args after a `--` separator (so a value starting with `-` stays a positional).
- * @param {{id: string, args?: object, flags?: object}} entry
+ * forced `--output=json`, then the write gate (`--allow-writes` when the
+ * server allows writes and the command has the flag, `--yes` only for a
+ * destructive tool with `confirm: true`), then positional args after a `--`
+ * separator (so a value starting with `-` stays a positional).
+ * @param {{id: string, kind?: string, args?: object, flags?: object}} entry
  * @param {Record<string, unknown>} input
+ * @param {{allowWrites?: boolean}} [context] the server context
  * @returns {string[]}
  */
-export function toArgv(entry, input) {
+export function toArgv(entry, input, { allowWrites = false } = {}) {
   const argv = entry.id.split(':')
+  const flags = entry.flags || {}
 
   const positionals = []
   for (const name of Object.keys(entry.args || {})) {
@@ -18,8 +25,8 @@ export function toArgv(entry, input) {
     if (v !== undefined && v !== null) positionals.push(String(v))
   }
 
-  for (const [name, flag] of Object.entries(entry.flags || {})) {
-    if (name === 'yes') continue // forced below
+  for (const [name, flag] of Object.entries(flags)) {
+    if (NOISE_FLAGS.has(name)) continue // the server owns these
     const v = input[name]
     if (v === undefined || v === null) continue
     if (flag.type === 'boolean') {
@@ -32,9 +39,27 @@ export function toArgv(entry, input) {
   }
 
   argv.push('--output=json')
-  if (entry.flags && 'yes' in entry.flags) argv.push('--yes')
+  const mutates = entry.kind === 'write' || entry.kind === 'destructive'
+  if (mutates && allowWrites && 'allow-writes' in flags) {
+    argv.push('--allow-writes')
+  }
+  if (
+    entry.kind === 'destructive' &&
+    input.confirm === true &&
+    'yes' in flags
+  ) {
+    argv.push('--yes')
+  }
   if (positionals.length) argv.push('--', ...positionals)
   return argv
+}
+
+/** An error result that spawns nothing. */
+function refuse(text) {
+  return Promise.resolve({
+    content: [{ type: 'text', text }],
+    isError: true,
+  })
 }
 
 function wrap(data) {
@@ -67,6 +92,10 @@ export async function runArgv(argv, exec) {
 
   const text = stdout.trim()
   const result = { content: [{ type: 'text', text: text || 'OK' }] }
+  // A hint next to a good answer ("More results available", "Next
+  // timestamp: N") lands on stderr; the agent gets it as a second block.
+  const hint = stderr.trim()
+  if (hint) result.content.push({ type: 'text', text: hint })
   try {
     result.structuredContent = wrap(JSON.parse(text))
   } catch {
@@ -76,13 +105,18 @@ export async function runArgv(argv, exec) {
 }
 
 /**
- * Run a catalogue tool: build the argv from the input, execute, shape.
+ * Run a catalogue tool: build the argv from the input, execute, shape. A
+ * destructive tool runs only with `confirm: true`.
  * @param {object} entry catalog entry
  * @param {Record<string, unknown>} input
  * @param {Function} exec
+ * @param {{allowWrites?: boolean}} [context] the server context
  */
-export function runTool(entry, input, exec) {
-  return runArgv(toArgv(entry, input), exec)
+export function runTool(entry, input, exec, context) {
+  if (entry.kind === 'destructive' && input.confirm !== true) {
+    return refuse(CONFIRM_ERROR)
+  }
+  return runArgv(toArgv(entry, input, context), exec)
 }
 
 /** A --set value as the CLI parses it: literals stay, plain text is pinned. */
@@ -96,8 +130,9 @@ function setValue(value) {
 
 /**
  * The argv of the exact_write tool, or an error text when the input cannot
- * become a command. Nothing is spawned for an error.
- * @param {{operation: string, resource: string, key?: string, body?: object, set?: object, dry_run?: boolean, confirm?: boolean}} input
+ * become a command. Nothing is spawned for an error. The resource and the
+ * key follow a `--` separator, as in toArgv, so neither can become a flag.
+ * @param {{operation: string, resource: string, key?: string|number, body?: object, set?: object, dry_run?: boolean, confirm?: boolean}} input
  * @returns {{argv?: string[], error?: string}}
  */
 export function writeArgv(input) {
@@ -114,10 +149,9 @@ export function writeArgv(input) {
     return { error: `${operation} needs a key` }
   }
   if (operation === 'delete' && !dryRun && confirm !== true) {
-    return { error: 'delete needs confirm: true' }
+    return { error: CONFIRM_ERROR }
   }
-  const argv = [operation, resource]
-  if (key) argv.push(String(key))
+  const argv = [operation]
   if (operation !== 'delete') {
     if (body) argv.push(`--body=${JSON.stringify(body)}`)
     for (const [name, value] of Object.entries(set ?? {})) {
@@ -127,7 +161,8 @@ export function writeArgv(input) {
   if (dryRun) argv.push('--dry-run')
   argv.push('--allow-writes')
   if (operation === 'delete' && confirm === true) argv.push('--yes')
-  argv.push('--output=json')
+  argv.push('--output=json', '--', resource)
+  if (key) argv.push(String(key))
   return { argv }
 }
 
@@ -138,13 +173,7 @@ export function writeArgv(input) {
  */
 export function runWrite(input, exec) {
   const { argv, error } = writeArgv(input)
-  if (error) {
-    return Promise.resolve({
-      content: [{ type: 'text', text: error }],
-      isError: true,
-    })
-  }
-  return runArgv(argv, exec)
+  return error ? refuse(error) : runArgv(argv, exec)
 }
 
 /** A process killed by a signal reports a null exit code; treat that as 0. */

@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import BaseCommand from '../base-command.js'
 import { buildServer } from '../lib/mcp/server.js'
 import { makeExec } from '../lib/mcp/invoke.js'
+import { readOnlyCredential } from '../lib/auth.js'
 import { readOnlyProfile } from '../lib/writes.js'
 
 /**
@@ -51,12 +52,12 @@ export default class McpCommand extends BaseCommand {
 
   static description = `Run exactcli as a Model Context Protocol (MCP) server over stdio.
 
-Exposes six generic tools that cover every resource of the catalogue
-(exact_resources, exact_metadata, exact_list, exact_get, exact_me,
-exact_quota) plus one tool per typed command. --allow-writes adds
-exact_write (create, update, delete with dry_run and confirm). Each tool
-call runs exactcli as a child process under the profile and division of
-the server.
+Exposes seven generic tools that cover every resource of the catalogue
+(exact_resources, exact_metadata, exact_list, exact_get, exact_probe,
+exact_me, exact_quota) plus one tool per typed command. --allow-writes adds
+exact_write (create, update, delete with dry_run and confirm). With
+--all-tools, a delete tool needs confirm: true. Each tool call runs
+exactcli as a child process under the profile and division of the server.
 
 Register with Claude Code:
   claude mcp add exact -- exactcli mcp
@@ -111,7 +112,9 @@ Or in .mcp.json / claude_desktop_config.json:
       timeout: flags['tool-timeout'] * 1000,
     })
     // A read-only profile never exposes a write tool, whatever the flag says.
-    const locked = readOnlyProfile(flags)
+    // The lock lives in the config store and in the keychain credential.
+    const locked =
+      readOnlyProfile(flags) || (await readOnlyCredential(this.activeProfile))
     if (locked && flags['allow-writes']) {
       process.stderr.write(
         `Profile ${locked} is read-only: writes stay hidden\n`,

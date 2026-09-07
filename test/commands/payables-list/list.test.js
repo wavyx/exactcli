@@ -109,7 +109,7 @@ describe('payables-list list', () => {
         $orderby: ORDER,
         $filter:
           `substringof('acme', AccountName) and AccountId eq guid'${GUID}'` +
-          " and DueDate ge datetime'2026-01-01' and DueDate le datetime'2026-01-31'",
+          " and DueDate ge datetime'2026-01-01' and DueDate le datetime'2026-01-31T23:59:59'",
       })
       .reply(200, { d: { results: [] } })
 

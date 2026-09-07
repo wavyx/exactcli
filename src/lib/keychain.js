@@ -36,6 +36,8 @@ function keychainRequired() {
  * @property {number} expiresAt epoch ms
  * @property {string} clientId
  * @property {string} clientSecret kept in the keychain, never in config
+ * @property {boolean} [readOnly] the credential refuses every write. Set by
+ *   `config set read_only`, stored by `auth login`, kept on every rotation.
  */
 
 /**

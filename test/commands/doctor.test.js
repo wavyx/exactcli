@@ -6,6 +6,7 @@ import { runCmd } from '../helpers.js'
 
 const mocks = vi.hoisted(() => ({
   fetchMe: vi.fn(),
+  getValidOAuthAccess: vi.fn(),
   loadConfig: vi.fn(() => ({ activeProfile: 'default' })),
   getProfileConfig: vi.fn(),
   getConf: vi.fn(() => ({ path: '/tmp/exactcli/config.json' })),
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../src/lib/auth.js', async (importOriginal) => ({
   ...(await importOriginal()),
   fetchMe: mocks.fetchMe,
+  getValidOAuthAccess: mocks.getValidOAuthAccess,
 }))
 vi.mock('../../src/lib/config.js', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -108,7 +110,45 @@ describe('doctor', () => {
     expect(checks.token.detail).toMatch(/fresh/)
     expect(checks.api.detail).toMatch(/Jane Doe/)
     expect(checks.writes.detail).toBe('off (default)')
+    expect(mocks.getValidOAuthAccess).not.toHaveBeenCalled()
+    expect(createClient.mock.calls[0][0].token).toBe('at-1')
     expect(process.exitCode).toBeUndefined()
+  })
+
+  it('refreshes an old token before the probe, as any command would', async () => {
+    // The raw keychain token answers 401 after ten minutes idle, which would
+    // turn the probe into a false failure.
+    profile(FULL)
+    mocks.getOAuthTokens.mockResolvedValue(blob(600_000))
+    mocks.getValidOAuthAccess.mockResolvedValue({ accessToken: 'at-fresh' })
+    const checks = await runJson()
+    expect(mocks.getValidOAuthAccess).toHaveBeenCalledWith('default')
+    expect(createClient.mock.calls[0][0].token).toBe('at-fresh')
+    expect(checks.token.detail).toMatch(/refreshable/)
+    expect(checks.api).toEqual(
+      expect.objectContaining({
+        status: 'ok',
+        detail: expect.stringMatching(/Jane Doe/),
+      }),
+    )
+    expect(process.exitCode).toBeUndefined()
+  })
+
+  it('reports a failed refresh as an api failure', async () => {
+    profile(FULL)
+    mocks.getOAuthTokens.mockResolvedValue(blob(600_000))
+    mocks.getValidOAuthAccess.mockRejectedValue(
+      new Error('OAuth token refresh failed (spent). Run: exactcli auth login'),
+    )
+    const checks = await runJson()
+    expect(checks.api).toEqual(
+      expect.objectContaining({
+        status: 'FAIL',
+        detail: 'OAuth token refresh failed (spent). Run: exactcli auth login',
+      }),
+    )
+    expect(mocks.fetchMe).not.toHaveBeenCalled()
+    expect(process.exitCode).toBe(1)
   })
 
   it('reports a read-only profile as locked, even with the environment switch', async () => {

@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  beforeAll,
+  afterAll,
+  vi,
+} from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,10 +14,33 @@ import { join } from 'node:path'
 const TMP_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'exactcli-config-set-test-'))
 process.env.EXACTCLI_CONFIG_DIR = TMP_CONFIG_DIR
 
+// The keychain is the real one on a developer machine: never touch it here.
+const mocks = vi.hoisted(() => ({
+  getOAuthTokens: vi.fn(),
+  setOAuthTokens: vi.fn(),
+  withLock: vi.fn((_name, fn) => fn()),
+}))
+
+vi.mock('../../../src/lib/keychain.js', () => ({
+  getOAuthTokens: mocks.getOAuthTokens,
+  setOAuthTokens: mocks.setOAuthTokens,
+  isKeychainAvailable: () => true,
+}))
+vi.mock('../../../src/lib/lock.js', () => ({ withLock: mocks.withLock }))
+
 const { getConf, getProfileConfig } = await import('../../../src/lib/config.js')
 const { default: ConfigSetCommand } =
   await import('../../../src/commands/config/set.js')
 const { runCmd } = await import('../../helpers.js')
+
+const BLOB = {
+  accessToken: 'at-1',
+  refreshToken: 'rt-1',
+  obtainedAt: 1_750_000_000_000,
+  expiresAt: 1_750_000_600_000,
+  clientId: 'cid',
+  clientSecret: 'csec',
+}
 
 describe('config set', () => {
   beforeAll(() => {
@@ -23,6 +54,9 @@ describe('config set', () => {
 
   beforeEach(() => {
     getConf().clear()
+    vi.resetAllMocks()
+    mocks.getOAuthTokens.mockResolvedValue(null)
+    mocks.withLock.mockImplementation((_name, fn) => fn())
   })
 
   it('rejects an unknown key with exit 64', async () => {
@@ -60,6 +94,7 @@ describe('config set', () => {
       expect(getProfileConfig('default', 'host')).toBe('start.exactonline.nl')
       expect(stdout).toContain('host')
       expect(stdout).toContain('start.exactonline.nl')
+      expect(mocks.getOAuthTokens).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -161,6 +196,59 @@ describe('config set', () => {
       )
       expect(err.exitCode ?? err.oclif?.exit).toBe(64)
       expect(err.message).toMatch(/read_only must be true or false/)
+      expect(mocks.setOAuthTokens).not.toHaveBeenCalled()
+    })
+
+    it('writes the lock into the keychain blob of the profile', async () => {
+      // The config store follows EXACTCLI_CONFIG_DIR, the blob does not, so
+      // the blob is the carrier that an empty config directory cannot drop.
+      mocks.getOAuthTokens.mockResolvedValue({ ...BLOB })
+
+      await runCmd(ConfigSetCommand, ['read_only', 'true', '--profile', 'prod'])
+
+      expect(mocks.getOAuthTokens).toHaveBeenCalledWith('prod')
+      expect(mocks.setOAuthTokens).toHaveBeenCalledWith('prod', {
+        ...BLOB,
+        readOnly: true,
+      })
+      expect(getProfileConfig('prod', 'read_only')).toBe(true)
+    })
+
+    it('clears the lock in the blob for false', async () => {
+      mocks.getOAuthTokens.mockResolvedValue({ ...BLOB, readOnly: true })
+
+      await runCmd(ConfigSetCommand, ['read_only', 'false'])
+
+      expect(mocks.setOAuthTokens).toHaveBeenCalledWith('default', {
+        ...BLOB,
+        readOnly: false,
+      })
+    })
+
+    it('rewrites the blob under the oauth lock of the profile', async () => {
+      // A refresh in a sibling process rotates the same blob. A stale copy
+      // written over it would spend the refresh token twice.
+      mocks.getOAuthTokens.mockResolvedValue({ ...BLOB })
+      mocks.withLock.mockImplementation(async (_name, fn) => {
+        expect(mocks.getOAuthTokens).not.toHaveBeenCalled()
+        await fn()
+        expect(mocks.setOAuthTokens).toHaveBeenCalled()
+      })
+
+      await runCmd(ConfigSetCommand, ['read_only', 'true', '--profile', 'prod'])
+
+      expect(mocks.withLock).toHaveBeenCalledWith(
+        'oauth-prod',
+        expect.any(Function),
+      )
+    })
+
+    it('leaves the keychain alone when the profile has no blob', async () => {
+      await runCmd(ConfigSetCommand, ['read_only', 'true'])
+
+      expect(mocks.getOAuthTokens).toHaveBeenCalledWith('default')
+      expect(mocks.setOAuthTokens).not.toHaveBeenCalled()
+      expect(getProfileConfig('default', 'read_only')).toBe(true)
     })
   })
 })

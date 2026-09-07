@@ -105,7 +105,7 @@ describe('sales-order list', () => {
         $orderby: ORDER,
         $filter:
           `OrderedBy eq guid'${GUID}' and OrderDate ge datetime'2026-01-01'` +
-          " and OrderDate le datetime'2026-01-31' and Status eq 12" +
+          " and OrderDate le datetime'2026-01-31T23:59:59' and Status eq 12" +
           " and substringof('acme', Description)",
       })
       .reply(200, { d: { results: [] } })

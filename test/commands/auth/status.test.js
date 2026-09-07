@@ -47,7 +47,7 @@ function profile(values = {}) {
 }
 
 /** A stored token blob of the given age. */
-function blob(ageMs) {
+function blob(ageMs, overrides = {}) {
   const obtainedAt = Date.now() - ageMs
   return {
     accessToken: 'at-1',
@@ -56,6 +56,7 @@ function blob(ageMs) {
     expiresAt: obtainedAt + 600_000,
     clientId: 'cid',
     clientSecret: 'csec',
+    ...overrides,
   }
 }
 
@@ -121,7 +122,25 @@ describe('auth status', () => {
     expect(stdout).toContain('Jane Doe')
     expect(stdout).toContain('jane@acme.example')
     expect(stdout).not.toContain('Not authenticated')
+    expect(stdout).not.toContain('Writes:')
     expect(stdout).not.toContain('at-1')
+  })
+
+  it('prints the lock that the credential carries', async () => {
+    mocks.getOAuthTokens.mockResolvedValue(blob(10_000, { readOnly: true }))
+
+    const stdout = await runCmd(StatusCommand)
+
+    expect(stdout).toContain('Writes:             locked: read-only credential')
+  })
+
+  it('emits the lock of the credential when piped', async () => {
+    process.stdout.isTTY = false
+    mocks.getOAuthTokens.mockResolvedValue(blob(10_000, { readOnly: true }))
+
+    const status = JSON.parse(await runCmd(StatusCommand))
+
+    expect(status.readOnly).toBe(true)
   })
 
   it('marks an aged token refreshable and warns about the idle refresh token', async () => {
@@ -230,6 +249,7 @@ describe('auth status', () => {
       tokenAgeSeconds: 600,
       refreshableNow: true,
       refreshTokenIdleDays: 0,
+      readOnly: false,
       identity: { fullName: 'Jane Doe', email: 'jane@acme.example' },
     })
   })
@@ -246,6 +266,7 @@ describe('auth status', () => {
       tokenAgeSeconds: null,
       refreshableNow: null,
       refreshTokenIdleDays: null,
+      readOnly: null,
       identity: null,
     })
   })

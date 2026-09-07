@@ -157,19 +157,30 @@ export default class BaseCommand extends Command {
     if (this.constructor.skipAuth) return
 
     const creds = await resolveCredentials({ profile: this.activeProfile })
+    // The lock travels with the credential, so readOnlyProfile finds it on
+    // the flags whatever config directory this process reads.
+    if (creds.readOnly) flags.readOnlyCredential = this.activeProfile
 
+    // The token in use. A refresh replaces it, so the next 401 names the
+    // token that the API refused, not the one from the start of the process.
+    let token = creds.token
     this.apiClient = createClient({
       host: creds.host,
-      token: creds.token,
+      token,
       retry: !flags['no-retry'],
       timeout: flags.timeout,
       userAgent: `exactcli/${this.config.version}`,
       // A token from EXACTCLI_ACCESS_TOKEN carries no refresh token, so a 401
       // on that path stays a 401 instead of reaching for the keychain.
       onRefresh: creds.oauth
-        ? async () =>
-            (await getValidOAuthAccess(this.activeProfile, { force: true }))
-              .accessToken
+        ? async () => {
+            const blob = await getValidOAuthAccess(this.activeProfile, {
+              force: true,
+              rejected: token,
+            })
+            token = blob.accessToken
+            return token
+          }
         : undefined,
     })
   }

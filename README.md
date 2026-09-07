@@ -329,9 +329,9 @@ sequentially.
 
 ### MCP server
 
-`exactcli mcp` runs a Model Context Protocol server over stdio. It exposes six
+`exactcli mcp` runs a Model Context Protocol server over stdio. It exposes seven
 generic tools that cover every resource of the catalogue (`exact_resources`,
-`exact_metadata`, `exact_list`, `exact_get`, `exact_me`, `exact_quota`) plus one
+`exact_metadata`, `exact_list`, `exact_get`, `exact_probe`, `exact_me`, `exact_quota`) plus one
 tool per typed command (`exact_transaction_line_list`, `exact_account_list`, ...).
 The server is read-only unless it starts with `--allow-writes`, which adds
 `exact_write` (create, update, delete with `dry_run` and `confirm`). Each tool call

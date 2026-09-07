@@ -4,14 +4,20 @@ import { buildCatalog } from './catalog.js'
 import { buildInputSchema } from './schema.js'
 import { runTool, runWrite } from './invoke.js'
 
+/** A resource path: segments of letters, digits, dots, dashes; never a flag. */
+const RESOURCE_RE = /^[A-Za-z0-9][A-Za-z0-9/._-]*$/
+
 /** The input of exact_write: hand-written, it maps to three commands. */
 export const WRITE_SHAPE = {
   operation: z
     .enum(['create', 'update', 'delete'])
     .describe('create (POST), update (PUT) or delete (DELETE)'),
-  resource: z.string().describe('Resource path, for example crm/Accounts'),
-  key: z
+  resource: z
     .string()
+    .regex(RESOURCE_RE, 'Resource path, for example crm/Accounts')
+    .describe('Resource path, for example crm/Accounts'),
+  key: z
+    .union([z.string(), z.number()])
     .optional()
     .describe('Record key for update and delete: a GUID, or an integer'),
   body: z
@@ -95,7 +101,7 @@ export function buildServer({
       },
       custom
         ? (input) => runWrite(input, exec)
-        : (input) => runTool(entry, input, exec),
+        : (input) => runTool(entry, input, exec, { allowWrites }),
     )
   }
 

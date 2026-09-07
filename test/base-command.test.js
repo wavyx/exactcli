@@ -3,6 +3,7 @@ import nock from 'nock'
 import chalk from 'chalk'
 import createDebug from 'debug'
 import { join } from 'node:path'
+import { Flags } from '@oclif/core'
 import { HOST, mockApi, runCmd } from './helpers.js'
 
 const { auth, config, jq } = vi.hoisted(() => ({
@@ -39,6 +40,7 @@ vi.mock('../src/lib/client.js', async (importOriginal) => {
 
 const { default: BaseCommand } = await import('../src/base-command.js')
 const { createClient } = await import('../src/lib/client.js')
+const { assertWritesAllowed } = await import('../src/lib/writes.js')
 const jqLib = await import('../src/lib/jq.js')
 
 const ME = '/api/v1/current/Me'
@@ -53,6 +55,28 @@ class ApiCmd extends BaseCommand {
   async run() {
     const body = await this.apiClient.get(ME)
     await this.outputResults(body.d, COLUMNS)
+  }
+}
+
+/** Reads the API twice, so a second 401 can name the token in use. */
+class TwoReadsCmd extends BaseCommand {
+  async run() {
+    await this.apiClient.get(ME)
+    const body = await this.apiClient.get(ME)
+    await this.outputResults(body.d, COLUMNS)
+  }
+}
+
+/** Deletes, as every write command does: the flags carry the write gate. */
+class DeleteCmd extends BaseCommand {
+  static flags = {
+    'allow-writes': Flags.boolean({ default: false }),
+    yes: Flags.boolean({ default: false }),
+  }
+
+  async run() {
+    assertWritesAllowed(this.flags, 'DELETE')
+    this.log(`locked:${this.flags.readOnlyCredential ?? 'no'}`)
   }
 }
 
@@ -395,7 +419,60 @@ describe('BaseCommand init', () => {
     expect(stdout).toContain('Refreshed')
     expect(auth.getValidOAuthAccess).toHaveBeenCalledWith('default', {
       force: true,
+      rejected: 'stored-access',
     })
+  })
+
+  it('names the token in use on every later 401', async () => {
+    // After a refresh the process holds the new token. A second 401 must
+    // report that one as rejected, or the floor check would look at the
+    // wrong token.
+    auth.resolveCredentials.mockResolvedValue(oauthCreds())
+    auth.getValidOAuthAccess
+      .mockResolvedValueOnce({ accessToken: 'fresh-1' })
+      .mockResolvedValueOnce({ accessToken: 'fresh-2' })
+    mockApi()
+      .get(ME)
+      .matchHeader('authorization', 'Bearer stored-access')
+      .reply(401, { error: { message: { value: 'expired' } } })
+      .get(ME)
+      .matchHeader('authorization', 'Bearer fresh-1')
+      .reply(200, { d: { id: 1, name: 'First' } })
+      .get(ME)
+      .matchHeader('authorization', 'Bearer fresh-1')
+      .reply(401, { error: { message: { value: 'expired' } } })
+      .get(ME)
+      .matchHeader('authorization', 'Bearer fresh-2')
+      .reply(200, { d: { id: 2, name: 'Second' } })
+
+    const stdout = await runCmd(TwoReadsCmd, ['--output', 'json'])
+
+    expect(stdout).toContain('Second')
+    expect(auth.getValidOAuthAccess.mock.calls).toEqual([
+      ['default', { force: true, rejected: 'stored-access' }],
+      ['default', { force: true, rejected: 'fresh-1' }],
+    ])
+  })
+
+  it('refuses a write on a read-only credential, whatever the config says', async () => {
+    // The config store knows nothing about the lock, as with an empty
+    // EXACTCLI_CONFIG_DIR. The keychain blob still carries it.
+    auth.resolveCredentials.mockResolvedValue(oauthCreds({ readOnly: true }))
+
+    const err = await DeleteCmd.run(['--allow-writes', '--yes']).catch((e) => e)
+
+    expect(err.exitCode ?? err.oclif?.exit).toBe(77)
+    expect(err.message).toBe(
+      'Profile default is read-only (config set read_only false to change it).',
+    )
+  })
+
+  it('leaves the flags unmarked for a credential without the lock', async () => {
+    auth.resolveCredentials.mockResolvedValue(oauthCreds({ readOnly: false }))
+
+    const stdout = await runCmd(DeleteCmd, ['--allow-writes', '--yes'])
+
+    expect(stdout).toBe('locked:no')
   })
 
   it('propagates a failed credential lookup', async () => {

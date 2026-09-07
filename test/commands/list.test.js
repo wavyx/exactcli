@@ -164,7 +164,7 @@ describe('list', () => {
         $orderby: 'Name asc',
         $top: '10',
       })
-      .reply(200, { d: { results: [account()] } })
+      .reply(200, { d: [account()] })
 
     await runCmd(ListCommand, [
       'crm/Accounts',
@@ -184,6 +184,33 @@ describe('list', () => {
       'json',
     ])
 
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('--top reads the bare array envelope Exact answers with $top', async () => {
+    const scope = mockApi()
+      .get(ACCOUNTS_PATH)
+      .query({ $top: '2', $select: SELECT })
+      .reply(200, { d: [account({ Code: '1' }), account({ Code: '2' })] })
+
+    const stderr = captureStderr()
+    let stdout
+    try {
+      stdout = await runCmd(ListCommand, [
+        'crm/Accounts',
+        '--division',
+        '123',
+        '--top',
+        '2',
+        '--output',
+        'json',
+      ])
+    } finally {
+      stderr.restore()
+    }
+
+    expect(JSON.parse(stdout).map((r) => r.Code)).toEqual(['1', '2'])
+    expect(stderr.text()).toBe('')
     expect(scope.isDone()).toBe(true)
   })
 

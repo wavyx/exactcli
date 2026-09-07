@@ -105,7 +105,7 @@ describe('purchase-invoice list', () => {
         $orderby: ORDER,
         $filter:
           `Supplier eq guid'${GUID}' and InvoiceDate ge datetime'2026-01-01'` +
-          " and InvoiceDate le datetime'2026-01-31' and Status eq 20",
+          " and InvoiceDate le datetime'2026-01-31T23:59:59' and Status eq 20",
       })
       .reply(200, { d: { results: [] } })
 

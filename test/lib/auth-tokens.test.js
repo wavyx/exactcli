@@ -5,12 +5,14 @@ import {
   exchangeCode,
   fetchMe,
   getValidOAuthAccess,
+  readOnlyCredential,
   refreshAccessToken,
   resolveCredentials,
   tokenRequest,
   REFRESH_AFTER_MS,
   REFRESH_FLOOR_MS,
   STATE_REQUIRED,
+  TOKEN_TIMEOUT_MS,
 } from '../../src/lib/auth.js'
 import { ApiError, CliError } from '../../src/lib/errors.js'
 import { HOST, mockApi, mockTokenExchange } from '../helpers.js'
@@ -209,6 +211,36 @@ describe('tokenRequest', () => {
     expect(err.message).not.toContain(SECRET)
     expect(nock.pendingMocks()).toEqual([])
   })
+
+  it('bounds the request well below the 60 s stale-lock threshold', () => {
+    expect(TOKEN_TIMEOUT_MS).toBe(30_000)
+  })
+
+  it('sends the request with a timeout signal', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    mockTokenExchange()
+
+    await tokenRequest(HOST, { grant_type: 'refresh_token' })
+
+    expect(fetchSpy.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it.each(['TimeoutError', 'AbortError'])(
+    'maps a %s on a stalled endpoint to a 69 service error',
+    async (name) => {
+      // A stalled endpoint that outlives the stale-lock threshold lets a
+      // second process claim the lock and spend the same refresh token.
+      const abort = Object.assign(new Error('aborted'), { name })
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(abort)
+
+      const err = await tokenRequest(HOST, {}).catch((e) => e)
+
+      expect(err).toBeInstanceOf(CliError)
+      expect(err.exitCode).toBe(69)
+      expect(err.message).toBe('Token endpoint timed out after 30 s')
+      expect(err.cause).toBe(abort)
+    },
+  )
 })
 
 describe('exchangeCode', () => {
@@ -438,6 +470,62 @@ describe('getValidOAuthAccess', () => {
     expect(access.accessToken).toBe('acc')
   })
 
+  it('returns the stored blob when a sibling rotated the rejected token', async () => {
+    // The 401 hit an older token. The keychain holds a young replacement
+    // already, so the floor does not apply and nothing is spent.
+    const rotated = blob(1000, { accessToken: 'sibling-access' })
+    keychain.getOAuthTokens.mockResolvedValue(rotated)
+    const { scope } = mockTokenExchange()
+
+    const access = await getValidOAuthAccess('default', {
+      force: true,
+      rejected: 'stored-access',
+    })
+
+    expect(access).toBe(rotated)
+    expect(scope.isDone()).toBe(false)
+    expect(lock.withLock).not.toHaveBeenCalled()
+  })
+
+  it('applies the floor when the stored token is the rejected one', async () => {
+    keychain.getOAuthTokens.mockResolvedValue(blob(569_999))
+
+    const err = await getValidOAuthAccess('default', {
+      force: true,
+      rejected: 'stored-access',
+    }).catch((e) => e)
+
+    expect(err.exitCode).toBe(77)
+    expect(err.message).toMatch(/before its refresh window/)
+    expect(lock.withLock).not.toHaveBeenCalled()
+  })
+
+  it('refreshes the rejected token once it passed the floor', async () => {
+    keychain.getOAuthTokens.mockResolvedValue(blob(572_000))
+    const { scope } = mockTokenExchange()
+
+    const access = await getValidOAuthAccess('default', {
+      force: true,
+      rejected: 'stored-access',
+    })
+
+    expect(scope.isDone()).toBe(true)
+    expect(access.accessToken).toBe('acc')
+  })
+
+  it('keeps the read-only lock of the blob on a rotation', async () => {
+    keychain.getOAuthTokens.mockResolvedValue(blob(600_000, { readOnly: true }))
+    mockTokenExchange()
+
+    const access = await getValidOAuthAccess('default')
+
+    expect(access.readOnly).toBe(true)
+    expect(keychain.setOAuthTokens).toHaveBeenCalledWith(
+      'default',
+      expect.objectContaining({ accessToken: 'acc', readOnly: true }),
+    )
+  })
+
   it('spends no refresh token when another process refreshed first', async () => {
     const stale = blob(600_000)
     const fresh = blob(0, { accessToken: 'other-process' })
@@ -537,7 +625,12 @@ describe('resolveCredentials', () => {
 
     const creds = await resolveCredentials({ profile: 'default' })
 
-    expect(creds).toEqual({ token: 'env-token', source: 'env', host: HOST })
+    expect(creds).toEqual({
+      token: 'env-token',
+      source: 'env',
+      host: HOST,
+      readOnly: false,
+    })
     expect(keychain.getOAuthTokens).not.toHaveBeenCalled()
   })
 
@@ -551,8 +644,17 @@ describe('resolveCredentials', () => {
       token: 'stored-access',
       source: 'profile',
       host: HOST,
+      readOnly: false,
       oauth: stored,
     })
+  })
+
+  it('carries the read-only lock of the blob', async () => {
+    keychain.getOAuthTokens.mockResolvedValue(blob(0, { readOnly: true }))
+
+    const creds = await resolveCredentials({ profile: 'default' })
+
+    expect(creds.readOnly).toBe(true)
   })
 
   it('reads the host from the profile configuration', async () => {
@@ -573,6 +675,23 @@ describe('resolveCredentials', () => {
     await expect(
       resolveCredentials({ profile: 'default' }),
     ).rejects.toMatchObject({ exitCode: 77 })
+  })
+})
+
+describe('readOnlyCredential', () => {
+  it('names the profile when its blob carries the lock', async () => {
+    keychain.getOAuthTokens.mockResolvedValue(blob(0, { readOnly: true }))
+
+    expect(await readOnlyCredential('acme')).toBe('acme')
+    expect(keychain.getOAuthTokens).toHaveBeenCalledWith('acme')
+  })
+
+  it('answers null for an unlocked blob and for no blob', async () => {
+    keychain.getOAuthTokens.mockResolvedValueOnce(blob(0))
+    expect(await readOnlyCredential('acme')).toBeNull()
+
+    keychain.getOAuthTokens.mockResolvedValueOnce(null)
+    expect(await readOnlyCredential('acme')).toBeNull()
   })
 })
 

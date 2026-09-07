@@ -244,7 +244,7 @@ describe('authorizationCodeFlow', () => {
     const { outcome, callback } = await startFlow({ state: 's' })
 
     const res = await callback(
-      'error=%3Cscript%3Ealert(1)%3C%2Fscript%3E&error_description=%3Cb%3Ehi',
+      'error=%3Cscript%3Ealert(1)%3C%2Fscript%3E&error_description=%3Cb%3Ehi&state=s',
     )
     const page = await res.text()
     const err = await outcome
@@ -252,6 +252,24 @@ describe('authorizationCodeFlow', () => {
     expect(page).not.toMatch(/script|<b>|hi/)
     expect(err.message).toMatch(/unknown/)
     expect(err.message).not.toMatch(/script/)
+  })
+
+  it('keeps listening on an error callback without the right state', async () => {
+    // The callback is reachable through the tunnel, so a bare error from
+    // outside must not end the login.
+    const { outcome, callback } = await startFlow({ state: 'st4te' })
+    mockTokenExchange()
+
+    const bare = await callback('error=access_denied')
+    expect(bare.status).toBe(400)
+    expect(await bare.text()).toMatch(/State mismatch/)
+
+    const wrong = await callback('error=access_denied&state=wrong')
+    expect(wrong.status).toBe(400)
+    expect(await wrong.text()).toMatch(/State mismatch/)
+
+    await callback('code=c&state=st4te')
+    expect((await outcome).accessToken).toBe('acc')
   })
 
   it('answers 500 and rejects when the exchange fails', async () => {

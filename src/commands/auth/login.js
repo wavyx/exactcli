@@ -95,7 +95,12 @@ export default class LoginCommand extends BaseCommand {
       expiresAt: now + tokens.expiresIn * 1000,
       clientId,
       clientSecret,
+      // A lock set before the login must survive it.
+      readOnly: getProfileConfig(profile, 'read_only') === true,
     })
+    // Only a login that succeeded may re-point the profile: an aborted login
+    // on another host must leave a working session where it was.
+    this.#storeProfile(profile, { host, ngrok_domain: domain })
 
     await this.#reportIdentity({ host, profile, token: tokens.accessToken })
   }
@@ -106,13 +111,24 @@ export default class LoginCommand extends BaseCommand {
    * @returns {string}
    */
   #resolveHost(flags, profile) {
-    const stored = getProfileConfig(profile, 'host')
-    const host = flags.host ?? stored ?? DEFAULT_HOST
+    const host = flags.host ?? getProfileConfig(profile, 'host') ?? DEFAULT_HOST
     if (!HOST_RE.test(host)) {
       throw new ConfigError(`Host ${host} is not an Exact Online host`)
     }
-    if (host !== stored) setProfileConfig(profile, 'host', host)
     return host
+  }
+
+  /**
+   * Write the values that differ from the stored ones.
+   * @param {string} profile
+   * @param {Record<string, string>} values
+   */
+  #storeProfile(profile, values) {
+    for (const [key, value] of Object.entries(values)) {
+      if (getProfileConfig(profile, key) !== value) {
+        setProfileConfig(profile, key, value)
+      }
+    }
   }
 
   /**
@@ -140,7 +156,6 @@ export default class LoginCommand extends BaseCommand {
         { exitCode: 64 },
       )
     }
-    if (domain !== stored) setProfileConfig(profile, 'ngrok_domain', domain)
     return domain
   }
 

@@ -41,6 +41,7 @@ export default class StatusCommand extends BaseCommand {
       tokenAgeSeconds: null,
       refreshableNow: null,
       refreshTokenIdleDays: null,
+      readOnly: null,
       identity: null,
     }
 
@@ -51,6 +52,7 @@ export default class StatusCommand extends BaseCommand {
       status.tokenAgeSeconds = Math.round(age / 1000)
       status.refreshableNow = age >= REFRESH_FLOOR_MS
       status.refreshTokenIdleDays = Math.floor(age / DAY_MS)
+      status.readOnly = blob.readOnly === true
       status.identity = await this.#identity(status.host, profile, blob, age)
     }
 
@@ -113,6 +115,7 @@ export default class StatusCommand extends BaseCommand {
     line('Token age', `${status.tokenAgeSeconds}s`)
     line('Refreshable now', status.refreshableNow ? 'yes' : 'no')
     line('Refresh token idle', `${status.refreshTokenIdleDays} days`)
+    if (status.readOnly) line('Writes', 'locked: read-only credential')
     if (status.refreshTokenIdleDays > IDLE_WARN_DAYS) {
       this.log(
         chalk.yellow(

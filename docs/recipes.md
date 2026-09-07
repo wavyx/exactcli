@@ -488,8 +488,8 @@ exactcli api GET read/financial/ProfitLossOverview
 Verified live.
 
 `exactcli mcp` runs a Model Context Protocol server over stdio. Without
-`--allow-writes` it is read-only: six generic tools (`exact_resources`,
-`exact_metadata`, `exact_list`, `exact_get`, `exact_me`, `exact_quota`) plus one tool
+`--allow-writes` it is read-only: seven generic tools (`exact_resources`,
+`exact_metadata`, `exact_list`, `exact_get`, `exact_probe`, `exact_me`, `exact_quota`) plus one tool
 per typed command. With `--allow-writes` the server adds `exact_write`.
 
 ```sh

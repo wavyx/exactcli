@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.7.0 (103 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.7.1 (103 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -175,12 +175,12 @@ exactcli list crm/Accounts --bulk --all --output csv
 
 Run exactcli as a Model Context Protocol (MCP) server over stdio.
 
-Exposes six generic tools that cover every resource of the catalogue
-(exact_resources, exact_metadata, exact_list, exact_get, exact_me,
-exact_quota) plus one tool per typed command. --allow-writes adds
-exact_write (create, update, delete with dry_run and confirm). Each tool
-call runs exactcli as a child process under the profile and division of
-the server.
+Exposes seven generic tools that cover every resource of the catalogue
+(exact_resources, exact_metadata, exact_list, exact_get, exact_probe,
+exact_me, exact_quota) plus one tool per typed command. --allow-writes adds
+exact_write (create, update, delete with dry_run and confirm). With
+--all-tools, a delete tool needs confirm: true. Each tool call runs
+exactcli as a child process under the profile and division of the server.
 
 Register with Claude Code:
   claude mcp add exact -- exactcli mcp
@@ -715,7 +715,7 @@ exactcli bank-entry create [flags]
 Examples:
 
 ```bash
-exactcli bank-entry create --journal 500 --line 400000:121:Invoice 26700001 --account 1001 --dry-run
+exactcli bank-entry create --journal 500 --line "400000:121:Invoice 26700001" --account 1001 --dry-run
 exactcli bank-entry create --journal 500 --line 656000:-12.5:Fees --date 2026-09-03 --allow-writes
 ```
 

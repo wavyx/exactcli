@@ -103,7 +103,7 @@ describe('asset list', () => {
         $filter:
           "substringof('laptop', Description) and Status eq 1" +
           " and StartDate ge datetime'2026-01-01'" +
-          " and StartDate le datetime'2026-12-31'",
+          " and StartDate le datetime'2026-12-31T23:59:59'",
       })
       .reply(200, { d: { results: [] } })
 
