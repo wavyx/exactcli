@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] - 2026-09-07
+
+### Added
+
+- `auth login --force-login`: asks Exact for the login form even when the
+  browser holds a session, so that another user (a production account next to
+  a developer account) can sign in. Without it Exact authorises the user of the
+  open browser session, which also breaks the refresh chain of that user's
+  other profile.
+
 ## [0.8.0] - 2026-09-07
 
 ### Added

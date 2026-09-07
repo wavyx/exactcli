@@ -53,6 +53,12 @@ export default class LoginCommand extends BaseCommand {
       description:
         'OAuth client secret (env EXACTCLI_CLIENT_SECRET). Prefer the prompt: flags stay in shell history',
     }),
+    'force-login': Flags.boolean({
+      description:
+        'Show the Exact login form even when the browser has a session, ' +
+        'to sign in as another user',
+      default: false,
+    }),
     manual: Flags.boolean({
       description:
         'Paste the redirected URL instead of catching the callback on a local port',
@@ -82,7 +88,13 @@ export default class LoginCommand extends BaseCommand {
       }))
     const clientSecret = await this.#resolveSecret(flags)
 
-    const app = { host, clientId, clientSecret, redirectUri }
+    const app = {
+      host,
+      clientId,
+      clientSecret,
+      redirectUri,
+      forceLogin: flags['force-login'],
+    }
     const tokens = flags.manual
       ? await this.#manualLogin(app)
       : await this.#tunnelLogin(app, { domain, port: flags.port })
@@ -189,6 +201,7 @@ export default class LoginCommand extends BaseCommand {
       authUrl(app.host, {
         clientId: app.clientId,
         redirectUri: app.redirectUri,
+        forceLogin: app.forceLogin,
       }),
     )
     return manualCodeFlow(app)

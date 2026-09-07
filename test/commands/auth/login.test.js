@@ -110,6 +110,22 @@ afterEach(() => {
   delete process.env.EXACTCLI_CLIENT_SECRET
 })
 
+describe('auth login --force-login', () => {
+  it('asks Exact for the login form, in the URL and in the flow', async () => {
+    const stdout = await runCmd(LoginCommand, [
+      '--manual',
+      '--force-login',
+      '--client-id',
+      'cid',
+    ])
+
+    expect(stdout).toMatch(/force_login=1/)
+    expect(mocks.manualCodeFlow).toHaveBeenCalledWith(
+      expect.objectContaining({ forceLogin: true }),
+    )
+  })
+})
+
 describe('auth login --manual', () => {
   it('passes --timeout to the identity probe', async () => {
     await runCmd(LoginCommand, [
@@ -138,6 +154,7 @@ describe('auth login --manual', () => {
       clientId: 'cid',
       clientSecret: 'csec',
       redirectUri: REDIRECT,
+      forceLogin: false,
     })
     const [profileName, blob] = mocks.setOAuthTokens.mock.calls[0]
     expect(profileName).toBe('default')

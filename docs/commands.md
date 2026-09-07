@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.8.0 (118 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.8.1 (118 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -618,6 +618,7 @@ exactcli auth login [flags]
 - `--port <value>` - Local port that receives the callback
 - `--client-id <value>` - OAuth client ID (env EXACTCLI_CLIENT_ID)
 - `--client-secret <value>` - OAuth client secret (env EXACTCLI_CLIENT_SECRET). Prefer the prompt: flags stay in shell history
+- `--force-login` - Show the Exact login form even when the browser has a session, to sign in as another user
 - `--manual` - Paste the redirected URL instead of catching the callback on a local port
 
 Examples:

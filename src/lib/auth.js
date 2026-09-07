@@ -57,15 +57,20 @@ function newState() {
 /**
  * Build the authorization URL the user opens in a browser.
  * @param {string} host Exact Online country host
- * @param {{ clientId: string, redirectUri: string, state?: string }} options
+ * `forceLogin` shows the login form even when the browser has a session, so
+ * that another user can sign in.
+ * @param {{ clientId: string, redirectUri: string, state?: string, forceLogin?: boolean }} options
  * @returns {string}
  */
-export function authUrl(host, { clientId, redirectUri, state = newState() }) {
+export function authUrl(
+  host,
+  { clientId, redirectUri, state = newState(), forceLogin = false },
+) {
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    force_login: '0',
+    force_login: forceLogin ? '1' : '0',
     state,
   })
   return `https://${host}${AUTH_PATH}?${params}`
@@ -386,6 +391,7 @@ export function authorizationCodeFlow({
   port = 9999,
   timeout = 300_000,
   state = newState(),
+  forceLogin = false,
   onReady,
 }) {
   const callbackPath = new URL(redirectUri).pathname
@@ -488,7 +494,7 @@ export function authorizationCodeFlow({
 
     server.listen(port, '127.0.0.1', () => {
       debug('callback server listens on 127.0.0.1:%d', port)
-      onReady?.(authUrl(host, { clientId, redirectUri, state }))
+      onReady?.(authUrl(host, { clientId, redirectUri, state, forceLogin }))
     })
   })
 }

@@ -113,6 +113,19 @@ describe('authorizationCodeFlow', () => {
     await outcome
   })
 
+  it('forces the login form when asked', async () => {
+    const { outcome, url, callback } = await startFlow({
+      state: 'st4te',
+      forceLogin: true,
+    })
+    mockTokenExchange()
+
+    expect(url.searchParams.get('force_login')).toBe('1')
+
+    await callback('code=c1&state=st4te')
+    await outcome
+  })
+
   it('exchanges the code and resolves the token set', async () => {
     const { outcome, callback } = await startFlow({ state: 'st4te' })
     const { scope, captured } = mockTokenExchange()

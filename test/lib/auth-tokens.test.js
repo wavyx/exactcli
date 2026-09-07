@@ -97,6 +97,17 @@ describe('authUrl', () => {
     expect(url.searchParams.get('state')).toBe('st4te')
   })
 
+  it('forces the login form when asked', () => {
+    const url = new URL(
+      authUrl(HOST, {
+        clientId: 'cid',
+        redirectUri: 'https://acme.example/callback',
+        forceLogin: true,
+      }),
+    )
+    expect(url.searchParams.get('force_login')).toBe('1')
+  })
+
   it('percent-encodes the redirect URI', () => {
     const url = authUrl(HOST, {
       clientId: 'c id',
