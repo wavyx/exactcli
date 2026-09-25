@@ -550,6 +550,65 @@ describe('list', () => {
       /^Unknown resource crm\/Nope \(not in the catalogue of \d{4}-\d{2}-\d{2}\)\. Sending anyway\.\n/,
     )
   })
+  it('--count asks $count with the filter and prints the number', async () => {
+    const scope = mockApi()
+      .get(`${ACCOUNTS_PATH}/$count`)
+      .query({ $filter: "Status eq 'C'" })
+      .matchHeader('accept', 'text/plain, application/json')
+      .reply(200, '7', { 'content-type': 'text/plain' })
+
+    const stdout = await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--filter',
+      "Status eq 'C'",
+      '--count',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(JSON.parse(stdout)).toEqual({ count: 7 })
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('--count prints the bare number in a table', async () => {
+    const scope = mockApi()
+      .get(`${ACCOUNTS_PATH}/$count`)
+      .reply(200, '7', { 'content-type': 'text/plain' })
+
+    const stdout = await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--count',
+      '--division',
+      '123',
+      '--output',
+      'table',
+    ])
+
+    expect(stdout).toBe('7')
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('--count with --bulk counts through the regular resource', async () => {
+    const scope = mockApi()
+      .get(`${ACCOUNTS_PATH}/$count`)
+      .reply(200, '3', { 'content-type': 'text/plain' })
+
+    const stdout = await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--bulk',
+      '--count',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(JSON.parse(stdout)).toEqual({ count: 3 })
+    expect(scope.isDone()).toBe(true)
+  })
+
   it('--bulk reads the bulk variant with the catalogue columns and no $top', async () => {
     const scope = mockApi()
       .get('/api/v1/123/bulk/CRM/Accounts')

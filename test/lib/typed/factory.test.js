@@ -173,6 +173,7 @@ describe('defineListCommand', () => {
     expect(Account.description).toBe(descriptors.account.description)
     for (const name of [
       ...Object.keys(listingFlags),
+      'count',
       'search',
       'status',
       'customer',
@@ -251,6 +252,24 @@ describe('defineListCommand', () => {
 
     await runCmd(Account, ['--search', '1001'])
 
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('--count sends the typed filter to $count', async () => {
+    const scope = mockApi()
+      .get(`${ACCOUNTS}/$count`)
+      .query({ $filter: '(Blocked eq false) and IsSales eq true' })
+      .reply(200, '3', { 'content-type': 'text/plain' })
+
+    const out = await runCmd(Account, [
+      '--customer',
+      'yes',
+      '--filter',
+      'Blocked eq false',
+      '--count',
+    ])
+
+    expect(JSON.parse(out)).toEqual({ count: 3 })
     expect(scope.isDone()).toBe(true)
   })
 

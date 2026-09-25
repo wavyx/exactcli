@@ -89,6 +89,15 @@ exactcli get crm/Accounts <guid> --select Code,Name,IsSales
 exactcli get system/Divisions <division code>
 ```
 
+`--count` prints the number of matching records in one call (OData `$count`). It
+keeps `--filter` and the typed filters, and ignores the paging flags.
+
+```sh
+exactcli list financialtransaction/TransactionLines --filter "Status eq 50" --count
+exactcli transaction-line list --year 2025 --count
+exactcli api GET 'crm/Accounts/$count' --query "\$filter=Status eq 'C'"
+```
+
 Probe an endpoint with the raw command. It is host-locked and prints the envelope
 untouched.
 
@@ -554,3 +563,10 @@ runs `exactcli` as a child process under the profile and the division of the ser
 - `read/sync/Sync/SyncTimestamp` accepts only `modified` and `endPoint`; any other
   query answers 400 `Error in query syntax`.
 - A deleted record shows in `sync/Deleted` with its `EntityType` (2 = Accounts).
+- `$count` answers plain text. A request that accepts only JSON gets 415
+  `Unsupported media type requested`. The CLI sends
+  `Accept: text/plain, application/json`, so an error still arrives as JSON.
+  `$inlinecount=allpages` works too and returns the total in `d.__count`.
+- An app registered inside an administration (Import/Export > App registrations)
+  serves the users of that licence. Its token reaches every division that the user
+  may open.

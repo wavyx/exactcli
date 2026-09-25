@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.8.1 (118 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.9.0 (118 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -158,6 +158,7 @@ exactcli list <resource> [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--beta` - Use the beta API namespace
 - `--bulk` - Read the bulk variant: 1000 rows per page, $select required
 
@@ -169,6 +170,7 @@ exactcli list crm/Accounts --filter "Status eq 'C'" --top 20
 exactcli list financial/GLAccounts --all --output json
 exactcli list logistics/Items --select Code,Description --limit 200
 exactcli list crm/Accounts --bulk --all --output csv
+exactcli list crm/Accounts --filter "Status eq 'C'" --count
 ```
 
 ### `exactcli mcp`
@@ -389,6 +391,7 @@ exactcli account list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Name contains, or exact Code
 - `--status <value>` - Status code, for example C
 - `--customer <value>` - Customers only (true or false)
@@ -451,6 +454,7 @@ exactcli address list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--account <value>` - Account GUID or code
 - `--type <value>` - Address type: 1 visit, 2 postal, 3 invoice, 4 delivery
 - `--city <value>` - City (exact match)
@@ -481,6 +485,7 @@ exactcli aging-overview list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--age-group <value>` - Age group number, 1 is the youngest
 - `--currency <value>` - Currency code, for example EUR
 
@@ -509,6 +514,7 @@ exactcli aging-payable list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Account name contains (a code goes to --account)
 - `--account <value>` - Account GUID or code
 
@@ -537,6 +543,7 @@ exactcli aging-receivable list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Account name contains (a code goes to --account)
 - `--account <value>` - Account GUID or code
 
@@ -591,6 +598,7 @@ exactcli asset list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains, or exact Code
 - `--status <value>` - Status code
 - `--from <value>` - Start date from (YYYY-MM-DD)
@@ -678,6 +686,7 @@ exactcli balance list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--year <value>` - Reporting year
 - `--period <value>` - Reporting period
 - `--gl-account <value>` - Ledger account code, for example 700000
@@ -709,6 +718,7 @@ exactcli bank-account list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--account <value>` - Account GUID or code
 - `--main <value>` - Main bank account only (true or false)
 - `--search <value>` - Bank account number contains
@@ -762,6 +772,7 @@ exactcli bank-entry list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--journal <value>` - Bank journal code
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
@@ -814,6 +825,7 @@ exactcli budget list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--year <value>` - Reporting year
 - `--period <value>` - Reporting period
 - `--gl-account <value>` - Ledger account code
@@ -844,6 +856,7 @@ exactcli cash-entry list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--journal <value>` - Cash journal code
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
@@ -961,6 +974,7 @@ exactcli contact list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Full name contains, or exact Code
 - `--account <value>` - Account GUID or code
 - `--email <value>` - Exact email address
@@ -1017,6 +1031,7 @@ exactcli cost-center list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains, or exact Code
 - `--active <value>` - Active cost centers only (true or false)
 
@@ -1045,6 +1060,7 @@ exactcli cost-unit list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains, or exact Code
 
 Examples:
@@ -1072,6 +1088,7 @@ exactcli currency list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains
 - `--since <value>` - Modified on or after (YYYY-MM-DD)
 
@@ -1225,6 +1242,7 @@ exactcli document list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--account <value>` - Account GUID or code
 - `--type <value>` - Document type code
 - `--from <value>` - Document date from (YYYY-MM-DD)
@@ -1255,6 +1273,7 @@ exactcli document-type list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains
 - `--creatable <value>` - Types a POST on documents/Documents accepts (true or false)
 - `--category <value>` - Document type category ID
@@ -1284,6 +1303,7 @@ exactcli exchange-rate list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--source <value>` - Foreign currency code, for example USD
 - `--target <value>` - Division currency code, for example EUR
 - `--from <value>` - Start date from (YYYY-MM-DD)
@@ -1314,6 +1334,7 @@ exactcli financial-period list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
 - `--from <value>` - Start date from (YYYY-MM-DD)
@@ -1344,6 +1365,7 @@ exactcli gl-account list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--type <value>` - Account type code
 - `--search <value>` - Description contains, or exact Code
 
@@ -1372,6 +1394,7 @@ exactcli gl-classification list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains, or exact Code
 - `--parent <value>` - Parent element GUID
 - `--namespace <value>` - Taxonomy namespace GUID (the reporting scheme)
@@ -1402,6 +1425,7 @@ exactcli goods-delivery list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--account <value>` - Delivery account GUID or code (the account that receives)
 - `--from <value>` - Delivery date from (YYYY-MM-DD)
 - `--to <value>` - Delivery date to (YYYY-MM-DD)
@@ -1488,6 +1512,7 @@ exactcli item list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains, or exact Code
 - `--sales <value>` - Sales items only (true or false)
 - `--purchase <value>` - Purchase items only (true or false)
@@ -1547,6 +1572,7 @@ exactcli item-group list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains, or exact Code
 - `--default <value>` - Default group flag: 1 default, 0 other
 
@@ -1575,6 +1601,7 @@ exactcli journal list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains, or exact Code
 - `--type <value>` - Journal type: 10 cash, 12 bank, 16 payment service, 20 sales, 22 purchase, 90 general
 
@@ -1626,6 +1653,7 @@ exactcli journal-entry list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--journal <value>` - Journal code
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
@@ -1656,6 +1684,7 @@ exactcli mail-message list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--operation <value>` - Scan service operation: 1 purchase invoice without details, 2 with details, 3 sales invoice, 4 bank statement
 - `--status <value>` - Recipient status: 5 rejected, 10 draft, 20 open, 25 prepared, 30 approved, 40 realized, 42 in process, 43 at the scanning service, 45 error, 46 blocked, 50 processed
 - `--from <value>` - Sent date from (YYYY-MM-DD)
@@ -1686,6 +1715,7 @@ exactcli mailbox list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains
 - `--account <value>` - Account GUID or code (the owner of the mailbox)
 - `--type <value>` - Mailbox type: 0 unknown, 1 Exact, 2 government, 3 manual input
@@ -1739,6 +1769,7 @@ exactcli payables-list list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Account name contains (a code goes to --account)
 - `--account <value>` - Account GUID or code
 - `--due-from <value>` - Due date from (YYYY-MM-DD)
@@ -1809,6 +1840,7 @@ exactcli payment list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--account <value>` - Supplier GUID or code
 - `--entry <value>` - The purchase entry (GUID) that created the payment
 - `--due-from <value>` - Due date from (YYYY-MM-DD)
@@ -1861,6 +1893,7 @@ exactcli payment-condition list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains, or exact Code
 - `--method <value>` - Payment method: B on credit, I collection, K cash, Q PSP
 - `--days <value>` - Payment days
@@ -1934,6 +1967,7 @@ exactcli profit-loss list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 
 Examples:
 
@@ -1960,6 +1994,7 @@ exactcli project list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--account <value>` - Account GUID or code (the customer of the project)
 - `--search <value>` - Description contains, or exact Code
 - `--type <value>` - Project type code
@@ -2018,6 +2053,7 @@ exactcli purchase-entry list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 
 Examples:
 
@@ -2071,6 +2107,7 @@ exactcli purchase-invoice list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--supplier <value>` - Supplier GUID or code
 - `--from <value>` - Invoice date from (YYYY-MM-DD)
 - `--to <value>` - Invoice date to (YYYY-MM-DD)
@@ -2126,6 +2163,7 @@ exactcli purchase-order list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--supplier <value>` - Supplier GUID or code (the account that delivers)
 - `--from <value>` - Order date from (YYYY-MM-DD)
 - `--to <value>` - Order date to (YYYY-MM-DD)
@@ -2238,6 +2276,7 @@ exactcli quotation list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--account <value>` - Account GUID or code (the account that requested the quotation)
 - `--from <value>` - Quotation date from (YYYY-MM-DD)
 - `--to <value>` - Quotation date to (YYYY-MM-DD)
@@ -2382,6 +2421,7 @@ exactcli receivable list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains
 - `--account <value>` - Account GUID or code
 - `--due-from <value>` - Due date from (YYYY-MM-DD)
@@ -2413,6 +2453,7 @@ exactcli receivables-list list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Account name contains (a code goes to --account)
 - `--account <value>` - Account GUID or code
 - `--due-from <value>` - Due date from (YYYY-MM-DD)
@@ -2465,6 +2506,7 @@ exactcli revenue list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--year <value>` - Reporting year
 - `--period <value>` - Reporting period
 
@@ -2520,6 +2562,7 @@ exactcli sales-entry list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 
 Examples:
 
@@ -2547,6 +2590,7 @@ exactcli sales-invoice list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--customer <value>` - Customer GUID or code (the account that ordered)
 - `--from <value>` - Invoice date from (YYYY-MM-DD)
 - `--to <value>` - Invoice date to (YYYY-MM-DD)
@@ -2702,6 +2746,7 @@ exactcli sales-order list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--customer <value>` - Customer GUID or code (the account that ordered)
 - `--from <value>` - Order date from (YYYY-MM-DD)
 - `--to <value>` - Order date to (YYYY-MM-DD)
@@ -2778,6 +2823,7 @@ exactcli subscription list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--account <value>` - Account GUID or code (the account that is invoiced)
 - `--from <value>` - Start date from (YYYY-MM-DD)
 - `--to <value>` - Start date to (YYYY-MM-DD)
@@ -2828,6 +2874,7 @@ exactcli transaction-line list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
 - `--from <value>` - Date from (YYYY-MM-DD)
@@ -2862,6 +2909,7 @@ exactcli vat-code list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--search <value>` - Description contains, or exact Code
 - `--type <value>` - Calculation type: B (base only), E (excluding), I (including), N (no VAT)
 - `--blocked <value>` - Blocked codes only (true or false)
@@ -2954,6 +3002,7 @@ exactcli webhook list [flags]
 - `--all` - Follow every page, up to --max-pages
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
 - `--topic <value>` - Subscription topic, for example Accounts or Items
 - `--search <value>` - Description contains
 - `--instant <value>` - Instant delivery subscriptions only (true or false)

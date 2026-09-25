@@ -1,4 +1,5 @@
 import { Flags } from '@oclif/core'
+import { CliError } from './errors.js'
 import { buildQuery, normalize, odataFlags } from './odata.js'
 import { collectPages } from './pagination.js'
 
@@ -19,6 +20,35 @@ export const listingFlags = {
     min: 1,
   }),
   raw: Flags.boolean({ description: 'Print the raw API envelope' }),
+}
+
+/** The flag of a list command that counts its records instead of reading them. */
+export const countFlags = {
+  count: Flags.boolean({
+    description:
+      'Print the number of matching records ($count), not the records',
+  }),
+}
+
+/**
+ * Count the records of a listing in one request: OData `$count` with the same
+ * $filter. Projection, order and paging do not change a count.
+ * @param {{ apiClient: object }} cmd
+ * @param {string} path division-qualified API path
+ * @param {object} query the OData query of the listing
+ * @returns {Promise<{ count: number }>}
+ */
+export async function countListing(cmd, path, query) {
+  const answer = await cmd.apiClient.get(`${path}/$count`, {
+    query: { $filter: query.$filter },
+  })
+  const text = String(answer ?? '').trim()
+  if (!/^\d+$/.test(text)) {
+    throw new CliError(`Unexpected $count answer from ${path}`, {
+      exitCode: 65,
+    })
+  }
+  return { count: Number(text) }
 }
 
 /**

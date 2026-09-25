@@ -4,6 +4,8 @@ import {
   collectListing,
   listingFlags,
   BULK_PAGE_SIZE,
+  countFlags,
+  countListing,
   pageBudget,
   visibleColumns,
 } from '../../src/lib/listing.js'
@@ -157,5 +159,57 @@ describe('bulk paging', () => {
       pageBudget({ limit: 2500, maxPages: 100, pageSize: BULK_PAGE_SIZE }),
     ).toBe(3)
     expect(pageBudget({ limit: 2500, maxPages: 100 })).toBe(42)
+  })
+})
+
+describe('countListing', () => {
+  function fakeCmd(answer) {
+    return { apiClient: { get: vi.fn(async () => answer) } }
+  }
+
+  it('asks $count with the $filter alone and returns the number', async () => {
+    const cmd = fakeCmd('14379')
+    const result = await countListing(cmd, '/api/v1/1/crm/Accounts', {
+      $filter: "Status eq 'C'",
+      $select: 'ID,Name',
+      $orderby: 'Name asc',
+      $top: 5,
+    })
+
+    expect(result).toEqual({ count: 14379 })
+    expect(cmd.apiClient.get).toHaveBeenCalledWith(
+      '/api/v1/1/crm/Accounts/$count',
+      { query: { $filter: "Status eq 'C'" } },
+    )
+  })
+
+  it('sends no $filter when the listing has none', async () => {
+    const cmd = fakeCmd('0')
+    expect(await countListing(cmd, '/api/v1/1/crm/Accounts', {})).toEqual({
+      count: 0,
+    })
+    expect(cmd.apiClient.get).toHaveBeenCalledWith(
+      '/api/v1/1/crm/Accounts/$count',
+      { query: { $filter: undefined } },
+    )
+  })
+
+  it('trims the text and takes a number that arrived as JSON', async () => {
+    expect(await countListing(fakeCmd(' 12\r\n'), '/p', {})).toEqual({
+      count: 12,
+    })
+    expect(await countListing(fakeCmd(42), '/p', {})).toEqual({ count: 42 })
+  })
+
+  it('fails with 65 when the answer is not a count', async () => {
+    for (const answer of [null, '', '  ', 'abc', '-1', '1.5', { d: {} }]) {
+      await expect(countListing(fakeCmd(answer), '/p', {})).rejects.toThrow(
+        expect.objectContaining({ exitCode: 65 }),
+      )
+    }
+  })
+
+  it('exposes the --count flag', () => {
+    expect(Object.keys(countFlags)).toEqual(['count'])
   })
 })

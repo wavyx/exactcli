@@ -3,7 +3,13 @@ import BaseCommand from '../../base-command.js'
 import { CliError } from '../errors.js'
 import { DATE_RE } from '../lines.js'
 import { buildQuery, divisionPath } from '../odata.js'
-import { collectListing, listingFlags, visibleColumns } from '../listing.js'
+import {
+  collectListing,
+  countFlags,
+  countListing,
+  listingFlags,
+  visibleColumns,
+} from '../listing.js'
 import { GUID_RE, padCode, quote, resolveRef } from '../refs.js'
 import { findResource, propertyNames } from '../catalog.js'
 import { columnsOf } from './descriptors.js'
@@ -134,7 +140,7 @@ export function defineListCommand(descriptor) {
       `<%= config.bin %> ${descriptor.topic} list`,
       `<%= config.bin %> ${descriptor.topic} list --limit 200 --output json`,
     ]
-    static flags = { ...listingFlags, ...filterFlags }
+    static flags = { ...listingFlags, ...countFlags, ...filterFlags }
 
     async run() {
       const path = divisionPath(this.resolveDivision(), descriptor.resource)
@@ -147,6 +153,11 @@ export function defineListCommand(descriptor) {
       }
       if (typed) {
         query.$filter = base.$filter ? `(${base.$filter}) and ${typed}` : typed
+      }
+      if (this.flags.count) {
+        const result = await countListing(this, path, query)
+        await this.outputAction(result, String(result.count))
+        return
       }
       const data = await collectListing(this, path, query)
       await this.outputResults(

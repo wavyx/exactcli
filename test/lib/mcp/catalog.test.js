@@ -43,7 +43,11 @@ const commands = [
       methods: bool(),
     },
   ),
-  cmd('list', { resource: { required: true } }, { ...listing, beta: bool() }),
+  cmd(
+    'list',
+    { resource: { required: true } },
+    { ...listing, count: bool(), beta: bool() },
+  ),
   cmd(
     'get',
     { resource: { required: true }, id: { required: true } },
@@ -73,6 +77,7 @@ const commands = [
     {},
     {
       ...listing,
+      count: bool(),
       year: opt(),
       period: opt(),
       from: opt(),
@@ -203,10 +208,12 @@ describe('buildCatalog', () => {
         'all',
         'max-pages',
         'limit',
+        'count',
         'beta',
       ].sort(),
     )
     expect(list.summary).toMatch(/substringof/)
+    expect(list.summary).toMatch(/count returns only the number/)
     const get = catalog.find((e) => e.toolName === 'exact_get')
     expect(Object.keys(buildInputSchema(get)).sort()).toEqual([
       'beta',
@@ -257,6 +264,7 @@ describe('buildCatalog', () => {
         'all',
         'max-pages',
         'limit',
+        'count',
       ].sort(),
     )
     expect(typed.summary).toMatch(

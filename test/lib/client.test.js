@@ -278,6 +278,31 @@ describe('headers', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('asks for plain text on a $count path', async () => {
+    // Exact answers 415 to a $count request that accepts only JSON.
+    const scope = mockApi()
+      .get('/api/v1/1/crm/Accounts/$count')
+      .query({ $filter: "Status eq 'C'" })
+      .matchHeader('accept', 'text/plain, application/json')
+      .reply(200, '42', { 'content-type': 'text/plain' })
+
+    const count = await client().get('/api/v1/1/crm/Accounts/$count', {
+      query: { $filter: "Status eq 'C'" },
+    })
+    expect(count).toBe('42')
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('keeps the JSON accept on a path that only contains $count', async () => {
+    const scope = mockApi()
+      .get('/api/v1/1/crm/Accounts$countless')
+      .matchHeader('accept', 'application/json')
+      .reply(200, { d: {} })
+
+    await client().get('/api/v1/1/crm/Accounts$countless')
+    expect(scope.isDone()).toBe(true)
+  })
+
   it('sends the configured user agent', async () => {
     const scope = mockApi()
       .get('/api/v1/current/Me')

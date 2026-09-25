@@ -49,6 +49,19 @@ function clamp(value, min, max) {
 }
 
 /**
+ * OData answers `$count` in plain text, and Exact refuses a `$count` request
+ * that accepts only JSON with 415. JSON stays second in the list, so an error
+ * body still arrives as JSON and not as XML (both verified live).
+ * @param {URL} url
+ * @returns {string}
+ */
+function acceptFor(url) {
+  return url.pathname.endsWith('/$count')
+    ? 'text/plain, application/json'
+    : 'application/json'
+}
+
+/**
  * The URL parser percent-encodes a space or a double quote but leaves a key
  * such as `(guid'...')` alone. Compare the decoded forms, so only a real
  * rewrite counts: a dot segment or a backslash. A sequence that does not
@@ -205,10 +218,10 @@ export function createClient({
     })
   }
 
-  function headers(hasBody) {
+  function headers(hasBody, accept = 'application/json') {
     const sent = {
       authorization: `Bearer ${token}`,
-      accept: 'application/json',
+      accept,
       'user-agent': userAgent,
     }
     if (hasBody) sent['content-type'] = 'application/json'
@@ -258,7 +271,7 @@ export function createClient({
       try {
         res = await fetch(url, {
           method,
-          headers: headers(Boolean(makeBody)),
+          headers: headers(Boolean(makeBody), acceptFor(url)),
           body: makeBody ? makeBody() : undefined,
           signal: AbortSignal.timeout(timeout),
           // Never auto-follow a redirect: fetch would re-send the bearer token

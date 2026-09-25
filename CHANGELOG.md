@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-09-25
+
+### Added
+
+- `--count` on `list` and on every typed list command: prints the number of
+  matching records in one call (OData `$count`), with `--filter` and the typed
+  filters applied. `--bulk` counts through the regular resource. The MCP list
+  tools (`exact_list` and the typed ones) take `count` too.
+
+### Fixed
+
+- A `$count` path answered 415 `Unsupported media type requested`: the client
+  accepted only JSON. It now sends `Accept: text/plain, application/json` on a
+  `$count` path, so the number arrives as text and an error still as JSON.
+- README: the app registration step names both routes. A customer subscription
+  registers an internal app in Exact Online; a developer subscription has no
+  such menu and registers in the App Store.
+
 ## [0.8.1] - 2026-09-07
 
 ### Added

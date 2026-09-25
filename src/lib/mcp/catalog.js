@@ -10,7 +10,8 @@ export const LIST_HELP =
   "filter syntax: Name eq 'Acme'; substringof('acme', Name); " +
   "Date ge datetime'2026-01-01'; Account eq guid'...'; " +
   "Status eq 'C' and IsSales eq true. select trims the fields, orderby sorts " +
-  '(EntryDate desc), limit caps the rows (default 60, pages of 60).'
+  '(EntryDate desc), limit caps the rows (default 60, pages of 60). ' +
+  'count returns only the number of matching records, in one call.'
 
 /**
  * Generic tools: which command they run and which args and flags they keep.
@@ -52,6 +53,7 @@ export const GENERIC_TOOLS = [
       'all',
       'max-pages',
       'limit',
+      'count',
       'beta',
     ],
   },
@@ -95,7 +97,15 @@ export const GENERIC_TOOLS = [
 ]
 
 /** Flags every typed list tool keeps next to its own filters. */
-const TYPED_FLAGS = ['filter', 'select', 'orderby', 'all', 'max-pages', 'limit']
+const TYPED_FLAGS = [
+  'filter',
+  'select',
+  'orderby',
+  'all',
+  'max-pages',
+  'limit',
+  'count',
+]
 
 /**
  * The one write tool. It maps an operation to create, update or delete and

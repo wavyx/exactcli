@@ -37,8 +37,13 @@ server and exposes it through an [ngrok](https://ngrok.com/) static domain.
 1. Claim a static domain in your ngrok account and install `ngrok`.
 2. Run `exactcli auth login`. The command prints the redirect URI,
    `https://<your-domain>/callback`.
-3. In Exact Online, register an app: Company name > Import/Export > App registrations.
-   Use the printed redirect URI. Copy the Client ID and the Client Secret.
+3. Register an app with the printed redirect URI. Copy the Client ID and the Client
+   Secret. The route depends on your subscription:
+   - A customer subscription registers an internal app in Exact Online: Company name >
+     Import/Export > App registrations. It needs the Manage apps role and serves only
+     the users of that subscription.
+   - A developer subscription has no such menu. Register the app in the App Store:
+     Manage my apps. A test app serves only the users of the developer subscription.
 4. Run `exactcli auth login` again, paste the Client ID and the Client Secret, and sign
    in in the browser that opens. The command stores the tokens in the keychain and
    remembers your division.
@@ -61,6 +66,7 @@ exactcli me                                      # who am I, which division
 exactcli division list                           # administrations you can reach
 exactcli list crm/Accounts --top 5 --select Name
 exactcli list financial/GLAccounts --all --output json
+exactcli transaction-line list --year 2025 --count  # one call, OData $count
 exactcli get crm/Accounts <guid> --expand BankAccounts
 exactcli sales-entry list --filter "EntryDate ge datetime'2026-01-01'" --all
 exactcli purchase-entry list --limit 50 --output csv

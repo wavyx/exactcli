@@ -10,7 +10,13 @@ import {
   variantOf,
   warnUnknown,
 } from '../lib/catalog.js'
-import { BULK_PAGE_SIZE, collectListing, listingFlags } from '../lib/listing.js'
+import {
+  BULK_PAGE_SIZE,
+  collectListing,
+  countFlags,
+  countListing,
+  listingFlags,
+} from '../lib/listing.js'
 import { expandedSelect } from '../lib/typed/factory.js'
 
 export default class ListCommand extends BaseCommand {
@@ -22,6 +28,7 @@ export default class ListCommand extends BaseCommand {
     '<%= config.bin %> list financial/GLAccounts --all --output json',
     '<%= config.bin %> list logistics/Items --select Code,Description --limit 200',
     '<%= config.bin %> list crm/Accounts --bulk --all --output csv',
+    '<%= config.bin %> list crm/Accounts --filter "Status eq \'C\'" --count',
   ]
 
   static args = {
@@ -33,6 +40,7 @@ export default class ListCommand extends BaseCommand {
 
   static flags = {
     ...listingFlags,
+    ...countFlags,
     beta: Flags.boolean({ description: 'Use the beta API namespace' }),
     bulk: Flags.boolean({
       description:
@@ -53,6 +61,13 @@ export default class ListCommand extends BaseCommand {
     // the envelope, --fields and --select already say what to fetch.
     const { select, fields, raw, bulk, expand } = this.flags
     const query = buildQuery(this.flags)
+    // The bulk variant holds the same records, so a count never needs it.
+    if (this.flags.count) {
+      const result = await countListing(this, path, query)
+      await this.outputAction(result, String(result.count))
+      return
+    }
+
     let columns
     const defaults = resource ? defaultColumns(resource) : []
     if (defaults.length > 0 && !select && !fields && !raw) {
