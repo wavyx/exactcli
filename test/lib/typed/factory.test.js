@@ -273,6 +273,63 @@ describe('defineListCommand', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('--all-divisions resolves a code in each division it reads', async () => {
+    const Invoices = defineListCommand(descriptors.salesInvoice)
+    const G1 = '55555555-5555-5555-5555-555555555555'
+    const G2 = '66666666-6666-6666-6666-666666666666'
+    const lookup = (division, id) =>
+      mockApi()
+        .get(`/api/v1/${division}/crm/Accounts`)
+        .query((q) => q.$filter?.includes("'1001'"))
+        .reply(200, { d: { results: [{ ID: id }] } })
+    const invoices = (division, id) =>
+      mockApi()
+        .get(`/api/v1/${division}/salesinvoice/SalesInvoices`)
+        .query((q) => q.$filter === `OrderedBy eq guid'${id}'`)
+        .reply(200, { d: { results: [{ InvoiceNumber: division }] } })
+    const scopes = [
+      mockApi()
+        .get('/api/v1/123/hrm/Divisions')
+        .query(true)
+        .reply(200, { d: { results: [{ Code: 123 }, { Code: 456 }] } }),
+      lookup(123, G1),
+      invoices(123, G1),
+      lookup(456, G2),
+      invoices(456, G2),
+    ]
+
+    const out = JSON.parse(
+      await runCmd(Invoices, ['--customer', '1001', '--all-divisions']),
+    )
+
+    for (const scope of scopes) expect(scope.isDone()).toBe(true)
+    expect(out).toEqual([
+      { Division: 123, InvoiceNumber: 123 },
+      { Division: 456, InvoiceNumber: 456 },
+    ])
+  })
+
+  it('--count --all-divisions prints one count per division', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/hrm/Divisions')
+      .query(true)
+      .reply(200, { d: { results: [{ Code: 123 }, { Code: 456 }] } })
+      .get(`${ACCOUNTS}/$count`)
+      .reply(200, '4', { 'content-type': 'text/plain' })
+      .get('/api/v1/456/crm/Accounts/$count')
+      .reply(200, '1', { 'content-type': 'text/plain' })
+
+    const out = JSON.parse(
+      await runCmd(Account, ['--count', '--all-divisions']),
+    )
+
+    expect(scope.isDone()).toBe(true)
+    expect(out).toEqual([
+      { Division: 123, count: 4 },
+      { Division: 456, count: 1 },
+    ])
+  })
+
   it('names the --expand properties in the default $select', async () => {
     const scope = mockApi()
       .get(ACCOUNTS)

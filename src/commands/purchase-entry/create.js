@@ -10,4 +10,10 @@ export default defineEntryCreate({
   lines: 'PurchaseEntryLines',
   invoice: { field: 'InvoiceNumber', integer: true },
   documentType: 20,
+  creditNoteType: 31,
+  lineOptions: {
+    // Exact stores these shares as fractions: 0.5 is 50% (verified live).
+    'non-deductible': { field: 'VATNonDeductiblePercentage', type: 'fraction' },
+    'private-use': { field: 'PrivateUsePercentage', type: 'fraction' },
+  },
 })

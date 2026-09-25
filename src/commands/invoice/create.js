@@ -1,6 +1,7 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { resolvePath } from '../../lib/catalog.js'
+import { CliError } from '../../lib/errors.js'
 import { assertDate, parseLine, resolveLines } from '../../lib/lines.js'
 import { autoColumns, normalize, unwrap } from '../../lib/odata.js'
 import { resolveRef } from '../../lib/refs.js'
@@ -17,9 +18,20 @@ const RESOURCE = 'salesinvoice/SalesInvoices'
  * the lookup runs after the write gate.
  */
 const LINE = {
-  shape: 'item:quantity:unit price[:description]',
+  shape: 'item:quantity:unit price[:option=value...][:description]',
   fields: { Item: 'text', Quantity: 'number', UnitPrice: 'number' },
+  options: {
+    vat: { field: 'VATCode', type: 'text' },
+    // A fraction of the price, negative for a surcharge; above 1 the line
+    // would flip its sign.
+    discount: { field: 'Discount', type: 'number', max: 1 },
+    'gl-account': { field: 'GLAccount', type: 'text' },
+    'cost-center': { field: 'CostCenter', type: 'text' },
+    'cost-unit': { field: 'CostUnit', type: 'text' },
+  },
 }
+/** The Type of a sales credit note; an invoice is 8020, the API default. */
+const CREDIT_NOTE_TYPE = 8021
 
 export default class InvoiceCreateCommand extends BaseCommand {
   static description = `Create a sales invoice from codes (POST ${RESOURCE})`
@@ -42,9 +54,25 @@ export default class InvoiceCreateCommand extends BaseCommand {
     line: Flags.string({
       required: true,
       multiple: true,
-      description: `Invoice line as ${LINE.shape} (repeatable)`,
+      description:
+        `Invoice line as ${LINE.shape} (repeatable). Options: vat (code), ` +
+        'discount (a fraction: 0.1 is 10%), gl-account (revenue account code ' +
+        'or GUID, instead of the one of the item), cost-center, cost-unit',
     }),
     description: Flags.string({ description: 'Invoice description' }),
+    'credit-note': Flags.boolean({
+      description:
+        `Create a credit note (Type ${CREDIT_NOTE_TYPE}). The lines carry ` +
+        'negative quantities: Exact books the signs as given',
+      default: false,
+    }),
+    remarks: Flags.string({ description: 'Remarks printed on the invoice' }),
+    reference: Flags.string({
+      description: 'Reference of the customer (YourRef)',
+    }),
+    'payment-condition': Flags.string({
+      description: 'Payment condition code (PaymentCondition)',
+    }),
     date: Flags.string({ description: 'Invoice date (YYYY-MM-DD)' }),
     'dry-run': Flags.boolean({
       description: 'Show the validated request and send nothing',
@@ -65,6 +93,27 @@ export default class InvoiceCreateCommand extends BaseCommand {
     }
     if (description) body.Description = description
     if (date) body.InvoiceDate = date
+    if (this.flags['credit-note']) {
+      // Exact keeps Type 8021 but books the quantities as given (verified
+      // live): a positive credit note would post like an invoice.
+      const total = body.SalesInvoiceLines.reduce(
+        (sum, l) => sum + l.Quantity * l.UnitPrice * (1 - (l.Discount ?? 0)),
+        0,
+      )
+      if (!(total < 0)) {
+        throw new CliError(
+          '--credit-note needs a negative total: give the lines negative ' +
+            'quantities. Exact books the signs as given',
+          { exitCode: 64 },
+        )
+      }
+      body.Type = CREDIT_NOTE_TYPE
+    }
+    if (this.flags.remarks) body.Remarks = this.flags.remarks
+    if (this.flags.reference) body.YourRef = this.flags.reference
+    if (this.flags['payment-condition']) {
+      body.PaymentCondition = this.flags['payment-condition']
+    }
     validateWrite({ resource: RESOURCE, body, method: 'POST' })
     // The gate comes before the reference lookups: a refused write costs no
     // call at all. A dry run needs no permission.
@@ -75,9 +124,14 @@ export default class InvoiceCreateCommand extends BaseCommand {
       OrderedBy: await resolveRef(this, 'crm/Accounts', customer),
       SalesInvoiceLines: await resolveLines(
         this,
-        body.SalesInvoiceLines,
-        'Item',
-        'logistics/Items',
+        await resolveLines(
+          this,
+          body.SalesInvoiceLines,
+          'Item',
+          'logistics/Items',
+        ),
+        'GLAccount',
+        'financial/GLAccounts',
       ),
     }
 

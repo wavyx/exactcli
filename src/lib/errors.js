@@ -12,6 +12,14 @@ export class AuthRequiredError extends CliError {
   }
 }
 
+/** A code that matches no record of the resource: a data problem (65). */
+export class RefNotFoundError extends CliError {
+  /** @param {string} message */
+  constructor(message) {
+    super(message, { exitCode: 65 })
+  }
+}
+
 export class ConfigError extends CliError {
   /** @param {string} message */
   constructor(message) {

@@ -576,6 +576,16 @@ runs `exactcli` as a child process under the profile and the division of the ser
   (`create logistics/SupplierItem` with `Item`, `Supplier`, `ItemUnit`, `PurchaseUnit`,
   `PurchasePrice`). Without it Exact answers 500: the item and the supplier are not
   linked.
+- Credit notes. An entry takes its type from the sign of the amounts: a positive
+  entry sent with Type 21 or 31 comes back as Type 20 or 30. A sales invoice keeps
+  Type 8021 but books the quantities as given, so a credit note with positive
+  quantities posts like an invoice. `--credit-note` therefore needs a negative total.
+- `VATNonDeductiblePercentage` and `PrivateUsePercentage` are fractions: 50 answers 500
+  "must be lower than or equal to 100"; 0.5 books half of the VAT on the cost account.
+- A deferral period (`from`/`to` on an entry line) needs the deferred cost settings of
+  the administration; without them Exact answers 500.
+- A bank line is signed from the point of view of the bank: a customer payment is
+  positive and books the receivable (400000) on the credit side.
 - A purchase invoice (`purchase/PurchaseInvoices`) takes the purchase account from the
   item group. `logistics/ItemGroups` is read-only in the API: set the account in the
   web interface first.

@@ -4,6 +4,49 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.11.0] - 2026-09-25
+
+### Added
+
+- `<topic> lines <ref...>` for sales invoices, sales, purchase, general journal,
+  bank and cash entries, sales and purchase orders, quotations and purchase
+  invoices: the lines of one or more headers, each named by its GUID or its
+  number (one lookup for the numbers, one read for the lines).
+- `--all-divisions` on `list` and every typed list: one read per division the
+  user can access, one after the other; every row carries its `Division`, and a
+  code resolves in the division it reads. With `--count`, one count per division.
+  A division without the code or the module (403) is skipped with a note on
+  stderr; `--limit` and `--all` apply per division. CLI only: the MCP tools keep
+  the division of the server.
+- Named line options (`option=value` between the fields and the description).
+  Entries: `vat`, `vat-amount`, `from`/`to` (deferral period, both or none),
+  `quantity`, `cost-center`, `cost-unit`; purchase entries add `non-deductible`
+  and `private-use` as fractions. Invoices: `vat`, `discount` (a fraction up to
+  1), `gl-account`, `cost-center`, `cost-unit`. An unknown option, or a known one
+  after the description or in upper case, fails with exit 64.
+- `--credit-note` on `sales-entry create`, `purchase-entry create` and
+  `invoice create`. It needs a negative total: Exact books the signs as given
+  and derives the type of an entry from the sign (verified live).
+- `invoice create --remarks --reference --payment-condition`. A credit note
+  counts the discount of each line in its total.
+- `<topic> lines` accepts a number of ten digits at most (an Int32).
+- The MCP server serves `exactcli://docs/recipes` and `exactcli://docs/coverage`
+  as resources; the package ships both files.
+
+### Changed
+
+- The `--line` help of the entry and invoice commands shows the options.
+- `sales-invoice list --status` says that 20 (Open) is a draft of the web
+  interface. `auth login` names both registration routes.
+
+### Fixed
+
+- `sales-entry create` and `purchase-entry create` with `--file` no longer leave
+  an orphan document when Exact refuses the entry or an attachment: the command
+  deletes the new document, or names it when the delete fails too. Without an
+  answer from Exact (timeout, broken connection) the entry may exist, so the
+  command keeps the document and names it.
+
 ## [0.10.0] - 2026-09-25
 
 ### Added

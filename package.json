@@ -1,6 +1,6 @@
 {
   "name": "@wavyx/exactcli",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "publishConfig": {
     "access": "public"
   },
@@ -23,7 +23,9 @@
     "bin",
     "src",
     "oclif.manifest.json",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "docs/recipes.md",
+    "docs/coverage.md"
   ],
   "engines": {
     "node": ">=20"

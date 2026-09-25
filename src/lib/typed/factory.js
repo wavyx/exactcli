@@ -2,11 +2,13 @@ import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { CliError } from '../errors.js'
 import { DATE_RE } from '../lines.js'
-import { buildQuery, divisionPath } from '../odata.js'
+import { autoColumns, buildQuery, divisionPath } from '../odata.js'
 import {
   collectListing,
   countFlags,
   countListing,
+  divisionsFlags,
+  eachDivision,
   listingFlags,
   visibleColumns,
 } from '../listing.js'
@@ -140,9 +142,41 @@ export function defineListCommand(descriptor) {
       `<%= config.bin %> ${descriptor.topic} list`,
       `<%= config.bin %> ${descriptor.topic} list --limit 200 --output json`,
     ]
-    static flags = { ...listingFlags, ...countFlags, ...filterFlags }
+    static flags = {
+      ...listingFlags,
+      ...countFlags,
+      ...divisionsFlags,
+      ...filterFlags,
+    }
 
     async run() {
+      const all = this.flags['all-divisions']
+      if (this.flags.count) {
+        const result = await eachDivision(this, async () => {
+          const { path, query } = await this.#request()
+          return countListing(this, path, query)
+        })
+        if (all) await this.outputResults(result, autoColumns(result))
+        else await this.outputAction(result, String(result.count))
+        return
+      }
+      const data = await eachDivision(this, async () => {
+        const { path, query } = await this.#request()
+        return collectListing(this, path, query)
+      })
+      const shown = visibleColumns(columns, data, this.flags.select)
+      await this.outputResults(
+        data,
+        all ? { Division: { header: 'Division' }, ...shown } : shown,
+      )
+    }
+
+    /**
+     * The path and the query in the active division. A typed filter that
+     * names a code resolves it here, so in the division that is read.
+     * @returns {Promise<{ path: string, query: object }>}
+     */
+    async #request() {
       const path = divisionPath(this.resolveDivision(), descriptor.resource)
       const base = buildQuery(this.flags)
       const typed = await buildTypedFilter(this, descriptor)
@@ -154,16 +188,7 @@ export function defineListCommand(descriptor) {
       if (typed) {
         query.$filter = base.$filter ? `(${base.$filter}) and ${typed}` : typed
       }
-      if (this.flags.count) {
-        const result = await countListing(this, path, query)
-        await this.outputAction(result, String(result.count))
-        return
-      }
-      const data = await collectListing(this, path, query)
-      await this.outputResults(
-        data,
-        visibleColumns(columns, data, this.flags.select),
-      )
+      return { path, query }
     }
   }
 }

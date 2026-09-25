@@ -173,6 +173,119 @@ describe('parseLine', () => {
   })
 })
 
+/** An entry line with named options between the fields and the description. */
+const WITH_OPTIONS = {
+  ...ENTRY,
+  options: {
+    vat: { field: 'VATCode', type: 'text' },
+    from: { field: 'From', type: 'date' },
+    to: { field: 'To', type: 'date' },
+    'vat-amount': { field: 'VATAmountFC', type: 'amount' },
+    quantity: { field: 'Quantity', type: 'number' },
+    share: { field: 'Share', type: 'fraction' },
+  },
+}
+
+describe('parseLine options', () => {
+  it('reads named options between the fields and the description', () => {
+    expect(
+      parseLine(
+        '610000:1200:vat=5:from=2026-01-01:to=2026-12-31:Rent: HQ',
+        WITH_OPTIONS,
+      ),
+    ).toEqual({
+      GLAccount: '610000',
+      AmountFC: 1200,
+      VATCode: '5',
+      From: '2026-01-01',
+      To: '2026-12-31',
+      Description: 'Rent: HQ',
+    })
+    expect(
+      parseLine('610000:10:vat-amount=-2.1:quantity=3:share=0.5', WITH_OPTIONS),
+    ).toEqual({
+      GLAccount: '610000',
+      AmountFC: 10,
+      VATAmountFC: -2.1,
+      Quantity: 3,
+      Share: 0.5,
+    })
+  })
+
+  it('keeps a line without options, and an unknown key after the description, as text', () => {
+    expect(parseLine('610000:10:Fees', WITH_OPTIONS)).toEqual({
+      GLAccount: '610000',
+      AmountFC: 10,
+      Description: 'Fees',
+    })
+    expect(parseLine('610000:10:Fees:note=x', WITH_OPTIONS)).toEqual({
+      GLAccount: '610000',
+      AmountFC: 10,
+      Description: 'Fees:note=x',
+    })
+  })
+
+  it('throws 64 on a known option after the description or in upper case', () => {
+    // Exact would book the default VAT code while the user meant another one.
+    for (const text of ['610000:10:Fees:vat=5', '610000:10:VAT=21']) {
+      const err = fail(() => parseLine(text, WITH_OPTIONS))
+      expect(err.exitCode).toBe(64)
+      expect(err.message).toBe(
+        `--line option vat must come before the description, in lower case, received: ${text}`,
+      )
+    }
+  })
+
+  it('bounds a number option with a maximum', () => {
+    const spec = {
+      ...ENTRY,
+      options: { rate: { field: 'Rate', type: 'number', max: 1 } },
+    }
+    expect(parseLine('610000:10:rate=-0.5', spec).Rate).toBe(-0.5)
+    const err = fail(() => parseLine('610000:10:rate=2', spec))
+    expect(err.message).toBe(
+      '--line option rate expects a number up to 1, received: 610000:10:rate=2',
+    )
+  })
+
+  it('reads an option-like part as text when the spec has no options', () => {
+    expect(parseLine('Default:2:100:note=x', ORDER)).toEqual({
+      Item: 'Default',
+      Quantity: 2,
+      UnitPrice: 100,
+      Description: 'note=x',
+    })
+  })
+
+  it('throws 64 on an unknown option and names the allowed ones', () => {
+    // A mistyped option on a financial write must fail, not land in the
+    // description.
+    const err = fail(() => parseLine('610000:10:vta=5', WITH_OPTIONS))
+    expect(err.exitCode).toBe(64)
+    expect(err.message).toBe(
+      '--line has an unknown option vta (allowed: vat, from, to, vat-amount, quantity, share), received: 610000:10:vta=5',
+    )
+  })
+
+  it('throws 64 on an option with a bad value or given twice', () => {
+    const cases = [
+      ['610000:10:from=2026-1-1', 'option from expects YYYY-MM-DD'],
+      ['610000:10:quantity=abc', 'option quantity expects a number'],
+      ['610000:10:vat-amount=1e3', 'option vat-amount expects an amount'],
+      ['610000:10:vat=', 'option vat expects a value'],
+      ['610000:10:share=50', 'option share expects a fraction from 0 to 1'],
+      ['610000:10:share=-0.1', 'option share expects a fraction from 0 to 1'],
+      ['610000:10:share=half', 'option share expects a fraction from 0 to 1'],
+      ['610000:10:vat=5:vat=F', 'option vat is given twice'],
+    ]
+    for (const [text, reason] of cases) {
+      const err = fail(() => parseLine(text, WITH_OPTIONS))
+      expect(err.exitCode).toBe(64)
+      expect(err.message).toBe(`--line ${reason}, received: ${text}`)
+    }
+  })
+})
+
 describe('resolveLines', () => {
   const PATH = '/api/v1/123/financial/GLAccounts'
   let cmd
@@ -221,6 +334,18 @@ describe('resolveLines', () => {
     ])
     expect(lines[1].GLAccount).toBe('700000')
     expect(scope.isDone()).toBe(true)
+  })
+
+  it('keeps a line that does not carry the field, without a lookup', async () => {
+    // An optional field, such as the ledger account of an invoice line.
+    expect(
+      await resolveLines(
+        cmd,
+        [{ Item: GUID_A, Quantity: 1 }],
+        'GLAccount',
+        'financial/GLAccounts',
+      ),
+    ).toEqual([{ Item: GUID_A, Quantity: 1 }])
   })
 
   it('returns an empty list for no lines', async () => {

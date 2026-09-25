@@ -41,7 +41,9 @@ const descriptor = {
     status: {
       field: 'Status',
       type: 'int',
-      description: 'Status code: 10 draft, 20 open, 50 processed',
+      description:
+        'Status code: 20 open (a draft in the web interface, not printed yet), ' +
+        '50 processed (printed), 10 draft (rare)',
     },
     search: {
       field: 'Description',

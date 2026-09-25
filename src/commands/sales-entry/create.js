@@ -10,4 +10,5 @@ export default defineEntryCreate({
   lines: 'SalesEntryLines',
   invoice: { field: 'YourRef' },
   documentType: 10,
+  creditNoteType: 21,
 })

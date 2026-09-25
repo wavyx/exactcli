@@ -137,6 +137,28 @@ describe('buildServer', () => {
     return { client, tools }
   }
 
+  it('serves the recipes and the coverage report as Markdown resources', async () => {
+    // An agent reads the verified flows before it calls a tool.
+    const { client } = await connect({})
+
+    const { resources } = await client.listResources()
+    expect(resources.map((r) => r.uri).sort()).toEqual([
+      'exactcli://docs/coverage',
+      'exactcli://docs/recipes',
+    ])
+    expect(resources.every((r) => r.mimeType === 'text/markdown')).toBe(true)
+
+    const { contents } = await client.readResource({
+      uri: 'exactcli://docs/recipes',
+    })
+    expect(contents[0].text).toMatch(/^---\ntitle: Recipes/)
+    expect(contents[0].text).toContain('Sales order to invoice')
+    const coverage = await client.readResource({
+      uri: 'exactcli://docs/coverage',
+    })
+    expect(coverage.contents[0].text).toMatch(/^# API coverage/)
+  })
+
   it('registers the read tools and answers a call through the executor', async () => {
     const calls = []
     const exec = async (argv) => {

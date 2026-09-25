@@ -77,8 +77,13 @@ export default class LoginCommand extends BaseCommand {
 
     // The registration must exist before the secret is worth typing.
     this.log(`Redirect URI: ${redirectUri}`)
+    // A customer subscription registers an internal app in Exact Online; a
+    // developer subscription has no such menu and uses the App Store.
     this.log(
-      'Register this URI in Exact Online: Company name > Import/Export > App registrations',
+      'Register this URI as the redirect URI of your app: in Exact Online, ' +
+        'Company name > Import/Export > App registrations (customer ' +
+        'subscription), or in the App Store, Manage my apps (developer ' +
+        'subscription)',
     )
 
     const clientId =

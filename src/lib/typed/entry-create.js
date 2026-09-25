@@ -3,7 +3,7 @@ import { basename } from 'node:path'
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { resolvePath } from '../../lib/catalog.js'
-import { CliError } from '../../lib/errors.js'
+import { ApiError, CliError } from '../../lib/errors.js'
 import { assertDate, parseLine, resolveLines } from '../../lib/lines.js'
 import {
   autoColumns,
@@ -26,13 +26,36 @@ const ATTACHMENTS = 'documents/DocumentAttachments'
 const INT_RE = /^\d+$/
 /** What --dry-run prints as the document of the entry. */
 const NEW_DOCUMENT = '<new document>'
+/** The named options of every entry line, sales and purchase alike. */
+const LINE_OPTIONS = {
+  vat: { field: 'VATCode', type: 'text' },
+  'vat-amount': { field: 'VATAmountFC', type: 'amount' },
+  from: { field: 'From', type: 'date' },
+  to: { field: 'To', type: 'date' },
+  quantity: { field: 'Quantity', type: 'number' },
+  'cost-center': { field: 'CostCenter', type: 'text' },
+  'cost-unit': { field: 'CostUnit', type: 'text' },
+}
+const LINE_SHAPE = '<gl account>:<amount>[:option=value...][:description]'
+
 /**
- * One `--line` as the API wants it. The account stays a code or a GUID
- * here: the lookup runs after the write gate.
+ * A deferral period needs both bounds, in order: Exact spreads the amount
+ * from `From` to `To`.
+ * @param {object} line
+ * @param {string} text the flag value, for the message
  */
-const LINE = {
-  shape: '<gl account>:<amount>[:description]',
-  fields: { GLAccount: 'text', AmountFC: 'amount' },
+function assertPeriod(line, text) {
+  const reason =
+    'From' in line !== 'To' in line
+      ? 'needs from and to together'
+      : line.From > line.To
+        ? 'has from after to'
+        : undefined
+  if (reason) {
+    throw new CliError(`--line ${reason}, received: ${text}`, {
+      exitCode: 64,
+    })
+  }
 }
 
 /**
@@ -66,14 +89,56 @@ async function createDocument(cmd, { subject, type, files }) {
       Type: type,
     }),
   )
-  for (const { fileName, bytes } of files) {
-    await cmd.apiClient.post(divisionPath(division, ATTACHMENTS), {
-      Document: doc.ID,
-      FileName: fileName,
-      Attachment: bytes.toString('base64'),
-    })
+  try {
+    for (const { fileName, bytes } of files) {
+      await cmd.apiClient.post(divisionPath(division, ATTACHMENTS), {
+        Document: doc.ID,
+        FileName: fileName,
+        Attachment: bytes.toString('base64'),
+      })
+    }
+  } catch (err) {
+    await discardDocument(cmd, doc.ID, err)
+    throw err
   }
   return doc.ID
+}
+
+/**
+ * The document of a write that failed. When Exact answered with an error,
+ * the write did not land: delete the document. Without an answer (a timeout,
+ * a broken connection) the write may exist and link it: keep it and name it.
+ * @param {BaseCommand} cmd
+ * @param {string} id
+ * @param {Error} cause the failure of the write
+ */
+async function discardDocument(cmd, id, cause) {
+  if (cause instanceof ApiError) {
+    await removeDocument(cmd, id)
+    return
+  }
+  cmd.warn(
+    `No answer from Exact, so the write may have landed: document ${id} ` +
+      'was kept. Check the entry before you delete it.',
+  )
+}
+
+/**
+ * Remove the document of an entry that Exact refused. Best effort: when the
+ * delete fails too, the warning names the document for a manual cleanup.
+ * @param {BaseCommand} cmd
+ * @param {string} id
+ */
+async function removeDocument(cmd, id) {
+  const path = `${divisionPath(cmd.resolveDivision(), DOCUMENTS)}(guid'${id}')`
+  try {
+    await cmd.apiClient.del(path)
+  } catch (err) {
+    cmd.warn(
+      `The entry failed and document ${id} stays behind (${err.message}). ` +
+        'Delete it by hand.',
+    )
+  }
 }
 
 /**
@@ -90,6 +155,8 @@ async function createDocument(cmd, { subject, type, files }) {
  * @param {string} options.lines body field of the lines
  * @param {{ field: string, integer?: boolean }} options.invoice body field of `--invoice`
  * @param {number} options.documentType document type of the files: 10 sales, 20 purchase
+ * @param {number} options.creditNoteType entry Type of a credit note: 21 sales, 31 purchase
+ * @param {object} [options.lineOptions] line options beyond the shared ones
  * @returns {typeof BaseCommand}
  */
 export function defineEntryCreate({
@@ -102,7 +169,15 @@ export function defineEntryCreate({
   lines,
   invoice,
   documentType,
+  creditNoteType,
+  lineOptions = {},
 }) {
+  const LINE = {
+    shape: LINE_SHAPE,
+    fields: { GLAccount: 'text', AmountFC: 'amount' },
+    options: { ...LINE_OPTIONS, ...lineOptions },
+  }
+  const optionNames = Object.keys(LINE.options).join(', ')
   const partyFlag = party.toLowerCase()
   const kind = topic.split('-')[0]
   const example = `<%= config.bin %> ${topic} create --${partyFlag} 1001 --journal ${journal} --line 700000:100`
@@ -125,7 +200,15 @@ export function defineEntryCreate({
         multiple: true,
         description:
           `Line as ${LINE.shape} (repeatable). ` +
-          'The account is a code or a GUID; the amount is a decimal',
+          'The account is a code or a GUID; the amount is a decimal. ' +
+          `Options: ${optionNames}. from and to (YYYY-MM-DD) spread the ` +
+          'amount over a period',
+      }),
+      'credit-note': Flags.boolean({
+        description:
+          `Post a credit note (Type ${creditNoteType}). The lines carry ` +
+          'negative amounts: Exact books the signs as given',
+        default: false,
       }),
       description: Flags.string({ description: 'Entry description' }),
       date: Flags.string({ description: 'Entry date (YYYY-MM-DD)' }),
@@ -161,7 +244,25 @@ export function defineEntryCreate({
       const body = {
         [party]: this.flags[partyFlag],
         Journal: journal,
-        [lines]: this.flags.line.map((text) => parseLine(text, LINE)),
+        [lines]: this.flags.line.map((text) => {
+          const line = parseLine(text, LINE)
+          assertPeriod(line, text)
+          return line
+        }),
+      }
+      if (this.flags['credit-note']) {
+        // Exact derives the type of an entry from the sign and books the
+        // amounts as given (verified live): a positive credit note would
+        // post a normal entry.
+        const total = body[lines].reduce((sum, l) => sum + l.AmountFC, 0)
+        if (!(total < 0)) {
+          throw new CliError(
+            '--credit-note needs a negative total: give the lines negative ' +
+              'amounts. Exact books the signs as given',
+            { exitCode: 64 },
+          )
+        }
+        body.Type = creditNoteType
       }
       if (description) body.Description = description
       if (date) body.EntryDate = date
@@ -201,7 +302,15 @@ export function defineEntryCreate({
           files,
         })
       }
-      const record = normalize(unwrap(await this.apiClient.post(path, body)))
+      let record
+      try {
+        record = normalize(unwrap(await this.apiClient.post(path, body)))
+      } catch (err) {
+        // The document exists already: an entry that Exact refuses must not
+        // leave it behind as an orphan.
+        if (files.length) await discardDocument(this, body.Document, err)
+        throw err
+      }
       if (files.length) record.document = body.Document
       await this.outputResults(record, autoColumns([record]))
     }

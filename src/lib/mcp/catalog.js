@@ -96,7 +96,10 @@ export const GENERIC_TOOLS = [
   },
 ]
 
-/** Flags every typed list tool keeps next to its own filters. */
+/**
+ * Flags every typed list tool keeps next to its own filters. all-divisions
+ * stays out, as in exact_list: the server owns the division of every call.
+ */
 const TYPED_FLAGS = [
   'filter',
   'select',
@@ -144,6 +147,7 @@ const EXCLUDED_PREFIXES = ['auth:', 'config:', 'profile:']
 
 const READ_LEAVES = new Set([
   'list',
+  'lines',
   'get',
   'current',
   'me',

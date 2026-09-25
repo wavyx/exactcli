@@ -199,7 +199,21 @@ exactcli mail-message list --operation 2 --status 50
 ```
 
 `--account`, `--customer` and `--supplier` take a GUID or a code; a code is looked up on
-`crm/Accounts`. A free `--filter` combines with the typed filters.
+`crm/Accounts`. A free `--filter` combines with the typed filters. Every list takes
+`--count` (one `$count` call) and `--all-divisions` (one read per division the user can
+access; each row carries its `Division`, a code resolves in the division it reads, and a
+division without the code or the module is skipped with a note on stderr). `--limit`
+applies per division. The MCP tools do not take `--all-divisions`: the server owns the
+division.
+
+The lines of invoices, entries, orders and quotations, by GUID or by number:
+
+```sh
+exactcli sales-invoice lines 26700001 26700002
+exactcli purchase-entry lines 26600001 --output json
+exactcli journal-entry lines <entry-id>
+exactcli sales-order lines 12
+```
 
 Typed writes build the nested bodies of Exact from codes (all behind `--allow-writes`):
 
@@ -221,6 +235,12 @@ exactcli purchase-order create --supplier 2001 --line Default:2:100 --receipt-da
 exactcli bank-entry create --journal 500 --line 400000:121:"Invoice 26700001" --account 1001 --allow-writes
 exactcli sales-order invoice <order-id> --journal 700 --async --allow-writes
 exactcli purchase-entry create --supplier 2001 --journal 600 --line 611000:1250 --file invoice.pdf --allow-writes
+exactcli purchase-entry create --supplier 2001 --journal 600 \
+  --line 611000:1200:vat=5:from=2026-01-01:to=2026-12-31:"Annual licence" --allow-writes
+exactcli purchase-entry create --supplier 2001 --journal 600 --line 611000:-150:vat=5 --credit-note --allow-writes
+exactcli invoice create --customer 1001 --journal 700 \
+  --line Default:1:1350:vat=F:"Service fee" --remarks "Reverse charge" --allow-writes
+exactcli invoice create --customer 1001 --journal 700 --line Default:-1:1350:vat=F --credit-note --allow-writes
 exactcli payment approve <payment-id> --allow-writes
 exactcli payment hold <payment-id> --allow-writes
 exactcli payment process <payment-id> <payment-id> --allow-writes
@@ -232,6 +252,16 @@ exactcli quotation update <id> --close-date 2026-09-30 --allow-writes
 exactcli mailbox upload --file invoice.pdf --operation 2 --allow-writes
 exactcli bank-statement upload --file statement.cod --allow-writes
 ```
+
+A line takes named options between its fields and its description:
+`<gl account>:<amount>[:option=value...][:description]` for entries,
+`item:quantity:unit price[:option=value...][:description]` for invoices. Entry options:
+`vat`, `vat-amount`, `from` and `to` (spread the amount over a period), `quantity`,
+`cost-center`, `cost-unit`; purchase entries add `non-deductible` and `private-use`, as
+fractions (0.5 is 50%). Invoice options: `vat`, `discount` (a fraction), `gl-account`,
+`cost-center`, `cost-unit`. An unknown option, or a known one after the description,
+fails with exit 64. A credit note
+(`--credit-note`) needs a negative total: Exact books the signs as given.
 
 Actions act on one record through the POST-only resources of Exact Online. Each one
 takes the record GUID, the flags of the action, `--dry-run` and the write gate:
@@ -386,7 +416,10 @@ tool per typed command (`exact_transaction_line_list`, `exact_account_list`, ...
 The server is read-only unless it starts with `--allow-writes`, which adds
 `exact_write` (create, update, delete with `dry_run` and `confirm`). Each tool call
 runs `exactcli` as a child process under the profile and the division of the
-server.
+server. Two resources carry the docs an agent should read first:
+`exactcli://docs/recipes` (the verified flows and the rules learned live) and
+`exactcli://docs/coverage` (which calls have a typed command, which writes were verified
+live).
 
 ```sh
 claude mcp add exact -- exactcli mcp

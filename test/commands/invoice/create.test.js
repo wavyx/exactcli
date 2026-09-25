@@ -168,7 +168,9 @@ describe('invoice create', () => {
     const err = await fail([...BASE, '--line', 'Default:two:100'])
 
     expect(exit(err)).toBe(64)
-    expect(err.message).toMatch(/item:quantity:unit price\[:description\]/)
+    expect(err.message).toMatch(
+      /item:quantity:unit price\[:option=value\.\.\.\]\[:description\]/,
+    )
   })
 
   it('fails with 64 on a bad --date, before the gate', async () => {
@@ -182,5 +184,111 @@ describe('invoice create', () => {
 
     expect(exit(err)).toBe(64)
     expect(err.message).toMatch(/YYYY-MM-DD/)
+  })
+
+  it('--dry-run sends the line options and the header fields of a credit note', async () => {
+    const REVENUE = '44444444-4444-4444-4444-444444444444'
+    const scope = mockApi()
+      .get('/api/v1/123/financial/GLAccounts')
+      .query({
+        $filter: "Code eq '700100'",
+        $select: 'ID,Code,Description',
+        $top: '2',
+      })
+      .reply(200, { d: { results: [{ ID: REVENUE }] } })
+
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        '--customer',
+        CUSTOMER,
+        '--journal',
+        '700',
+        '--line',
+        `${ITEM}:-1:1350:vat=F:discount=0.1:gl-account=700100:cost-center=HQ:Fees`,
+        '--line',
+        `${ITEM}:0:0:vat=F:350 K x 0.45%`,
+        '--credit-note',
+        '--remarks',
+        'Reverse charge',
+        '--reference',
+        'PO-7',
+        '--payment-condition',
+        'PR',
+        '--dry-run',
+      ]),
+    )
+
+    expect(scope.isDone()).toBe(true)
+    expect(out.body).toEqual({
+      Journal: '700',
+      OrderedBy: CUSTOMER,
+      Type: 8021,
+      Remarks: 'Reverse charge',
+      YourRef: 'PO-7',
+      PaymentCondition: 'PR',
+      SalesInvoiceLines: [
+        {
+          Item: ITEM,
+          Quantity: -1,
+          UnitPrice: 1350,
+          VATCode: 'F',
+          Discount: 0.1,
+          GLAccount: REVENUE,
+          CostCenter: 'HQ',
+          Description: 'Fees',
+        },
+        {
+          Item: ITEM,
+          Quantity: 0,
+          UnitPrice: 0,
+          VATCode: 'F',
+          Description: '350 K x 0.45%',
+        },
+      ],
+    })
+  })
+
+  it('--credit-note fails with 64 on a total that is not negative', async () => {
+    // Exact keeps Type 8021 but books the quantities as given: a positive
+    // credit note would post like an invoice.
+    const err = await fail([
+      ...BASE,
+      '--line',
+      'Default:1:100',
+      '--credit-note',
+    ])
+
+    expect(exit(err)).toBe(64)
+    expect(err.message).toBe(
+      '--credit-note needs a negative total: give the lines negative quantities. Exact books the signs as given',
+    )
+  })
+
+  it('--credit-note counts the discount in the total, and a discount stays up to 1', async () => {
+    // A full discount leaves nothing to credit; 2 would turn -100 into +100.
+    const full = await fail([
+      ...BASE,
+      '--line',
+      'Default:-1:100:discount=1',
+      '--credit-note',
+    ])
+    expect(exit(full)).toBe(64)
+    expect(full.message).toMatch(/--credit-note needs a negative total/)
+
+    const over = await fail([
+      ...BASE,
+      '--line',
+      'Default:-1:100:discount=2',
+      '--credit-note',
+    ])
+    expect(exit(over)).toBe(64)
+    expect(over.message).toMatch(/option discount expects a number up to 1/)
+  })
+
+  it('fails with 64 on a bad line option, before the gate', async () => {
+    const err = await fail([...BASE, '--line', 'Default:1:10:discount=ten'])
+
+    expect(exit(err)).toBe(64)
+    expect(err.message).toMatch(/option discount expects a number/)
   })
 })

@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.10.0 (118 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.11.0 (128 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -159,6 +159,7 @@ exactcli list <resource> [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--beta` - Use the beta API namespace
 - `--bulk` - Read the bulk variant: 1000 rows per page, $select required
 
@@ -392,6 +393,7 @@ exactcli account list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Name contains, or exact Code
 - `--status <value>` - Status code, for example C
 - `--customer <value>` - Customers only (true or false)
@@ -455,6 +457,7 @@ exactcli address list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--account <value>` - Account GUID or code
 - `--type <value>` - Address type: 1 visit, 2 postal, 3 invoice, 4 delivery
 - `--city <value>` - City (exact match)
@@ -486,6 +489,7 @@ exactcli aging-overview list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--age-group <value>` - Age group number, 1 is the youngest
 - `--currency <value>` - Currency code, for example EUR
 
@@ -515,6 +519,7 @@ exactcli aging-payable list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Account name contains (a code goes to --account)
 - `--account <value>` - Account GUID or code
 
@@ -544,6 +549,7 @@ exactcli aging-receivable list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Account name contains (a code goes to --account)
 - `--account <value>` - Account GUID or code
 
@@ -599,6 +605,7 @@ exactcli asset list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains, or exact Code
 - `--status <value>` - Status code
 - `--from <value>` - Start date from (YYYY-MM-DD)
@@ -687,6 +694,7 @@ exactcli balance list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--year <value>` - Reporting year
 - `--period <value>` - Reporting period
 - `--gl-account <value>` - Ledger account code, for example 700000
@@ -719,6 +727,7 @@ exactcli bank-account list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--account <value>` - Account GUID or code
 - `--main <value>` - Main bank account only (true or false)
 - `--search <value>` - Bank account number contains
@@ -756,6 +765,30 @@ exactcli bank-entry create --journal 500 --line "400000:121:Invoice 26700001" --
 exactcli bank-entry create --journal 500 --line 656000:-12.5:Fees --date 2026-09-03 --allow-writes
 ```
 
+### `exactcli bank-entry lines`
+
+List the lines of bank entries, by entry GUID or number (GET financialtransaction/BankEntryLines)
+
+```
+exactcli bank-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli bank-entry lines <guid>
+exactcli bank-entry lines <number> <number> --output json
+```
+
 ### `exactcli bank-entry list`
 
 List bank entries (bank statement headers)
@@ -773,6 +806,7 @@ exactcli bank-entry list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--journal <value>` - Bank journal code
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
@@ -826,6 +860,7 @@ exactcli budget list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--year <value>` - Reporting year
 - `--period <value>` - Reporting period
 - `--gl-account <value>` - Ledger account code
@@ -839,6 +874,30 @@ exactcli budget list --year 2026 --period 3 --scenario BUDGET --all
 ```
 
 ## exactcli cash-entry
+
+### `exactcli cash-entry lines`
+
+List the lines of cash entries, by entry GUID or number (GET financialtransaction/CashEntryLines)
+
+```
+exactcli cash-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli cash-entry lines <guid>
+exactcli cash-entry lines <number> <number> --output json
+```
 
 ### `exactcli cash-entry list`
 
@@ -857,6 +916,7 @@ exactcli cash-entry list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--journal <value>` - Cash journal code
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
@@ -976,6 +1036,7 @@ exactcli contact list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Full name contains, or exact Code
 - `--account <value>` - Account GUID or code
 - `--email <value>` - Exact email address
@@ -1033,6 +1094,7 @@ exactcli cost-center list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains, or exact Code
 - `--active <value>` - Active cost centers only (true or false)
 
@@ -1062,6 +1124,7 @@ exactcli cost-unit list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains, or exact Code
 
 Examples:
@@ -1090,6 +1153,7 @@ exactcli currency list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains
 - `--since <value>` - Modified on or after (YYYY-MM-DD)
 
@@ -1244,6 +1308,7 @@ exactcli document list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--account <value>` - Account GUID or code
 - `--type <value>` - Document type code
 - `--from <value>` - Document date from (YYYY-MM-DD)
@@ -1275,6 +1340,7 @@ exactcli document-type list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains
 - `--creatable <value>` - Types a POST on documents/Documents accepts (true or false)
 - `--category <value>` - Document type category ID
@@ -1305,6 +1371,7 @@ exactcli exchange-rate list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--source <value>` - Foreign currency code, for example USD
 - `--target <value>` - Division currency code, for example EUR
 - `--from <value>` - Start date from (YYYY-MM-DD)
@@ -1336,6 +1403,7 @@ exactcli financial-period list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
 - `--from <value>` - Start date from (YYYY-MM-DD)
@@ -1367,6 +1435,7 @@ exactcli gl-account list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--type <value>` - Account type code
 - `--search <value>` - Description contains, or exact Code
 
@@ -1396,6 +1465,7 @@ exactcli gl-classification list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains, or exact Code
 - `--parent <value>` - Parent element GUID
 - `--namespace <value>` - Taxonomy namespace GUID (the reporting scheme)
@@ -1427,6 +1497,7 @@ exactcli goods-delivery list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--account <value>` - Delivery account GUID or code (the account that receives)
 - `--from <value>` - Delivery date from (YYYY-MM-DD)
 - `--to <value>` - Delivery date to (YYYY-MM-DD)
@@ -1453,8 +1524,12 @@ exactcli invoice create [flags]
 - `--yes` - Confirm a DELETE
 - `--customer <value>` _(required)_ - Customer code or GUID (crm/Accounts with IsSales)
 - `--journal <value>` _(required)_ - Sales journal code, for example 700
-- `--line <value>` _(required)_ - Invoice line as item:quantity:unit price[:description] (repeatable)
+- `--line <value>` _(required)_ - Invoice line as item:quantity:unit price[:option=value...][:description] (repeatable). Options: vat (code), discount (a fraction: 0.1 is 10%), gl-account (revenue account code or GUID, instead of the one of the item), cost-center, cost-unit
 - `--description <value>` - Invoice description
+- `--credit-note` - Create a credit note (Type 8021). The lines carry negative quantities: Exact books the signs as given
+- `--remarks <value>` - Remarks printed on the invoice
+- `--reference <value>` - Reference of the customer (YourRef)
+- `--payment-condition <value>` - Payment condition code (PaymentCondition)
 - `--date <value>` - Invoice date (YYYY-MM-DD)
 - `--dry-run` - Show the validated request and send nothing
 
@@ -1514,6 +1589,7 @@ exactcli item list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains, or exact Code
 - `--sales <value>` - Sales items only (true or false)
 - `--purchase <value>` - Purchase items only (true or false)
@@ -1574,6 +1650,7 @@ exactcli item-group list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains, or exact Code
 - `--default <value>` - Default group flag: 1 default, 0 other
 
@@ -1603,6 +1680,7 @@ exactcli journal list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains, or exact Code
 - `--type <value>` - Journal type: 10 cash, 12 bank, 16 payment service, 20 sales, 22 purchase, 90 general
 
@@ -1638,6 +1716,30 @@ exactcli journal-entry create --journal 800 --line 499000:50:Rent --line 580600:
 exactcli journal-entry create --journal 800 --line 499000:50 --line 580600:-50 --date 2026-09-03 --allow-writes
 ```
 
+### `exactcli journal-entry lines`
+
+List the lines of general journal entries, by entry GUID or number (GET generaljournalentry/GeneralJournalEntryLines)
+
+```
+exactcli journal-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli journal-entry lines <guid>
+exactcli journal-entry lines <number> <number> --output json
+```
+
 ### `exactcli journal-entry list`
 
 List general journal entries (manual bookings)
@@ -1655,6 +1757,7 @@ exactcli journal-entry list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--journal <value>` - Journal code
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
@@ -1686,6 +1789,7 @@ exactcli mail-message list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--operation <value>` - Scan service operation: 1 purchase invoice without details, 2 with details, 3 sales invoice, 4 bank statement
 - `--status <value>` - Recipient status: 5 rejected, 10 draft, 20 open, 25 prepared, 30 approved, 40 realized, 42 in process, 43 at the scanning service, 45 error, 46 blocked, 50 processed
 - `--from <value>` - Sent date from (YYYY-MM-DD)
@@ -1717,6 +1821,7 @@ exactcli mailbox list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains
 - `--account <value>` - Account GUID or code (the owner of the mailbox)
 - `--type <value>` - Mailbox type: 0 unknown, 1 Exact, 2 government, 3 manual input
@@ -1771,6 +1876,7 @@ exactcli payables-list list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Account name contains (a code goes to --account)
 - `--account <value>` - Account GUID or code
 - `--due-from <value>` - Due date from (YYYY-MM-DD)
@@ -1842,6 +1948,7 @@ exactcli payment list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--account <value>` - Supplier GUID or code
 - `--entry <value>` - The purchase entry (GUID) that created the payment
 - `--due-from <value>` - Due date from (YYYY-MM-DD)
@@ -1895,6 +2002,7 @@ exactcli payment-condition list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains, or exact Code
 - `--method <value>` - Payment method: B on credit, I collection, K cash, Q PSP
 - `--days <value>` - Payment days
@@ -1969,6 +2077,7 @@ exactcli profit-loss list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 
 Examples:
 
@@ -1996,6 +2105,7 @@ exactcli project list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--account <value>` - Account GUID or code (the customer of the project)
 - `--search <value>` - Description contains, or exact Code
 - `--type <value>` - Project type code
@@ -2023,7 +2133,8 @@ exactcli purchase-entry create [flags]
 - `--yes` - Confirm a DELETE
 - `--supplier <value>` _(required)_ - Supplier code or GUID (crm/Accounts with IsSupplier)
 - `--journal <value>` _(required)_ - Purchase journal code, for example 600
-- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:description] (repeatable). The account is a code or a GUID; the amount is a decimal
+- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:option=value...][:description] (repeatable). The account is a code or a GUID; the amount is a decimal. Options: vat, vat-amount, from, to, quantity, cost-center, cost-unit, non-deductible, private-use. from and to (YYYY-MM-DD) spread the amount over a period
+- `--credit-note` - Post a credit note (Type 31). The lines carry negative amounts: Exact books the signs as given
 - `--description <value>` - Entry description
 - `--date <value>` - Entry date (YYYY-MM-DD)
 - `--invoice <value>` - Invoice number (InvoiceNumber)
@@ -2036,6 +2147,30 @@ Examples:
 exactcli purchase-entry create --supplier 1001 --journal 600 --line 700000:100 --dry-run
 exactcli purchase-entry create --supplier 1001 --journal 600 --line 700000:100 --allow-writes
 exactcli purchase-entry create --supplier 1001 --journal 600 --line 700000:100 --file invoice.pdf --allow-writes
+```
+
+### `exactcli purchase-entry lines`
+
+List the lines of purchase entries, by entry GUID or number (GET purchaseentry/PurchaseEntryLines)
+
+```
+exactcli purchase-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli purchase-entry lines <guid>
+exactcli purchase-entry lines <number> <number> --output json
 ```
 
 ### `exactcli purchase-entry list`
@@ -2055,6 +2190,7 @@ exactcli purchase-entry list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 
 Examples:
 
@@ -2092,6 +2228,30 @@ exactcli purchase-invoice create --supplier 2001 --journal 600 --line Default:2:
 exactcli purchase-invoice create --supplier 2001 --journal 600 --line Default:2:100 --reference INV-2026-42 --allow-writes
 ```
 
+### `exactcli purchase-invoice lines`
+
+List the lines of purchase invoices, by invoice GUID or entry number (GET purchase/PurchaseInvoiceLines)
+
+```
+exactcli purchase-invoice lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli purchase-invoice lines <guid>
+exactcli purchase-invoice lines <number> <number> --output json
+```
+
 ### `exactcli purchase-invoice list`
 
 List purchase invoices (the invoices received from suppliers)
@@ -2109,6 +2269,7 @@ exactcli purchase-invoice list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--supplier <value>` - Supplier GUID or code
 - `--from <value>` - Invoice date from (YYYY-MM-DD)
 - `--to <value>` - Invoice date to (YYYY-MM-DD)
@@ -2148,6 +2309,30 @@ exactcli purchase-order create --supplier 2001 --line Default:2:100 --dry-run
 exactcli purchase-order create --supplier 2001 --line Default:2:100 --receipt-date 2026-09-10 --allow-writes
 ```
 
+### `exactcli purchase-order lines`
+
+List the lines of purchase orders, by order GUID or number (GET purchaseorder/PurchaseOrderLines)
+
+```
+exactcli purchase-order lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli purchase-order lines <guid>
+exactcli purchase-order lines <number> <number> --output json
+```
+
 ### `exactcli purchase-order list`
 
 List purchase orders (the orders placed with suppliers)
@@ -2165,6 +2350,7 @@ exactcli purchase-order list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--supplier <value>` - Supplier GUID or code (the account that delivers)
 - `--from <value>` - Order date from (YYYY-MM-DD)
 - `--to <value>` - Order date to (YYYY-MM-DD)
@@ -2261,6 +2447,30 @@ exactcli quotation email <id> --email-layout <layout-id> --dry-run
 exactcli quotation email <id> --email-layout <layout-id> --action 1 --allow-writes
 ```
 
+### `exactcli quotation lines`
+
+List the lines of quotations, by quotation GUID or number; a number matches every version (GET crm/QuotationLines)
+
+```
+exactcli quotation lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli quotation lines <guid>
+exactcli quotation lines <number> <number> --output json
+```
+
 ### `exactcli quotation list`
 
 List quotations (the offers sent to prospects and customers)
@@ -2278,6 +2488,7 @@ exactcli quotation list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--account <value>` - Account GUID or code (the account that requested the quotation)
 - `--from <value>` - Quotation date from (YYYY-MM-DD)
 - `--to <value>` - Quotation date to (YYYY-MM-DD)
@@ -2423,6 +2634,7 @@ exactcli receivable list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains
 - `--account <value>` - Account GUID or code
 - `--due-from <value>` - Due date from (YYYY-MM-DD)
@@ -2455,6 +2667,7 @@ exactcli receivables-list list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Account name contains (a code goes to --account)
 - `--account <value>` - Account GUID or code
 - `--due-from <value>` - Due date from (YYYY-MM-DD)
@@ -2508,6 +2721,7 @@ exactcli revenue list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--year <value>` - Reporting year
 - `--period <value>` - Reporting period
 
@@ -2532,7 +2746,8 @@ exactcli sales-entry create [flags]
 - `--yes` - Confirm a DELETE
 - `--customer <value>` _(required)_ - Customer code or GUID (crm/Accounts with IsSales)
 - `--journal <value>` _(required)_ - Sales journal code, for example 700
-- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:description] (repeatable). The account is a code or a GUID; the amount is a decimal
+- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:option=value...][:description] (repeatable). The account is a code or a GUID; the amount is a decimal. Options: vat, vat-amount, from, to, quantity, cost-center, cost-unit. from and to (YYYY-MM-DD) spread the amount over a period
+- `--credit-note` - Post a credit note (Type 21). The lines carry negative amounts: Exact books the signs as given
 - `--description <value>` - Entry description
 - `--date <value>` - Entry date (YYYY-MM-DD)
 - `--invoice <value>` - Invoice reference (YourRef)
@@ -2545,6 +2760,30 @@ Examples:
 exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100 --dry-run
 exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100 --allow-writes
 exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100 --file invoice.pdf --allow-writes
+```
+
+### `exactcli sales-entry lines`
+
+List the lines of sales entries, by entry GUID or number (GET salesentry/SalesEntryLines)
+
+```
+exactcli sales-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli sales-entry lines <guid>
+exactcli sales-entry lines <number> <number> --output json
 ```
 
 ### `exactcli sales-entry list`
@@ -2564,6 +2803,7 @@ exactcli sales-entry list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 
 Examples:
 
@@ -2574,6 +2814,30 @@ exactcli sales-entry list --limit 200 --output json
 ```
 
 ## exactcli sales-invoice
+
+### `exactcli sales-invoice lines`
+
+List the lines of sales invoices, by invoice GUID or number (GET salesinvoice/SalesInvoiceLines)
+
+```
+exactcli sales-invoice lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli sales-invoice lines <guid>
+exactcli sales-invoice lines <number> <number> --output json
+```
 
 ### `exactcli sales-invoice list`
 
@@ -2592,10 +2856,11 @@ exactcli sales-invoice list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--customer <value>` - Customer GUID or code (the account that ordered)
 - `--from <value>` - Invoice date from (YYYY-MM-DD)
 - `--to <value>` - Invoice date to (YYYY-MM-DD)
-- `--status <value>` - Status code: 10 draft, 20 open, 50 processed
+- `--status <value>` - Status code: 20 open (a draft in the web interface, not printed yet), 50 processed (printed), 10 draft (rare)
 - `--search <value>` - Description contains
 
 Examples:
@@ -2731,6 +2996,30 @@ exactcli sales-order invoice <order-id> <order-id> --journal 700 --create-mode 0
 exactcli sales-order invoice <order-id> --journal 700 --async --allow-writes
 ```
 
+### `exactcli sales-order lines`
+
+List the lines of sales orders, by order GUID or number (GET salesorder/SalesOrderLines)
+
+```
+exactcli sales-order lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli sales-order lines <guid>
+exactcli sales-order lines <number> <number> --output json
+```
+
 ### `exactcli sales-order list`
 
 List sales orders (the orders placed by customers)
@@ -2748,6 +3037,7 @@ exactcli sales-order list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--customer <value>` - Customer GUID or code (the account that ordered)
 - `--from <value>` - Order date from (YYYY-MM-DD)
 - `--to <value>` - Order date to (YYYY-MM-DD)
@@ -2825,6 +3115,7 @@ exactcli subscription list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--account <value>` - Account GUID or code (the account that is invoiced)
 - `--from <value>` - Start date from (YYYY-MM-DD)
 - `--to <value>` - Start date to (YYYY-MM-DD)
@@ -2876,6 +3167,7 @@ exactcli transaction-line list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--year <value>` - Financial year
 - `--period <value>` - Financial period
 - `--from <value>` - Date from (YYYY-MM-DD)
@@ -2911,6 +3203,7 @@ exactcli vat-code list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--search <value>` - Description contains, or exact Code
 - `--type <value>` - Calculation type: B (base only), E (excluding), I (including), N (no VAT)
 - `--blocked <value>` - Blocked codes only (true or false)
@@ -3004,6 +3297,7 @@ exactcli webhook list [flags]
 - `--max-pages <value>` - Maximum number of pages to read
 - `--raw` - Print the raw API envelope
 - `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--topic <value>` - Subscription topic, for example Accounts or Items
 - `--search <value>` - Description contains
 - `--instant <value>` - Instant delivery subscriptions only (true or false)

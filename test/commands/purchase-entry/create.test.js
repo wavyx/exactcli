@@ -6,6 +6,7 @@ import {
   afterAll,
   beforeEach,
   afterEach,
+  vi,
 } from 'vitest'
 import nock from 'nock'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -132,6 +133,154 @@ describe('purchase-entry create', () => {
       EntryNumber: 26600002,
       document: DOC,
     })
+  })
+
+  it('removes the new document when the entry fails, then reports the failure', async () => {
+    // Exact refuses an entry for a business reason (500) after the document
+    // exists: the document must not stay behind as an orphan.
+    const scope = mockLookups()
+      .post(DOCUMENTS)
+      .reply(201, { d: { ID: DOC } })
+      .post(ATTACHMENTS)
+      .reply(201, { d: { ID: '1' } })
+      .post(ENTRIES)
+      .reply(500, {
+        error: { message: { value: 'Deferral settings missing' } },
+      })
+      .delete(`${DOCUMENTS}(guid'${DOC}')`)
+      .reply(204)
+
+    const err = await fail([
+      ...BASE,
+      '--line',
+      '610000:1250',
+      '--file',
+      FILE_A,
+      '--allow-writes',
+      '--no-retry',
+    ])
+
+    expect(exit(err)).toBe(69)
+    expect(err.message).toMatch(/Deferral settings missing/)
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('keeps and names the document when Exact gives no answer to the entry', async () => {
+    // Without an answer the entry may exist and link the document.
+    const scope = mockLookups()
+      .post(DOCUMENTS)
+      .reply(201, { d: { ID: DOC } })
+      .post(ATTACHMENTS)
+      .reply(201, { d: { ID: '1' } })
+      .post(ENTRIES)
+      .replyWithError('socket hang up')
+    const del = mockApi().delete(`${DOCUMENTS}(guid'${DOC}')`).reply(204)
+    const chunks = []
+    const spy = vi
+      .spyOn(console, 'error')
+      .mockImplementation((...args) => chunks.push(args.join(' ')))
+
+    let err
+    try {
+      err = await fail([
+        ...BASE,
+        '--line',
+        '610000:1250',
+        '--file',
+        FILE_A,
+        '--allow-writes',
+        '--no-retry',
+      ])
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect(exit(err)).toBe(69)
+    expect(scope.isDone()).toBe(true)
+    expect(del.isDone()).toBe(false)
+    expect(chunks.join('')).toMatch(/may have landed/)
+    expect(chunks.join('')).toContain(DOC)
+  })
+
+  it('removes the new document when an attachment fails', async () => {
+    const scope = mockLookups()
+      .post(DOCUMENTS)
+      .reply(201, { d: { ID: DOC } })
+      .post(ATTACHMENTS)
+      .reply(500, { error: { message: { value: 'File too large' } } })
+      .delete(`${DOCUMENTS}(guid'${DOC}')`)
+      .reply(204)
+
+    const err = await fail([
+      ...BASE,
+      '--line',
+      '610000:1250',
+      '--file',
+      FILE_A,
+      '--allow-writes',
+      '--no-retry',
+    ])
+
+    expect(exit(err)).toBe(69)
+    expect(err.message).toMatch(/File too large/)
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('deletes nothing when an entry without files fails', async () => {
+    const scope = mockLookups()
+      .post(ENTRIES)
+      .reply(500, { error: { message: { value: 'Period closed' } } })
+
+    const err = await fail([
+      ...BASE,
+      '--line',
+      '610000:1250',
+      '--allow-writes',
+      '--no-retry',
+    ])
+
+    expect(exit(err)).toBe(69)
+    expect(err.message).toMatch(/Period closed/)
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('names the document when it cannot remove it, and keeps the entry failure', async () => {
+    const scope = mockLookups()
+      .post(DOCUMENTS)
+      .reply(201, { d: { ID: DOC } })
+      .post(ATTACHMENTS)
+      .reply(201, { d: { ID: '1' } })
+      .post(ENTRIES)
+      .reply(500, {
+        error: { message: { value: 'Deferral settings missing' } },
+      })
+      .delete(`${DOCUMENTS}(guid'${DOC}')`)
+      .reply(500, { error: { message: { value: 'Locked' } } })
+    const chunks = []
+    // oclif prints a warning through console.error.
+    const spy = vi
+      .spyOn(console, 'error')
+      .mockImplementation((...args) => chunks.push(args.join(' ')))
+
+    let err
+    try {
+      err = await fail([
+        ...BASE,
+        '--line',
+        '610000:1250',
+        '--file',
+        FILE_A,
+        '--allow-writes',
+        '--no-retry',
+      ])
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect(exit(err)).toBe(69)
+    expect(err.message).toMatch(/Deferral settings missing/)
+    expect(chunks.join('')).toContain(DOC)
+    expect(scope.isDone()).toBe(true)
   })
 
   it('--dry-run with --file prints a placeholder document and the file sizes', async () => {
@@ -293,7 +442,89 @@ describe('purchase-entry create', () => {
     const err = await fail([...BASE, '--line', '610000:12,50'])
 
     expect(exit(err)).toBe(64)
-    expect(err.message).toMatch(/<gl account>:<amount>\[:description\]/)
+    expect(err.message).toMatch(
+      /<gl account>:<amount>\[:option=value\.\.\.\]\[:description\]/,
+    )
+  })
+
+  it('--dry-run sends the line options: VAT, deferral period, VAT shares', async () => {
+    mockLookups()
+
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        ...BASE,
+        '--line',
+        '610000:1200:vat=5:from=2026-01-01:to=2026-12-31:non-deductible=0.5:Rent',
+        '--line',
+        `${COST}:100:private-use=0.2:cost-center=HQ:quantity=2`,
+        '--dry-run',
+      ]),
+    )
+
+    expect(out.body.PurchaseEntryLines).toEqual([
+      {
+        GLAccount: COST,
+        AmountFC: 1200,
+        VATCode: '5',
+        From: '2026-01-01',
+        To: '2026-12-31',
+        VATNonDeductiblePercentage: 0.5,
+        Description: 'Rent',
+      },
+      {
+        GLAccount: COST,
+        AmountFC: 100,
+        PrivateUsePercentage: 0.2,
+        CostCenter: 'HQ',
+        Quantity: 2,
+      },
+    ])
+  })
+
+  it('--credit-note sends Type 31 with a negative total', async () => {
+    mockLookups()
+
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        ...BASE,
+        '--line',
+        '610000:-100',
+        '--credit-note',
+        '--dry-run',
+      ]),
+    )
+
+    expect(out.body.Type).toBe(31)
+  })
+
+  it('--credit-note fails with 64 on a total that is not negative', async () => {
+    // Exact derives the type of an entry from the sign and books the amounts
+    // as given: a positive credit note would post a normal entry.
+    const err = await fail([
+      ...BASE,
+      '--line',
+      '610000:100',
+      '--line',
+      '610000:-40',
+      '--credit-note',
+    ])
+
+    expect(exit(err)).toBe(64)
+    expect(err.message).toBe(
+      '--credit-note needs a negative total: give the lines negative amounts. Exact books the signs as given',
+    )
+  })
+
+  it('fails with 64 on a deferral period with one bound or reversed, before the gate', async () => {
+    for (const [line, reason] of [
+      ['610000:10:from=2026-01-01', 'needs from and to together'],
+      ['610000:10:to=2026-01-01', 'needs from and to together'],
+      ['610000:10:from=2026-02-01:to=2026-01-31', 'has from after to'],
+    ]) {
+      const err = await fail([...BASE, '--line', line])
+      expect(exit(err)).toBe(64)
+      expect(err.message).toBe(`--line ${reason}, received: ${line}`)
+    }
   })
 
   it('fails with 64 on a bad --date, before the gate', async () => {

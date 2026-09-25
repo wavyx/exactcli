@@ -46,7 +46,7 @@ const commands = [
   cmd(
     'list',
     { resource: { required: true } },
-    { ...listing, count: bool(), beta: bool() },
+    { ...listing, count: bool(), 'all-divisions': bool(), beta: bool() },
   ),
   cmd(
     'get',
@@ -78,6 +78,7 @@ const commands = [
     {
       ...listing,
       count: bool(),
+      'all-divisions': bool(),
       year: opt(),
       period: opt(),
       from: opt(),
@@ -131,6 +132,7 @@ describe('classifyKind and helpers', () => {
   it('classifies by the leaf verb, mutation by default', () => {
     expect(classifyKind('division:list')).toBe('read')
     expect(classifyKind('me')).toBe('read')
+    expect(classifyKind('sales-invoice:lines')).toBe('read')
     expect(classifyKind('division:use')).toBe('write')
     expect(classifyKind('create')).toBe('write')
     expect(classifyKind('delete')).toBe('destructive')
@@ -214,6 +216,8 @@ describe('buildCatalog', () => {
     )
     expect(list.summary).toMatch(/substringof/)
     expect(list.summary).toMatch(/count returns only the number/)
+    // The server owns the division: a tool must never read another one.
+    expect(list.summary).not.toMatch(/all-divisions/)
     const get = catalog.find((e) => e.toolName === 'exact_get')
     expect(Object.keys(buildInputSchema(get)).sort()).toEqual([
       'beta',

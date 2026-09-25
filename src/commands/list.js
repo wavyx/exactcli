@@ -15,6 +15,8 @@ import {
   collectListing,
   countFlags,
   countListing,
+  divisionsFlags,
+  eachDivision,
   listingFlags,
 } from '../lib/listing.js'
 import { expandedSelect } from '../lib/typed/factory.js'
@@ -41,6 +43,7 @@ export default class ListCommand extends BaseCommand {
   static flags = {
     ...listingFlags,
     ...countFlags,
+    ...divisionsFlags,
     beta: Flags.boolean({ description: 'Use the beta API namespace' }),
     bulk: Flags.boolean({
       description:
@@ -50,24 +53,69 @@ export default class ListCommand extends BaseCommand {
 
   async run() {
     const { args } = await this.parse(ListCommand)
-    const division = this.resolveDivision()
-    const { path, resource } = resolvePath(division, args.resource, {
-      beta: this.flags.beta,
-    })
+    const all = this.flags['all-divisions']
+    // Check the request once, before the first call of any division.
+    const { resource } = this.#target(args)
     warnUnknown(args.resource, resource)
+    if (this.flags.bulk && !this.flags.count) {
+      this.bulkPath(this.resolveDivision(), args.resource, resource)
+      // The bulk endpoints demand a $select; --raw has no columns to offer.
+      if (this.flags.raw && !this.flags.select) {
+        throw new CliError('--bulk needs --select', { exitCode: 64 })
+      }
+    }
+    if (this.flags.count) {
+      // The bulk variant holds the same records, so a count never needs it.
+      const result = await eachDivision(this, () => {
+        const { path } = this.#target(args)
+        return countListing(this, path, buildQuery(this.flags))
+      })
+      if (all) await this.outputResults(result, autoColumns(result))
+      else await this.outputAction(result, String(result.count))
+      return
+    }
+
+    let columns
+    const data = await eachDivision(this, async () => {
+      const read = await this.#collect(args)
+      columns = read.columns
+      return read.data
+    })
+    await this.outputResults(
+      data,
+      columns && all
+        ? { Division: { header: 'Division' }, ...columns }
+        : (columns ?? autoColumns(data)),
+    )
+  }
+
+  /**
+   * The path and the catalogue record of the resource in the active division.
+   * @param {{ resource: string }} args
+   */
+  #target(args) {
+    const { path, resource } = resolvePath(
+      this.resolveDivision(),
+      args.resource,
+      { beta: this.flags.beta },
+    )
+    return { path, resource }
+  }
+
+  /**
+   * Read one division: the regular or the bulk variant.
+   * @param {{ resource: string }} args
+   * @returns {Promise<{ data: object[], columns?: Record<string, object> }>}
+   */
+  async #collect(args) {
+    const division = this.resolveDivision()
+    const { path, resource } = this.#target(args)
 
     // A known resource without an explicit projection gets the catalogue
     // columns as $select: lighter answers and a readable table. --raw keeps
     // the envelope, --fields and --select already say what to fetch.
     const { select, fields, raw, bulk, expand } = this.flags
     const query = buildQuery(this.flags)
-    // The bulk variant holds the same records, so a count never needs it.
-    if (this.flags.count) {
-      const result = await countListing(this, path, query)
-      await this.outputAction(result, String(result.count))
-      return
-    }
-
     let columns
     const defaults = resource ? defaultColumns(resource) : []
     if (defaults.length > 0 && !select && !fields && !raw) {
@@ -78,21 +126,16 @@ export default class ListCommand extends BaseCommand {
     if (bulk) {
       const bulkPath = this.bulkPath(division, args.resource, resource)
       // The bulk endpoints demand a $select. Without one, the catalogue
-      // columns stand in; --raw has no columns to offer.
-      if (!query.$select) {
-        if (raw) throw new CliError('--bulk needs --select', { exitCode: 64 })
-        query.$select = expandedSelect(defaults, expand)
-      }
+      // columns stand in; run() already refused --raw without --select.
+      if (!query.$select) query.$select = expandedSelect(defaults, expand)
       const data = await collectListing(this, bulkPath, query, {
         pageSize: BULK_PAGE_SIZE,
         noTop: true,
       })
-      await this.outputResults(data, columns ?? autoColumns(data))
-      return
+      return { data, columns }
     }
 
-    const data = await collectListing(this, path, query)
-    await this.outputResults(data, columns ?? autoColumns(data))
+    return { data: await collectListing(this, path, query), columns }
   }
 
   /**

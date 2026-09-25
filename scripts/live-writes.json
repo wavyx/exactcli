@@ -27,5 +27,6 @@
   "POST logistics/SupplierItem",
   "POST documents/Documents",
   "POST documents/DocumentAttachments",
+  "DELETE documents/Documents",
   "PUT cashflow/Payments"
 ]

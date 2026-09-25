@@ -1,6 +1,6 @@
 import { Flags } from '@oclif/core'
-import { CliError } from './errors.js'
-import { buildQuery, normalize, odataFlags } from './odata.js'
+import { ApiError, CliError, RefNotFoundError } from './errors.js'
+import { buildQuery, divisionPath, normalize, odataFlags } from './odata.js'
 import { collectPages } from './pagination.js'
 
 /** Exact Online caps a CRUD page at 60 records. */
@@ -28,6 +28,57 @@ export const countFlags = {
     description:
       'Print the number of matching records ($count), not the records',
   }),
+}
+
+/** The flag of a list command that reads every accessible division. */
+export const divisionsFlags = {
+  'all-divisions': Flags.boolean({
+    description:
+      'Read every division the user can access, one after the other; every ' +
+      'row carries its Division (replaces --division). --limit and --all ' +
+      'apply per division',
+    default: false,
+  }),
+}
+
+/**
+ * Run a read for the active division, or with --all-divisions once per
+ * division the user can access (hrm/Divisions of the active one), one after
+ * the other. The run sets the division flag, so every lookup inside it, for
+ * example a code resolved to a GUID, happens in the division it reads.
+ * `--limit` and `--all` apply per division.
+ * @param {{ flags: object, apiClient: object, resolveDivision: () => number }} cmd
+ * @param {() => Promise<object | object[]>} run
+ * @returns {Promise<object | object[]>} the result of one run, or the rows
+ *   of every run, each tagged with its Division
+ */
+export async function eachDivision(cmd, run) {
+  if (!cmd.flags['all-divisions']) return run()
+  const divisions = await collectPages(
+    cmd.apiClient.pageOData(
+      divisionPath(cmd.resolveDivision(), 'hrm/Divisions'),
+      { $select: 'Code', $orderby: 'Code' },
+    ),
+  )
+  const rows = []
+  for (const { Code: code } of divisions) {
+    cmd.flags.division = String(code)
+    let result
+    try {
+      result = await run()
+    } catch (err) {
+      // A division without the code, or without the module (403), holds no
+      // matching record: skip it and say so. Any other failure stops the run.
+      const missing =
+        err instanceof RefNotFoundError ||
+        (err instanceof ApiError && err.statusCode === 403)
+      if (!missing) throw err
+      process.stderr.write(`Division ${code} skipped: ${err.message}\n`)
+      continue
+    }
+    for (const row of [result].flat()) rows.push({ Division: code, ...row })
+  }
+  return rows
 }
 
 /**

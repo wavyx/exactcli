@@ -132,6 +132,15 @@ describe('sales-invoice list', () => {
     expect(err.message).toMatch(/Expected YYYY-MM-DD, received yesterday/)
   })
 
+  it('says in the status help that the web interface calls 20 a draft', () => {
+    // Exact creates every invoice as Open (20); the web interface lists it as a
+    // draft until the print. 10 (Draft) almost never occurs.
+    expect(Cmd.flags.status.description).toBe(
+      'Status code: 20 open (a draft in the web interface, not printed yet), ' +
+        '50 processed (printed), 10 draft (rare)',
+    )
+  })
+
   it('fails with 64 on a bad status before any request', async () => {
     process.stdout.isTTY = true
     const err = await Cmd.run(['--status', 'open']).catch((e) => e)

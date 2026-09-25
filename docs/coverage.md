@@ -14,10 +14,10 @@ administration (`scripts/live-writes.json`).
 
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
-| regular | GET | 230 | 40 | - |
+| regular | GET | 230 | 50 | - |
 | regular | POST | 151 | 35 | 16 |
 | regular | PUT | 103 | 6 | 3 |
-| regular | DELETE | 97 | 1 | 10 |
+| regular | DELETE | 97 | 1 | 11 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 0 |
 | beta | PUT | 1 | 0 | 0 |
@@ -115,7 +115,7 @@ administration (`scripts/live-writes.json`).
 | DELETE documents/DocumentTypeFolders | - | no |
 | POST documents/Documents | `bank-statement upload`, `document create` | yes |
 | PUT documents/Documents | - | no |
-| DELETE documents/Documents | - | no |
+| DELETE documents/Documents | - | yes |
 | POST financial/ExchangeRates | - | no |
 | PUT financial/ExchangeRates | - | no |
 | DELETE financial/ExchangeRates | - | no |

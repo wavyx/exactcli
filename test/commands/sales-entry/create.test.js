@@ -302,7 +302,9 @@ describe('sales-entry create', () => {
     for (const line of ['700000', '700000:abc', ':100', '700000:1e3']) {
       const err = await fail([...BASE, '--line', line])
       expect(exit(err)).toBe(64)
-      expect(err.message).toMatch(/<gl account>:<amount>\[:description\]/)
+      expect(err.message).toMatch(
+        /<gl account>:<amount>\[:option=value\.\.\.\]\[:description\]/,
+      )
     }
   })
 
@@ -324,5 +326,38 @@ describe('sales-entry create', () => {
 
     expect(exit(err)).toBe(64)
     expect(err.message).toMatch(/Missing required flag line/)
+  })
+
+  it('--credit-note sends Type 21, and the line takes VAT and a period', async () => {
+    mockLookups()
+
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        ...BASE,
+        '--line',
+        '700000:-500:vat=F:from=2026-01-01:to=2026-06-30:Licence',
+        '--credit-note',
+        '--dry-run',
+      ]),
+    )
+
+    expect(out.body.Type).toBe(21)
+    expect(out.body.SalesEntryLines).toEqual([
+      {
+        GLAccount: REVENUE,
+        AmountFC: -500,
+        VATCode: 'F',
+        From: '2026-01-01',
+        To: '2026-06-30',
+        Description: 'Licence',
+      },
+    ])
+  })
+
+  it('refuses the purchase-only VAT options with 64', async () => {
+    const err = await fail([...BASE, '--line', '700000:10:non-deductible=0.5'])
+
+    expect(exit(err)).toBe(64)
+    expect(err.message).toMatch(/unknown option non-deductible/)
   })
 })

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { buildCatalog } from './catalog.js'
@@ -6,6 +7,31 @@ import { runTool, runWrite } from './invoke.js'
 
 /** A resource path: segments of letters, digits, dots, dashes; never a flag. */
 const RESOURCE_RE = /^[A-Za-z0-9][A-Za-z0-9/._-]*$/
+
+/** The docs of the package, next to src/ (package.json ships them). */
+const DOCS_DIR = new URL('../../../docs/', import.meta.url)
+
+/** The docs an agent reads before it calls a tool. */
+export const DOC_RESOURCES = [
+  {
+    name: 'recipes',
+    uri: 'exactcli://docs/recipes',
+    file: 'recipes.md',
+    title: 'exactcli recipes',
+    description:
+      'End-to-end flows verified live (entries, invoices, orders, documents, ' +
+      'payments, sync, reporting) and the API rules learned live',
+  },
+  {
+    name: 'coverage',
+    uri: 'exactcli://docs/coverage',
+    file: 'coverage.md',
+    title: 'API coverage',
+    description:
+      'Every catalogued call, the typed command that covers it, and the write ' +
+      'calls verified live',
+  },
+]
 
 /** The input of exact_write: hand-written, it maps to three commands. */
 export const WRITE_SHAPE = {
@@ -102,6 +128,27 @@ export function buildServer({
       custom
         ? (input) => runWrite(input, exec)
         : (input) => runTool(entry, input, exec, { allowWrites }),
+    )
+  }
+
+  for (const doc of DOC_RESOURCES) {
+    server.registerResource(
+      doc.name,
+      doc.uri,
+      {
+        title: doc.title,
+        description: doc.description,
+        mimeType: 'text/markdown',
+      },
+      async (uri) => ({
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: 'text/markdown',
+            text: readFileSync(new URL(doc.file, DOCS_DIR), 'utf8'),
+          },
+        ],
+      }),
     )
   }
 

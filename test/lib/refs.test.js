@@ -156,6 +156,9 @@ describe('resolveRef', () => {
     const err = await resolveRef(cmd, 'crm/Accounts', 'ZZZ').catch((e) => e)
     expect(err.exitCode).toBe(65)
     expect(err.message).toBe('No crm/Accounts with Code ZZZ')
+    // --all-divisions skips a division that lacks the code.
+    const { RefNotFoundError } = await import('../../src/lib/errors.js')
+    expect(err).toBeInstanceOf(RefNotFoundError)
   })
 
   it('treats an answer without rows as no match', async () => {

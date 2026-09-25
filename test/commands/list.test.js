@@ -609,6 +609,97 @@ describe('list', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('--all-divisions reads every accessible division and tags the rows', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/hrm/Divisions')
+      .query({ $select: 'Code', $orderby: 'Code' })
+      .reply(200, { d: { results: [{ Code: 123 }, { Code: 456 }] } })
+      .get(ACCOUNTS_PATH)
+      .query({ $select: SELECT })
+      .reply(200, { d: { results: [account()] } })
+      .get('/api/v1/456/crm/Accounts')
+      .query({ $select: SELECT })
+      .reply(200, { d: { results: [account({ Code: '2002' })] } })
+
+    const stdout = await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--all-divisions',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(JSON.parse(stdout).map((r) => [r.Division, r.Code])).toEqual([
+      [123, '1001'],
+      [456, '2002'],
+    ])
+  })
+
+  it('--all-divisions --count prints one count per division', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/hrm/Divisions')
+      .query(true)
+      .reply(200, { d: { results: [{ Code: 123 }, { Code: 456 }] } })
+      .get(`${ACCOUNTS_PATH}/$count`)
+      .reply(200, '7', { 'content-type': 'text/plain' })
+      .get('/api/v1/456/crm/Accounts/$count')
+      .reply(200, '3', { 'content-type': 'text/plain' })
+
+    const stdout = await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--all-divisions',
+      '--count',
+      '--division',
+      '123',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(JSON.parse(stdout)).toEqual([
+      { Division: 123, count: 7 },
+      { Division: 456, count: 3 },
+    ])
+  })
+
+  it('--count warns on stderr for an unknown resource', async () => {
+    mockApi()
+      .get('/api/v1/123/crm/Nope/$count')
+      .reply(200, '0', { 'content-type': 'text/plain' })
+    const stderr = captureStderr()
+    try {
+      await runCmd(ListCommand, [
+        'crm/Nope',
+        '--count',
+        '--division',
+        '123',
+        '--output',
+        'json',
+      ])
+    } finally {
+      stderr.restore()
+    }
+
+    expect(stderr.text()).toMatch(/Unknown resource crm\/Nope/)
+  })
+
+  it('--all-divisions --bulk --raw fails with 64 before any request', async () => {
+    process.stdout.isTTY = true
+    const err = await ListCommand.run([
+      'crm/Accounts',
+      '--all-divisions',
+      '--bulk',
+      '--raw',
+      '--division',
+      '123',
+    ]).catch((e) => e)
+
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(/--bulk needs --select/)
+  })
+
   it('--bulk reads the bulk variant with the catalogue columns and no $top', async () => {
     const scope = mockApi()
       .get('/api/v1/123/bulk/CRM/Accounts')

@@ -1,5 +1,5 @@
 import { findResource, keyType } from './catalog.js'
-import { CliError } from './errors.js'
+import { CliError, RefNotFoundError } from './errors.js'
 import { divisionPath, unwrap } from './odata.js'
 
 export const GUID_RE =
@@ -111,7 +111,7 @@ export async function resolveRef(cmd, resource, value) {
     rows = await lookup(cmd, path, padCode(value), label)
   }
   if (rows.length === 0) {
-    throw new CliError(`No ${resource} with Code ${value}`, { exitCode: 65 })
+    throw new RefNotFoundError(`No ${resource} with Code ${value}`)
   }
   if (rows.length > 1) {
     const names = rows.map((r) => `${r[label]} (${r.ID})`).join(', ')

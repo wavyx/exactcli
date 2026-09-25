@@ -171,7 +171,10 @@ describe('auth login --manual', () => {
     expect(blob.expiresAt).toBe(blob.obtainedAt + 600_000)
     expect(stdout).toContain(`Redirect URI: ${REDIRECT}`)
     expect(stdout).toContain(
-      'Register this URI in Exact Online: Company name > Import/Export > App registrations',
+      'Register this URI as the redirect URI of your app: in Exact Online, ' +
+        'Company name > Import/Export > App registrations (customer ' +
+        'subscription), or in the App Store, Manage my apps (developer ' +
+        'subscription)',
     )
     expect(stdout).toContain(
       'Logged in to start.exactonline.be as Jane Doe (jane@acme.example)',

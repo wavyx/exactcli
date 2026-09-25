@@ -6,6 +6,8 @@ import {
   BULK_PAGE_SIZE,
   countFlags,
   countListing,
+  divisionsFlags,
+  eachDivision,
   pageBudget,
   visibleColumns,
 } from '../../src/lib/listing.js'
@@ -211,5 +213,106 @@ describe('countListing', () => {
 
   it('exposes the --count flag', () => {
     expect(Object.keys(countFlags)).toEqual(['count'])
+  })
+})
+
+describe('eachDivision', () => {
+  function fakeCmd(flags, codes = [123, 456]) {
+    const cmd = {
+      flags,
+      resolveDivision: () => Number(cmd.flags.division ?? 123),
+      apiClient: {
+        pageOData: vi.fn(async function* () {
+          yield* codes.map((Code) => ({ Code }))
+        }),
+      },
+    }
+    return cmd
+  }
+
+  it('runs once for the active division without the flag', async () => {
+    const cmd = fakeCmd({})
+    const run = vi.fn(async () => [{ a: 1 }])
+
+    expect(await eachDivision(cmd, run)).toEqual([{ a: 1 }])
+    expect(run).toHaveBeenCalledTimes(1)
+    expect(cmd.apiClient.pageOData).not.toHaveBeenCalled()
+  })
+
+  it('runs per accessible division and tags every row with its division', async () => {
+    // The division flag drives every lookup of the run, so a code resolves
+    // in the division that is being read.
+    const cmd = fakeCmd({ 'all-divisions': true, division: '123' })
+    const seen = []
+    const run = vi.fn(async () => {
+      seen.push(cmd.flags.division)
+      return [{ a: seen.length }]
+    })
+
+    expect(await eachDivision(cmd, run)).toEqual([
+      { Division: 123, a: 1 },
+      { Division: 456, a: 2 },
+    ])
+    expect(seen).toEqual(['123', '456'])
+    expect(cmd.apiClient.pageOData).toHaveBeenCalledWith(
+      '/api/v1/123/hrm/Divisions',
+      { $select: 'Code', $orderby: 'Code' },
+    )
+  })
+
+  it('tags a single result object, such as a count', async () => {
+    const cmd = fakeCmd({ 'all-divisions': true })
+    const run = vi.fn(async () => ({ count: 2 }))
+
+    expect(await eachDivision(cmd, run)).toEqual([
+      { Division: 123, count: 2 },
+      { Division: 456, count: 2 },
+    ])
+  })
+
+  it('skips a division that lacks the code or the module, and says so on stderr', async () => {
+    const { ApiError, RefNotFoundError } =
+      await import('../../src/lib/errors.js')
+    const cmd = fakeCmd({ 'all-divisions': true }, [1, 2, 3])
+    const failures = {
+      1: new RefNotFoundError('No crm/Accounts with Code 1001'),
+      2: new ApiError(403, { message: 'Forbidden' }, '/api/v1/2/x'),
+    }
+    const run = vi.fn(async () => {
+      const failure = failures[cmd.flags.division]
+      if (failure) throw failure
+      return [{ a: 1 }]
+    })
+    const chunks = []
+    const spy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation((chunk) => chunks.push(String(chunk)) > 0)
+
+    let rows
+    try {
+      rows = await eachDivision(cmd, run)
+    } finally {
+      spy.mockRestore()
+    }
+
+    expect(rows).toEqual([{ Division: 3, a: 1 }])
+    expect(chunks.join('')).toBe(
+      'Division 1 skipped: No crm/Accounts with Code 1001\n' +
+        'Division 2 skipped: Exact Online API 403: Forbidden\n',
+    )
+  })
+
+  it('stops on any other failure', async () => {
+    const { ApiError } = await import('../../src/lib/errors.js')
+    const cmd = fakeCmd({ 'all-divisions': true })
+    const run = vi.fn(async () => {
+      throw new ApiError(400, { message: 'Bad filter' }, '/x')
+    })
+
+    await expect(eachDivision(cmd, run)).rejects.toThrow(/Bad filter/)
+  })
+
+  it('exposes the --all-divisions flag', () => {
+    expect(Object.keys(divisionsFlags)).toEqual(['all-divisions'])
   })
 })
