@@ -38,6 +38,10 @@ types where they help.
 - New commands extend `BaseCommand`, spread the shared flags, and end with
   `outputResults` or `outputAction` so `--output`, `--jq` and `--fields` work.
 - `docs/commands.md` is generated: run `npm run docs:commands`, do not edit it by hand.
+- A typed command names the calls it makes at the end of its description, for example
+  `(POST crm/Accounts)`. `npm run docs:coverage` reads these names to generate
+  `docs/coverage.md`. After a live check of a write call on a test administration, add
+  the call to `scripts/live-writes.json`.
 - Prose in files: plain English, ASCII only.
 
 ## Release

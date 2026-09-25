@@ -43,6 +43,31 @@ export function readOnlyProfile(flags) {
 }
 
 /**
+ * The divisions a profile may write to, or null when it may write to every
+ * division. The list has two carriers, as the read-only lock: the keychain
+ * blob and the config store. A list in either carrier restricts. With two
+ * lists, only the divisions that both name remain, so an empty config
+ * directory or a config edit never widens the list of the credential.
+ * A carrier value that is not a list of division codes, for example a
+ * hand-edited config, counts as an empty list: every write is refused.
+ * @param {unknown} credential the list of the keychain blob
+ * @param {unknown} config the list of the config store
+ * @returns {number[] | null}
+ */
+export function allowedWriteDivisions(credential, config) {
+  const lists = [credential, config]
+    .filter((value) => value != null)
+    .map((value) =>
+      Array.isArray(value) &&
+      value.every((code) => Number.isSafeInteger(code) && code > 0)
+        ? value
+        : [],
+    )
+  if (lists.length === 0) return null
+  return lists.reduce((kept, list) => kept.filter((d) => list.includes(d)))
+}
+
+/**
  * Refuse before anything is read or sent: a refused write costs nothing.
  * @param {{ 'allow-writes'?: boolean, yes?: boolean, profile?: string }} flags
  * @param {string} method

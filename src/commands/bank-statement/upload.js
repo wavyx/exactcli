@@ -25,7 +25,7 @@ const COLUMNS = {
 
 export default class BankStatementUploadCommand extends BaseCommand {
   static description =
-    'Upload a bank statement file (CODA, MT940, CAMT) to the bank import'
+    'Upload a bank statement file (CODA, MT940, CAMT) to the bank import (POST documents/Documents, POST cashflow/BankStatementUploadAttachments)'
 
   static examples = [
     '<%= config.bin %> bank-statement upload --file statement.cod --dry-run',

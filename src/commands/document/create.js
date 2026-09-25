@@ -45,7 +45,8 @@ function readAttachment(path) {
 }
 
 export default class DocumentCreateCommand extends BaseCommand {
-  static description = 'Create a document and attach files'
+  static description =
+    'Create a document and attach files (POST documents/Documents, POST documents/DocumentAttachments)'
 
   static examples = [
     '<%= config.bin %> document create --subject "Invoice 2026-001" --type 183 --file invoice.pdf --dry-run',

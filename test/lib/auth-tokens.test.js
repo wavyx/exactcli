@@ -668,6 +668,33 @@ describe('resolveCredentials', () => {
     expect(creds.readOnly).toBe(true)
   })
 
+  it('carries the write division list of the blob', async () => {
+    keychain.getOAuthTokens.mockResolvedValue(
+      blob(0, { writeDivisions: [123456] }),
+    )
+
+    const creds = await resolveCredentials({ profile: 'default' })
+
+    expect(creds.writeDivisions).toEqual([123456])
+  })
+
+  it('keeps the write division list of the blob on a rotation', async () => {
+    keychain.getOAuthTokens.mockResolvedValue(
+      blob(600_000, { writeDivisions: [123456] }),
+    )
+    mockTokenExchange()
+
+    await getValidOAuthAccess('default')
+
+    expect(keychain.setOAuthTokens).toHaveBeenCalledWith(
+      'default',
+      expect.objectContaining({
+        accessToken: 'acc',
+        writeDivisions: [123456],
+      }),
+    )
+  })
+
   it('reads the host from the profile configuration', async () => {
     keychain.getOAuthTokens.mockResolvedValue(blob(0))
     config.getProfileConfig.mockImplementation((profile, key) =>

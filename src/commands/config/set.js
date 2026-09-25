@@ -13,6 +13,7 @@ const ALLOWED_KEYS = [
   'division',
   'default_output',
   'read_only',
+  'write_divisions',
 ]
 const OUTPUT_FORMATS = ['table', 'json', 'yaml', 'csv']
 
@@ -21,7 +22,7 @@ const OUTPUT_FORMATS = ['table', 'json', 'yaml', 'csv']
  * CliError (exit 64) on an invalid value.
  * @param {string} key
  * @param {string} rawValue
- * @returns {string | number}
+ * @returns {string | number | boolean | number[]}
  */
 function normalizeValue(key, rawValue) {
   if (key === 'default_output') {
@@ -39,6 +40,22 @@ function normalizeValue(key, rawValue) {
       throw new CliError('read_only must be true or false', { exitCode: 64 })
     }
     return rawValue === 'true'
+  }
+
+  if (key === 'write_divisions') {
+    const codes = rawValue.split(',').map((code) => code.trim())
+    const valid = (code) =>
+      /^\d+$/.test(code) &&
+      Number.isSafeInteger(Number(code)) &&
+      Number(code) > 0
+    if (!codes.every(valid)) {
+      throw new CliError(
+        'write_divisions must list division codes separated by commas, ' +
+          'for example 123456',
+        { exitCode: 64 },
+      )
+    }
+    return codes.map(Number)
   }
 
   if (key === 'division') {
@@ -73,6 +90,7 @@ export default class ConfigSetCommand extends BaseCommand {
     '<%= config.bin %> config set host start.exactonline.be',
     '<%= config.bin %> config set division 123456',
     '<%= config.bin %> config set read_only true',
+    '<%= config.bin %> config set write_divisions 123456',
   ]
 
   static args = {
@@ -93,7 +111,12 @@ export default class ConfigSetCommand extends BaseCommand {
     const value = normalizeValue(args.key, args.value)
 
     setProfileConfig(this.activeProfile, args.key, value)
-    if (args.key === 'read_only') await this.#lockCredential(value)
+    if (args.key === 'read_only') {
+      await this.#updateCredential({ readOnly: value })
+    }
+    if (args.key === 'write_divisions') {
+      await this.#updateCredential({ writeDivisions: value })
+    }
     await this.outputAction(
       { profile: this.activeProfile, key: args.key, value },
       `Set ${chalk.cyan(args.key)} = ${chalk.green(value)} for profile ${chalk.cyan(this.activeProfile)}`,
@@ -101,18 +124,19 @@ export default class ConfigSetCommand extends BaseCommand {
   }
 
   /**
-   * The lock lives in the keychain blob too: the config store follows
-   * EXACTCLI_CONFIG_DIR, the credential does not, so a config-only lock falls
-   * away with an empty config directory. The write takes the oauth lock: a
-   * refresh in a sibling process rotates the same blob, and a stale copy
-   * written over it would spend the refresh token twice.
-   * @param {boolean} readOnly
+   * The read-only lock and the write division list live in the keychain blob
+   * too: the config store follows EXACTCLI_CONFIG_DIR, the credential does
+   * not, so a config-only lock falls away with an empty config directory.
+   * The write takes the oauth lock: a refresh in a sibling process rotates
+   * the same blob, and a stale copy written over it would spend the refresh
+   * token twice.
+   * @param {{ readOnly?: boolean, writeDivisions?: number[] }} fields
    */
-  async #lockCredential(readOnly) {
+  async #updateCredential(fields) {
     const profile = this.activeProfile
     await withLock(`oauth-${profile}`, async () => {
       const blob = await getOAuthTokens(profile)
-      if (blob) await setOAuthTokens(profile, { ...blob, readOnly })
+      if (blob) await setOAuthTokens(profile, { ...blob, ...fields })
     })
   }
 }

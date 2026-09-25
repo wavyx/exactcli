@@ -27,6 +27,15 @@ entry.
   reads no body and sends no request. The MCP server exposes no mutating tool unless
   it starts with `--allow-writes`, and its `exact_write` tool needs `confirm: true`
   for a delete. `doctor` warns when the environment switch is on.
+- A profile can refuse every write (`config set read_only true`) or limit writes to
+  a list of divisions (`config set write_divisions <codes>`). The HTTP client checks
+  the division in the path of every POST, PUT and DELETE, so a write to another
+  division never leaves. A write path with an encoded slash, backslash, dot or
+  percent is refused. Both settings live in the keychain credential as well as in
+  the config store, and `auth login` keeps the stricter of the two, so an empty or
+  edited `EXACTCLI_CONFIG_DIR` cannot loosen them. A malformed list refuses every
+  write. Limit: a token from `EXACTCLI_ACCESS_TOKEN` skips the keychain, so only
+  the config settings apply to it.
 - `create`, `update` and `delete` validate a body against the catalogue before the
   request (method, mandatory fields, unknown fields, read-only fields), and
   `--dry-run` shows the exact request without sending it.

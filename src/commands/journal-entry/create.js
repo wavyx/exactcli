@@ -26,7 +26,7 @@ const TOLERANCE = 0.005
 
 export default class JournalEntryCreateCommand extends BaseCommand {
   static description =
-    'Post a general journal entry (OD) from ledger account codes'
+    'Post a general journal entry (OD) from ledger account codes (POST generaljournalentry/GeneralJournalEntries)'
 
   static examples = [
     '<%= config.bin %> journal-entry create --journal 800 --line 499000:50:Rent --line 580600:-50 --dry-run',

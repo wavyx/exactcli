@@ -18,8 +18,9 @@ import {
   setProfileConfig,
 } from '../../lib/config.js'
 import { CliError, ConfigError } from '../../lib/errors.js'
-import { setOAuthTokens } from '../../lib/keychain.js'
+import { getOAuthTokens, setOAuthTokens } from '../../lib/keychain.js'
 import { startTunnel } from '../../lib/ngrok.js'
+import { allowedWriteDivisions } from '../../lib/writes.js'
 
 export default class LoginCommand extends BaseCommand {
   static skipAuth = true
@@ -99,6 +100,10 @@ export default class LoginCommand extends BaseCommand {
       ? await this.#manualLogin(app)
       : await this.#tunnelLogin(app, { domain, port: flags.port })
 
+    // A login replaces the credential. It must never drop the lock or widen
+    // the write list of the credential it replaces: an empty or edited config
+    // directory would otherwise loosen both.
+    const previous = await getOAuthTokens(profile)
     const now = Date.now()
     await setOAuthTokens(profile, {
       accessToken: tokens.accessToken,
@@ -108,7 +113,14 @@ export default class LoginCommand extends BaseCommand {
       clientId,
       clientSecret,
       // A lock set before the login must survive it.
-      readOnly: getProfileConfig(profile, 'read_only') === true,
+      readOnly:
+        getProfileConfig(profile, 'read_only') === true ||
+        previous?.readOnly === true,
+      writeDivisions:
+        allowedWriteDivisions(
+          previous?.writeDivisions,
+          getProfileConfig(profile, 'write_divisions'),
+        ) ?? undefined,
     })
     // Only a login that succeeded may re-point the profile: an aborted login
     // on another host must leave a working session where it was.

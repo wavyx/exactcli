@@ -286,6 +286,8 @@ export async function getValidOAuthAccess(
  * @property {'env' | 'profile'} source
  * @property {string} host
  * @property {boolean} readOnly the credential itself refuses every write
+ * @property {number[]} [writeDivisions] the only divisions the credential
+ *   may write to; absent when it may write to every division
  * @property {import('./keychain.js').OAuthTokens} [oauth] absent on the env path
  */
 
@@ -309,6 +311,7 @@ export async function resolveCredentials({ profile }) {
     source: 'profile',
     host,
     readOnly: blob.readOnly === true,
+    writeDivisions: blob.writeDivisions,
     oauth: blob,
   }
 }

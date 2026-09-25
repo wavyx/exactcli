@@ -61,6 +61,49 @@ function acceptFor(url) {
     : 'application/json'
 }
 
+/** The division segment of an API path: `/api/v1/<division>/...`, beta too. */
+const DIVISION_PATH_RE = /^\/api\/v1\/(?:beta\/)?(\d+)\//
+/**
+ * An escape that a decoding server could turn into a path separator or a dot
+ * segment. The URL parser keeps it, so the checks below would read another
+ * division than the one the server resolves.
+ */
+const ENCODED_SEPARATOR_RE = /%(2f|5c|2e|25)/i
+
+/**
+ * Refuse a write outside the allowed divisions, before it leaves. The
+ * division sits in the path, so every write command, the raw `api` command
+ * and the MCP tools meet this check. A path without a division is refused,
+ * and so is a write path with an encoded separator, list or no list.
+ * @param {string} method
+ * @param {URL} url
+ * @param {number[] | null} allowed null allows every division
+ */
+function assertWriteDivision(method, url, allowed) {
+  if (method === 'GET') return
+  if (ENCODED_SEPARATOR_RE.test(url.pathname)) {
+    throw new CliError(
+      'Refusing a write path with an encoded slash, backslash, dot or percent',
+      { exitCode: 64 },
+    )
+  }
+  if (allowed == null) return
+  const match = DIVISION_PATH_RE.exec(url.pathname)
+  const division = match ? Number(match[1]) : null
+  if (division !== null && allowed.includes(division)) return
+  const list =
+    allowed.length === 0
+      ? 'no division'
+      : `${allowed.length === 1 ? 'division' : 'divisions'} ${allowed.join(', ')}`
+  const target =
+    division === null ? 'a path without a division' : `division ${division}`
+  throw new CliError(
+    `Writes are limited to ${list} (config write_divisions). ` +
+      `Refusing ${method} on ${target}.`,
+    { exitCode: 77 },
+  )
+}
+
 /**
  * The URL parser percent-encodes a space or a double quote but leaves a key
  * such as `(guid'...')` alone. Compare the decoded forms, so only a real
@@ -147,6 +190,8 @@ function hostToBaseOrigin(value) {
  * @param {number} [options.timeout]
  * @param {boolean} [options.retry]
  * @param {string} [options.userAgent]
+ * @param {number[] | null} [options.writeDivisions] the only divisions a
+ *   write may reach; null allows every division
  */
 export function createClient({
   host = DEFAULT_HOST,
@@ -155,6 +200,7 @@ export function createClient({
   timeout = 30_000,
   retry = true,
   userAgent = 'exactcli',
+  writeDivisions = null,
 }) {
   const usingMock = Boolean(process.env.EXACTCLI_BASE_URL)
   const baseOrigin = usingMock
@@ -200,6 +246,7 @@ export function createClient({
    */
   async function request(method, path, { body, query } = {}) {
     const url = lockedUrl(path)
+    assertWriteDivision(method, url, writeDivisions)
     if (query) {
       for (const [k, v] of Object.entries(query)) {
         if (v == null) continue

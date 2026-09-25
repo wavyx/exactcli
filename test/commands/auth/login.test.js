@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => {
     getProfileConfig: vi.fn(),
     setProfileConfig: vi.fn(),
     setOAuthTokens: vi.fn(),
+    getOAuthTokens: vi.fn(),
     startTunnel: vi.fn(),
     input: vi.fn(),
     password: vi.fn(),
@@ -46,6 +47,7 @@ vi.mock('../../../src/lib/config.js', async (importOriginal) => ({
 }))
 vi.mock('../../../src/lib/keychain.js', () => ({
   setOAuthTokens: mocks.setOAuthTokens,
+  getOAuthTokens: mocks.getOAuthTokens,
 }))
 vi.mock('../../../src/lib/ngrok.js', () => ({ startTunnel: mocks.startTunnel }))
 vi.mock('@inquirer/prompts', () => ({
@@ -240,6 +242,39 @@ describe('auth login --manual', () => {
     await runCmd(LoginCommand, ['--manual', '--client-id', 'cid'])
 
     expect(mocks.setOAuthTokens.mock.calls[0][1].readOnly).toBe(true)
+  })
+
+  it('stores the write division list of the profile in the blob', async () => {
+    profile({ ngrok_domain: DOMAIN, write_divisions: [123456] })
+
+    await runCmd(LoginCommand, ['--manual', '--client-id', 'cid'])
+
+    expect(mocks.setOAuthTokens.mock.calls[0][1].writeDivisions).toEqual([
+      123456,
+    ])
+  })
+
+  it('never widens the write list or drops the lock of the stored blob', async () => {
+    // An empty or edited config directory must not loosen a credential that
+    // a login replaces: only the divisions that both carriers name remain.
+    profile({ ngrok_domain: DOMAIN, write_divisions: [123456, 42] })
+    mocks.getOAuthTokens.mockResolvedValue({
+      accessToken: 'old',
+      readOnly: true,
+      writeDivisions: [123456],
+    })
+
+    await runCmd(LoginCommand, ['--manual', '--client-id', 'cid'])
+
+    const stored = mocks.setOAuthTokens.mock.calls[0][1]
+    expect(stored.writeDivisions).toEqual([123456])
+    expect(stored.readOnly).toBe(true)
+  })
+
+  it('stores no write list when neither carrier holds one', async () => {
+    await runCmd(LoginCommand, ['--manual', '--client-id', 'cid'])
+
+    expect(mocks.setOAuthTokens.mock.calls[0][1].writeDivisions).toBeUndefined()
   })
 
   it('writes the host and the domain only after the tokens are stored', async () => {

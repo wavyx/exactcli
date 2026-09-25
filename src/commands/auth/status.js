@@ -9,6 +9,7 @@ import {
 import { DEFAULT_HOST, createClient } from '../../lib/client.js'
 import { getProfileConfig } from '../../lib/config.js'
 import { getOAuthTokens, isKeychainAvailable } from '../../lib/keychain.js'
+import { allowedWriteDivisions } from '../../lib/writes.js'
 
 const DAY_MS = 86_400_000
 /** A refresh token dies after 30 days without use. Warn before that. */
@@ -42,10 +43,15 @@ export default class StatusCommand extends BaseCommand {
       refreshableNow: null,
       refreshTokenIdleDays: null,
       readOnly: null,
+      writeDivisions: null,
       identity: null,
     }
 
     const blob = await getOAuthTokens(profile)
+    status.writeDivisions = allowedWriteDivisions(
+      blob?.writeDivisions,
+      getProfileConfig(profile, 'write_divisions'),
+    )
     if (blob) {
       const age = Date.now() - blob.obtainedAt
       status.authenticated = true
@@ -115,7 +121,17 @@ export default class StatusCommand extends BaseCommand {
     line('Token age', `${status.tokenAgeSeconds}s`)
     line('Refreshable now', status.refreshableNow ? 'yes' : 'no')
     line('Refresh token idle', `${status.refreshTokenIdleDays} days`)
-    if (status.readOnly) line('Writes', 'locked: read-only credential')
+    if (status.readOnly) {
+      line('Writes', 'locked: read-only credential')
+    } else if (status.writeDivisions) {
+      const list = status.writeDivisions
+      line(
+        'Writes',
+        list.length === 0
+          ? 'locked: no division allowed'
+          : `${list.length === 1 ? 'division' : 'divisions'} ${list.join(', ')} only`,
+      )
+    }
     if (status.refreshTokenIdleDays > IDLE_WARN_DAYS) {
       this.log(
         chalk.yellow(

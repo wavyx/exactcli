@@ -293,9 +293,9 @@ exactcli create salesinvoice/SalesInvoices --set Journal=@str:700 \
 
 ## 7. Sales order to invoice (order, delivery, invoice)
 
-From the documentation. The sales order module needs a Wholesale Distribution or
-Manufacturing subscription: the demo administration answered 403 Forbidden on
-`salesorder/SalesOrders` (verified live).
+Verified live: the order, the invoice from the order, and the print. The delivery step
+comes from the documentation. A licence without the sales order module answers 403
+Forbidden on `salesorder/SalesOrders`.
 
 Create the order from codes. A line is `item:quantity:unit price[:description]`.
 
@@ -327,13 +327,19 @@ documentation says that only the asynchronous `Mode` (1) survives after October 
 the answer then carries a `ProcessID` for the result endpoint.
 
 ```sh
-exactcli create salesinvoice/InvoiceSalesOrders \
-  --body '{"CreateMode":1,"InvoiceMode":0,"JournalCode":"700","SalesOrderIDs":[{"ID":"<order guid>"}]}' \
-  --dry-run
+exactcli sales-order invoice <order guid> --journal 700 --invoice-mode 1 --dry-run
+exactcli sales-order invoice <order guid> --journal 700 --invoice-mode 1 --allow-writes
 exactcli sales-invoice list --customer <customer code> --status 20
+exactcli sales-invoice print <invoice guid> --allow-writes
 ```
 
-Then print the invoice as in recipe 6.
+What to expect. The answer counts `NumberOfCreatedInvoices`. The new invoice is Open
+(20) and has no `InvoiceNumber`. The print moves it to Processed (50), assigns the
+number, and creates the PDF document and the sales entry. That sales entry stays Open
+(20) in the general ledger, as for an invoice printed in the web interface: the API
+offers no call that processes a financial entry. A processed invoice cannot be
+deleted. Without a delivery the order shows `InvoiceStatus` 21 (complete) and `Status`
+20 (partial).
 
 ## 8. Documents and attachments (create with files, download)
 
@@ -563,6 +569,16 @@ runs `exactcli` as a child process under the profile and the division of the ser
 - `read/sync/Sync/SyncTimestamp` accepts only `modified` and `endPoint`; any other
   query answers 400 `Error in query syntax`.
 - A deleted record shows in `sync/Deleted` with its `EntityType` (2 = Accounts).
+- A purchase item needs a costs account. With the default stock setting Exact asks
+  for a stock account in the item group (`Obligatoire: Groupe d'articles`); a
+  non-stock item (`item create --purchase true --stock false --gl-costs <code>`) works.
+- A purchase order line needs a supplier item that links the item and the supplier
+  (`create logistics/SupplierItem` with `Item`, `Supplier`, `ItemUnit`, `PurchaseUnit`,
+  `PurchasePrice`). Without it Exact answers 500: the item and the supplier are not
+  linked.
+- A purchase invoice (`purchase/PurchaseInvoices`) takes the purchase account from the
+  item group. `logistics/ItemGroups` is read-only in the API: set the account in the
+  web interface first.
 - `$count` answers plain text. A request that accepts only JSON gets 415
   `Unsupported media type requested`. The CLI sends
   `Accept: text/plain, application/json`, so an error still arrives as JSON.

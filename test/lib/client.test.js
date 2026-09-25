@@ -265,6 +265,120 @@ describe('URL length guard', () => {
   })
 })
 
+describe('write division allowlist', () => {
+  const guarded = () => client({ writeDivisions: [123456] })
+
+  it('refuses a write to another division before any request', async () => {
+    // No interceptor: a request that leaves would fail with a nock error.
+    const err = await guarded()
+      .post('/api/v1/654321/crm/Accounts', { Name: 'Acme' })
+      .catch((e) => e)
+
+    expect(err).toBeInstanceOf(CliError)
+    expect(err.exitCode).toBe(77)
+    expect(err.message).toBe(
+      'Writes are limited to division 123456 (config write_divisions). ' +
+        'Refusing POST on division 654321.',
+    )
+  })
+
+  it('refuses PUT and DELETE, on the beta path too', async () => {
+    const put = await guarded()
+      .put("/api/v1/beta/654321/crm/Accounts(guid'x')", {})
+      .catch((e) => e)
+    const del = await guarded()
+      .del("/api/v1/654321/crm/Accounts(guid'x')")
+      .catch((e) => e)
+
+    expect(put.exitCode).toBe(77)
+    expect(put.message).toMatch(/Refusing PUT on division 654321\.$/)
+    expect(del.exitCode).toBe(77)
+    expect(del.message).toMatch(/Refusing DELETE on division 654321\.$/)
+  })
+
+  it('refuses a write on a path without a division', async () => {
+    const err = await guarded()
+      .post('/api/v1/current/Me', {})
+      .catch((e) => e)
+
+    expect(err.exitCode).toBe(77)
+    expect(err.message).toMatch(/Refusing POST on a path without a division\.$/)
+  })
+
+  it('names every allowed division', async () => {
+    const err = await client({ writeDivisions: [1, 2] })
+      .post('/api/v1/3/crm/Accounts', {})
+      .catch((e) => e)
+
+    expect(err.message).toMatch(/^Writes are limited to divisions 1, 2 /)
+  })
+
+  it('refuses every write with an empty list', async () => {
+    const err = await client({ writeDivisions: [] })
+      .post('/api/v1/123456/crm/Accounts', {})
+      .catch((e) => e)
+
+    expect(err.exitCode).toBe(77)
+    expect(err.message).toMatch(/^Writes are limited to no division /)
+  })
+
+  it('sends a write to an allowed division, beta included', async () => {
+    const scope = mockApi()
+      .post('/api/v1/123456/crm/Accounts')
+      .reply(201, { d: { ID: 'a' } })
+      .delete("/api/v1/beta/123456/crm/Accounts(guid'x')")
+      .reply(204)
+
+    await guarded().post('/api/v1/123456/crm/Accounts', { Name: 'Acme' })
+    await guarded().del("/api/v1/beta/123456/crm/Accounts(guid'x')")
+
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('refuses a write path with an encoded slash, backslash, dot or percent', async () => {
+    // The parser keeps these escapes, so the division check would read the
+    // first segment while a decoding server could resolve another one. A
+    // plain %2e%2e never gets here: the parser resolves it, and the
+    // normalisation guard refuses the changed path.
+    for (const path of [
+      '/api/v1/123456/..%2F654321/crm/Accounts',
+      '/api/v1/123456/..%5c654321/crm/Accounts',
+      '/api/v1/123456/%252e%252e/654321/crm/Accounts',
+    ]) {
+      for (const c of [guarded(), client()]) {
+        const err = await c.post(path, {}).catch((e) => e)
+        expect(err.exitCode).toBe(64)
+        expect(err.message).toBe(
+          'Refusing a write path with an encoded slash, backslash, dot or percent',
+        )
+      }
+    }
+  })
+
+  it('keeps an encoded space in a write path and in a read', async () => {
+    const scope = mockApi()
+      .put("/api/v1/123456/system/Things('a%20b')")
+      .reply(204)
+      .get('/api/v1/654321/crm/Accounts/..%2F1')
+      .reply(200, { d: {} })
+
+    await guarded().put("/api/v1/123456/system/Things('a b')", {})
+    await guarded().get('/api/v1/654321/crm/Accounts/..%2F1')
+
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('reads any division', async () => {
+    const scope = mockApi()
+      .get('/api/v1/654321/crm/Accounts')
+      .reply(200, { d: { results: [] } })
+
+    await guarded().get('/api/v1/654321/crm/Accounts')
+
+    expect(scope.isDone()).toBe(true)
+  })
+})
+
 describe('headers', () => {
   it('sends bearer auth, accept and user-agent on every request', async () => {
     const scope = mockApi()

@@ -38,6 +38,9 @@ function keychainRequired() {
  * @property {string} clientSecret kept in the keychain, never in config
  * @property {boolean} [readOnly] the credential refuses every write. Set by
  *   `config set read_only`, stored by `auth login`, kept on every rotation.
+ * @property {number[]} [writeDivisions] the only divisions a write may reach.
+ *   Set by `config set write_divisions`, stored by `auth login`, kept on
+ *   every rotation.
  */
 
 /**

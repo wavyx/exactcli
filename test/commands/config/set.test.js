@@ -64,7 +64,7 @@ describe('config set', () => {
 
     expect(err.exitCode ?? err.oclif?.exit).toBe(64)
     expect(err.message).toBe(
-      'Unknown config key bogus. Allowed: host, ngrok_domain, division, default_output, read_only',
+      'Unknown config key bogus. Allowed: host, ngrok_domain, division, default_output, read_only, write_divisions',
     )
     expect(getProfileConfig('default', 'bogus')).toBeUndefined()
   })
@@ -249,6 +249,62 @@ describe('config set', () => {
       expect(mocks.getOAuthTokens).toHaveBeenCalledWith('default')
       expect(mocks.setOAuthTokens).not.toHaveBeenCalled()
       expect(getProfileConfig('default', 'read_only')).toBe(true)
+    })
+  })
+
+  describe('write_divisions', () => {
+    it('stores the division codes as a list of numbers', async () => {
+      await runCmd(ConfigSetCommand, ['write_divisions', '123456'])
+      expect(getProfileConfig('default', 'write_divisions')).toEqual([123456])
+
+      await runCmd(ConfigSetCommand, ['write_divisions', '123456, 42'])
+      expect(getProfileConfig('default', 'write_divisions')).toEqual([
+        123456, 42,
+      ])
+    })
+
+    it('rejects anything but positive division codes with exit 64', async () => {
+      process.stdout.isTTY = true
+      for (const value of [
+        'abc',
+        '',
+        '0',
+        '1,,2',
+        '12a',
+        '-5',
+        '9007199254740993',
+      ]) {
+        const err = await ConfigSetCommand.run([
+          'write_divisions',
+          value,
+        ]).catch((e) => e)
+        expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+        expect(err.message).toMatch(
+          /write_divisions must list division codes separated by commas/,
+        )
+      }
+      expect(mocks.setOAuthTokens).not.toHaveBeenCalled()
+    })
+
+    it('writes the list into the keychain blob under the oauth lock', async () => {
+      mocks.getOAuthTokens.mockResolvedValue({ ...BLOB, readOnly: true })
+
+      await runCmd(ConfigSetCommand, [
+        'write_divisions',
+        '123456',
+        '--profile',
+        'dev',
+      ])
+
+      expect(mocks.withLock).toHaveBeenCalledWith(
+        'oauth-dev',
+        expect.any(Function),
+      )
+      expect(mocks.setOAuthTokens).toHaveBeenCalledWith('dev', {
+        ...BLOB,
+        readOnly: true,
+        writeDivisions: [123456],
+      })
     })
   })
 })

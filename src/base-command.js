@@ -3,11 +3,12 @@ import chalk from 'chalk'
 import createDebug from 'debug'
 import { formatOutput } from './lib/output/index.js'
 import { jqBinaryExists, jqBinaryPath } from './lib/jq.js'
-import { PROFILE_NAME_RE, loadConfig } from './lib/config.js'
+import { PROFILE_NAME_RE, getProfileConfig, loadConfig } from './lib/config.js'
 import { getValidOAuthAccess, resolveCredentials } from './lib/auth.js'
 import { createClient } from './lib/client.js'
 import { requireDivision } from './lib/odata.js'
 import { handleError, CliError } from './lib/errors.js'
+import { allowedWriteDivisions } from './lib/writes.js'
 
 const OUTPUT_FORMATS = ['table', 'json', 'yaml', 'csv']
 
@@ -170,6 +171,10 @@ export default class BaseCommand extends Command {
       retry: !flags['no-retry'],
       timeout: flags.timeout,
       userAgent: `exactcli/${this.config.version}`,
+      writeDivisions: allowedWriteDivisions(
+        creds.writeDivisions,
+        getProfileConfig(this.activeProfile, 'write_divisions'),
+      ),
       // A token from EXACTCLI_ACCESS_TOKEN carries no refresh token, so a 401
       // on that path stays a 401 instead of reaching for the keychain.
       onRefresh: creds.oauth

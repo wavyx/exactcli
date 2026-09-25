@@ -134,6 +134,39 @@ describe('auth status', () => {
     expect(stdout).toContain('Writes:             locked: read-only credential')
   })
 
+  it('prints the divisions that writes may reach', async () => {
+    profile({ write_divisions: [123456, 42] })
+    mocks.getOAuthTokens.mockResolvedValue(
+      blob(10_000, { writeDivisions: [123456] }),
+    )
+
+    const stdout = await runCmd(StatusCommand)
+
+    expect(stdout).toContain('Writes:             division 123456 only')
+  })
+
+  it('names several divisions, and an empty list as a lock', async () => {
+    profile({ write_divisions: [1, 2] })
+    mocks.getOAuthTokens.mockResolvedValue(blob(10_000))
+    expect(await runCmd(StatusCommand)).toContain(
+      'Writes:             divisions 1, 2 only',
+    )
+
+    mocks.getOAuthTokens.mockResolvedValue(blob(10_000, { writeDivisions: [] }))
+    expect(await runCmd(StatusCommand)).toContain(
+      'Writes:             locked: no division allowed',
+    )
+  })
+
+  it('emits the write division list when piped, from the config alone too', async () => {
+    process.stdout.isTTY = false
+    profile({ write_divisions: [123456] })
+
+    const status = JSON.parse(await runCmd(StatusCommand))
+
+    expect(status.writeDivisions).toEqual([123456])
+  })
+
   it('emits the lock of the credential when piped', async () => {
     process.stdout.isTTY = false
     mocks.getOAuthTokens.mockResolvedValue(blob(10_000, { readOnly: true }))
@@ -250,6 +283,7 @@ describe('auth status', () => {
       refreshableNow: true,
       refreshTokenIdleDays: 0,
       readOnly: false,
+      writeDivisions: null,
       identity: { fullName: 'Jane Doe', email: 'jane@acme.example' },
     })
   })
@@ -267,6 +301,7 @@ describe('auth status', () => {
       refreshableNow: null,
       refreshTokenIdleDays: null,
       readOnly: null,
+      writeDivisions: null,
       identity: null,
     })
   })

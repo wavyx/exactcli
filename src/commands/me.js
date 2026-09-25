@@ -15,7 +15,7 @@ const COLUMNS = {
 }
 
 export default class Me extends BaseCommand {
-  static description = 'Show the current user and session'
+  static description = 'Show the current user and session (GET current/Me)'
 
   static examples = [
     '<%= config.bin %> me',

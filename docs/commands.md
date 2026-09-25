@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.9.0 (118 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.10.0 (118 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -208,7 +208,7 @@ exactcli mcp --all-tools --allow-writes
 
 ### `exactcli me`
 
-Show the current user and session
+Show the current user and session (GET current/Me)
 
 ```
 exactcli me [flags]
@@ -788,7 +788,7 @@ exactcli bank-entry list --year 2026 --period 9 --all --output csv
 
 ### `exactcli bank-statement upload`
 
-Upload a bank statement file (CODA, MT940, CAMT) to the bank import
+Upload a bank statement file (CODA, MT940, CAMT) to the bank import (POST documents/Documents, POST cashflow/BankStatementUploadAttachments)
 
 ```
 exactcli bank-statement upload [flags]
@@ -913,6 +913,7 @@ Examples:
 exactcli config set host start.exactonline.be
 exactcli config set division 123456
 exactcli config set read_only true
+exactcli config set write_divisions 123456
 ```
 
 ### `exactcli config unset`
@@ -1187,7 +1188,7 @@ exactcli division use 123456 --profile acme
 
 ### `exactcli document create`
 
-Create a document and attach files
+Create a document and attach files (POST documents/Documents, POST documents/DocumentAttachments)
 
 ```
 exactcli document create [flags]
@@ -1616,7 +1617,7 @@ exactcli journal list --type 12 --search bank
 
 ### `exactcli journal-entry create`
 
-Post a general journal entry (OD) from ledger account codes
+Post a general journal entry (OD) from ledger account codes (POST generaljournalentry/GeneralJournalEntries)
 
 ```
 exactcli journal-entry create [flags]
@@ -1729,7 +1730,7 @@ exactcli mailbox list --account 1001 --type 1
 
 ### `exactcli mailbox upload`
 
-Send files to the digital postbox or the scan service of the division
+Send files to the digital postbox or the scan service of the division (POST mailbox/MailMessagesSent, POST mailbox/MailMessageAttachments)
 
 ```
 exactcli mailbox upload [flags]

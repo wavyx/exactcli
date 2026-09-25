@@ -173,6 +173,7 @@ beforeEach(() => {
   process.env.JQ_PATH = process.execPath
   config.loadConfig.mockReset()
   config.loadConfig.mockReturnValue({ activeProfile: 'default' })
+  config.getProfileConfig.mockReset()
   auth.resolveCredentials.mockResolvedValue({
     token: 'env-token',
     source: 'env',
@@ -355,6 +356,32 @@ describe('BaseCommand init', () => {
     expect(options.retry).toBe(false)
     expect(options.timeout).toBe(4200)
     expect(options.userAgent).toMatch(/^exactcli\/\d+\.\d+\.\d+/)
+  })
+
+  it('gives the client no write division list by default', async () => {
+    mockApi().get(ME).reply(200, { d: {} })
+
+    await runCmd(ApiCmd, ['--output', 'json'])
+
+    expect(createClient.mock.calls[0][0].writeDivisions).toBeNull()
+  })
+
+  it('gives the client the divisions that both carriers allow', async () => {
+    // The keychain blob and the config store each carry a list. Only the
+    // divisions that both name remain, so neither carrier widens the other.
+    auth.resolveCredentials.mockResolvedValue(
+      oauthCreds({ writeDivisions: [123456, 42] }),
+    )
+    config.getProfileConfig.mockImplementation((profile, key) =>
+      profile === 'default' && key === 'write_divisions'
+        ? [123456, 7]
+        : undefined,
+    )
+    mockApi().get(ME).reply(200, { d: {} })
+
+    await runCmd(ApiCmd, ['--output', 'json'])
+
+    expect(createClient.mock.calls[0][0].writeDivisions).toEqual([123456])
   })
 
   it('enables the retry by default', async () => {

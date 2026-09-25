@@ -114,7 +114,9 @@ with `list`, `get` and `api`: pass the `service/Resource` path, for example
 
 Full reference with every flag: [docs/commands.md](docs/commands.md) or
 `exactcli <command> --help`. End-to-end flows (login, entries, invoices, documents,
-synchronisation, reporting, agents): [docs/recipes.md](docs/recipes.md).
+synchronisation, reporting, agents): [docs/recipes.md](docs/recipes.md). Which API calls
+have a typed command, and which writes were verified live:
+[docs/coverage.md](docs/coverage.md).
 
 Global flags on every command: `--output table|json|yaml|csv`, `--jq <expr>`,
 `--fields a,b`, `--profile <name>`, `--division <code>`, `--limit <n>`,
@@ -295,6 +297,22 @@ exactcli api DELETE "crm/Accounts(guid'<id>')" --allow-writes --yes   # raw, no 
 `true`, `false`, `null`; `@str:1001` pins a string; `@guid:<id>` pins a GUID;
 `@ref:crm/Accounts:1001` resolves a code to the GUID of that record.
 
+Two profile settings protect an administration that must stay untouched:
+
+```sh
+exactcli config set read_only true --profile prod           # no write at all
+exactcli config set write_divisions 123456 --profile test   # writes reach 123456 only
+```
+
+`read_only` refuses every write of the profile. `write_divisions` takes a list of
+division codes separated by commas. A write to another division, or to a path without
+a division, stops with exit 77 before the request leaves. The check covers the typed
+commands, the generic ones, `api` and the MCP tools. `config set` stores both settings in the profile and in the keychain credential.
+`auth login` keeps the stricter of the two carriers, so an empty or edited config
+directory cannot loosen them. A token from `EXACTCLI_ACCESS_TOKEN` skips the keychain:
+only the config settings apply to it. `auth status` shows both settings.
+`config unset write_divisions` removes the list.
+
 ## Sync and bulk
 
 Exact offers three read APIs per resource. The regular API pages at 60. The bulk
@@ -388,6 +406,8 @@ Or in `.mcp.json` or `claude_desktop_config.json`:
 - The raw `api` command cannot leave that host.
 - Writes are off unless you add `--allow-writes`; a delete needs `--yes` as well.
   `create`, `update` and `delete` validate the body against the catalogue first.
+- A profile can refuse every write (`read_only`) or limit writes to a list of
+  divisions (`write_divisions`). Both settings live in the keychain credential too.
 - `--verbose` never prints credentials.
 
 ## Contributing

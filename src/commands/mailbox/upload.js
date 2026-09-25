@@ -64,7 +64,7 @@ async function defaultMailboxes(cmd, path) {
 
 export default class MailboxUploadCommand extends BaseCommand {
   static description =
-    'Send files to the digital postbox or the scan service of the division'
+    'Send files to the digital postbox or the scan service of the division (POST mailbox/MailMessagesSent, POST mailbox/MailMessageAttachments)'
 
   static examples = [
     '<%= config.bin %> mailbox upload --file invoice.pdf --operation 2 --dry-run',

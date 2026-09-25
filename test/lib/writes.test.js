@@ -8,6 +8,7 @@ import { mockApi } from '../helpers.js'
 import { createClient } from '../../src/lib/client.js'
 import {
   WRITE_METHODS,
+  allowedWriteDivisions,
   applyRefs,
   assertWritesAllowed,
   coerce,
@@ -354,3 +355,38 @@ describe('describeRequest and readBody', () => {
 })
 
 rmSync(TMP_CONFIG_DIR, { recursive: true, force: true })
+
+describe('allowedWriteDivisions', () => {
+  it('allows every division when no carrier holds a list', () => {
+    expect(allowedWriteDivisions(undefined, undefined)).toBeNull()
+  })
+
+  it('takes the list of the only carrier that holds one', () => {
+    expect(allowedWriteDivisions([1], undefined)).toEqual([1])
+    expect(allowedWriteDivisions(undefined, [2])).toEqual([2])
+  })
+
+  it('refuses every division for a value that is not a list of codes', () => {
+    // A hand-edited config must never lift the restriction.
+    for (const bad of [
+      123456,
+      '123456',
+      [1, -2],
+      [1.5],
+      ['1'],
+      {},
+      [2 ** 53],
+    ]) {
+      expect(allowedWriteDivisions(bad, undefined)).toEqual([])
+      expect(allowedWriteDivisions(undefined, bad)).toEqual([])
+    }
+    expect(allowedWriteDivisions(null, undefined)).toBeNull()
+  })
+
+  it('keeps only the divisions that both lists name', () => {
+    // An empty config directory must not widen the list of the keychain,
+    // and a config edit must not widen it either.
+    expect(allowedWriteDivisions([1, 2], [2, 3])).toEqual([2])
+    expect(allowedWriteDivisions([1], [3])).toEqual([])
+  })
+})
