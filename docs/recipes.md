@@ -582,8 +582,14 @@ runs `exactcli` as a child process under the profile and the division of the ser
   quantities posts like an invoice. `--credit-note` therefore needs a negative total.
 - `VATNonDeductiblePercentage` and `PrivateUsePercentage` are fractions: 50 answers 500
   "must be lower than or equal to 100"; 0.5 books half of the VAT on the cost account.
-- A deferral period (`from`/`to` on an entry line) needs the deferred cost settings of
-  the administration; without them Exact answers 500.
+- A deferral period (`from`/`to` on an entry line) needs the accrual accounts of the
+  administration: Administration > Settings > G/L accounts: links (prepaid expenses,
+  deferred income, accrued expenses, accrued income) and the journal for accruals.
+  Without them Exact answers 500. With them, Exact books the spread as Type 86 entries in
+  that journal, one per period; deleting the source entry deletes them too (verified
+  live).
+- A purchase invoice (`purchase/PurchaseInvoices`) needs the purchase account and the
+  stock variance account of the item group; both are settings of the web interface.
 - A bank line is signed from the point of view of the bank: a customer payment is
   positive and books the receivable (400000) on the credit side.
 - A purchase invoice (`purchase/PurchaseInvoices`) takes the purchase account from the

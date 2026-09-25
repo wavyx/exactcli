@@ -50,6 +50,26 @@ afterEach(() => {
 })
 
 /** The supplier lookup by code, then the item lookup by code. */
+/**
+ * The financial period that covers the invoice date: the given one, or today
+ * without --date.
+ */
+const mockPeriod = (date) =>
+  mockApi()
+    .get('/api/v1/123/financial/FinancialPeriods')
+    .query(
+      (q) =>
+        q.$select === 'FinYear,FinPeriod' &&
+        q.$top === '1' &&
+        (date
+          ? q.$filter ===
+            `StartDate le datetime'${date}' and EndDate ge datetime'${date}'`
+          : /^StartDate le datetime'\d{4}-\d{2}-\d{2}' and EndDate ge/.test(
+              q.$filter,
+            )),
+    )
+    .reply(200, { d: { results: [{ FinYear: 2026, FinPeriod: 9 }] } })
+
 const mockLookups = () =>
   mockApi()
     .get(ACCOUNTS)
@@ -70,8 +90,9 @@ const fail = (argv) => {
 const exit = (err) => err.exitCode ?? err.oclif?.exit
 
 describe('purchase-invoice create', () => {
-  it('--dry-run resolves the supplier and the item and sends no POST', async () => {
+  it('--dry-run resolves the supplier, the item and the period of today, and sends no POST', async () => {
     const lookups = mockLookups()
+    const period = mockPeriod()
     const post = mockApi().post(INVOICES).reply(201, { d: {} })
 
     const out = JSON.parse(
@@ -79,6 +100,7 @@ describe('purchase-invoice create', () => {
     )
 
     expect(lookups.isDone()).toBe(true)
+    expect(period.isDone()).toBe(true)
     expect(post.isDone()).toBe(false)
     expect(out).toEqual({
       method: 'POST',
@@ -88,6 +110,8 @@ describe('purchase-invoice create', () => {
         Supplier: SUPPLIER,
         Type: 8033,
         PurchaseInvoiceLines: [{ Item: ITEM, Quantity: 2, UnitPrice: 100 }],
+        FinancialYear: 2026,
+        FinancialPeriod: 9,
       },
     })
   })
@@ -102,6 +126,9 @@ describe('purchase-invoice create', () => {
   })
 
   it('POSTs the invoice with --allow-writes and prints the record', async () => {
+    // Exact refuses a purchase invoice without its financial year (verified
+    // live): the period comes from the invoice date.
+    mockPeriod('2026-09-03')
     const scope = mockLookups()
       .post(INVOICES, {
         Journal: '600',
@@ -110,6 +137,8 @@ describe('purchase-invoice create', () => {
         Description: 'Office supplies',
         InvoiceDate: '2026-09-03',
         YourRef: 'INV-2026-42',
+        FinancialYear: 2026,
+        FinancialPeriod: 9,
         PurchaseInvoiceLines: [
           {
             Item: ITEM,
@@ -153,7 +182,8 @@ describe('purchase-invoice create', () => {
     })
   })
 
-  it('passes a GUID supplier and a GUID item through without a lookup', async () => {
+  it('passes a GUID supplier and a GUID item through without a code lookup', async () => {
+    mockPeriod()
     const out = JSON.parse(
       await runCmd(Cmd, [
         '--supplier',
@@ -173,6 +203,30 @@ describe('purchase-invoice create', () => {
     expect(out.body.PurchaseInvoiceLines).toEqual([
       { Item: ITEM, Quantity: 1, UnitPrice: 50 },
     ])
+  })
+
+  it('fails with 65 when no financial period covers the date', async () => {
+    mockApi()
+      .get('/api/v1/123/financial/FinancialPeriods')
+      .query(true)
+      .reply(200, { d: { results: [] } })
+
+    const err = await fail([
+      '--supplier',
+      SUPPLIER,
+      '--journal',
+      '600',
+      '--line',
+      `${ITEM}:1:50`,
+      '--date',
+      '2031-01-01',
+      '--dry-run',
+    ])
+
+    expect(exit(err)).toBe(65)
+    expect(err.message).toBe(
+      'No financial period covers 2031-01-01: create the financial year first',
+    )
   })
 
   it('fails with 64 on a bad --line, before the gate', async () => {

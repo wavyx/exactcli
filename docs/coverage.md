@@ -15,9 +15,9 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 50 | - |
-| regular | POST | 151 | 35 | 16 |
+| regular | POST | 151 | 35 | 17 |
 | regular | PUT | 103 | 6 | 3 |
-| regular | DELETE | 97 | 1 | 11 |
+| regular | DELETE | 97 | 1 | 12 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 0 |
 | beta | PUT | 1 | 0 | 0 |
@@ -299,9 +299,9 @@ administration (`scripts/live-writes.json`).
 | PUT project/WBSExpenses | - | no |
 | DELETE project/WBSExpenses | - | no |
 | POST purchase/PurchaseInvoiceLines | - | no |
-| POST purchase/PurchaseInvoices | `purchase-invoice create` | no |
+| POST purchase/PurchaseInvoices | `purchase-invoice create` | yes |
 | PUT purchase/PurchaseInvoices | - | no |
-| DELETE purchase/PurchaseInvoices | - | no |
+| DELETE purchase/PurchaseInvoices | - | yes |
 | POST purchaseentry/PurchaseEntries | `purchase-entry create` | yes |
 | PUT purchaseentry/PurchaseEntries | - | no |
 | DELETE purchaseentry/PurchaseEntries | - | yes |

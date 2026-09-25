@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.11.1] - 2026-09-25
+
+### Fixed
+
+- `purchase-invoice create` sends the financial year and period of the invoice
+  date (today without `--date`), looked up in `financial/FinancialPeriods`:
+  Exact refuses a purchase invoice without them and does not derive them from
+  the date (verified live). A date that no period covers fails with 65.
+
 ## [0.11.0] - 2026-09-25
 
 ### Added

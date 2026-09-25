@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.11.0 (128 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.11.1 (128 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -2217,7 +2217,7 @@ exactcli purchase-invoice create [flags]
 - `--type <value>` - Invoice type: 8030 direct purchase invoice, 8031 direct purchase invoice (credit), 8033 purchase invoice, 8034 purchase invoice (credit)
 - `--line <value>` _(required)_ - Invoice line as item:quantity:unit price[:description] (repeatable)
 - `--description <value>` - Invoice description
-- `--date <value>` - Invoice date (YYYY-MM-DD)
+- `--date <value>` - Invoice date (YYYY-MM-DD). The financial year and period come from it, or from today without --date
 - `--reference <value>` - Invoice number of the supplier (YourRef)
 - `--dry-run` - Show the validated request and send nothing
 

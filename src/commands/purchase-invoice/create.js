@@ -4,6 +4,7 @@ import { resolvePath } from '../../lib/catalog.js'
 import { assertDate, parseLine, resolveLines } from '../../lib/lines.js'
 import { autoColumns, normalize, unwrap } from '../../lib/odata.js'
 import { resolveRef } from '../../lib/refs.js'
+import { financialPeriod, today } from '../../lib/periods.js'
 import {
   assertWritesAllowed,
   describeRequest,
@@ -54,7 +55,11 @@ export default class PurchaseInvoiceCreateCommand extends BaseCommand {
       description: `Invoice line as ${LINE.shape} (repeatable)`,
     }),
     description: Flags.string({ description: 'Invoice description' }),
-    date: Flags.string({ description: 'Invoice date (YYYY-MM-DD)' }),
+    date: Flags.string({
+      description:
+        'Invoice date (YYYY-MM-DD). The financial year and period come from ' +
+        'it, or from today without --date',
+    }),
     reference: Flags.string({
       description: 'Invoice number of the supplier (YourRef)',
     }),
@@ -95,6 +100,9 @@ export default class PurchaseInvoiceCreateCommand extends BaseCommand {
         'Item',
         'logistics/Items',
       ),
+      // Exact refuses a purchase invoice without its financial year and does
+      // not derive it from the date (verified live).
+      ...(await financialPeriod(this, date ?? today())),
     }
 
     if (dryRun) {
