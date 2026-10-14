@@ -262,6 +262,15 @@ describe('doctor', () => {
     expect((await runJson(['--offline'])).ngrok.status).toBe('ok')
   })
 
+  it('looks for plain ngrok on other platforms', async () => {
+    // The mirror of the windows case, so a windows runner covers it too.
+    Object.defineProperty(process, 'platform', {
+      value: 'linux',
+      configurable: true,
+    })
+    expect((await runJson(['--offline'])).ngrok.status).toBe('ok')
+  })
+
   it('fails host, keychain and config when they are broken', async () => {
     profile({ ...FULL, host: 'evil.example' })
     mocks.isKeychainAvailable.mockReturnValue(false)
