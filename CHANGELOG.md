@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-14
+
 ### Added
 
 - The documentation site in `website/` (Astro and Starlight): the home page,
