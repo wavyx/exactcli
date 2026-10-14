@@ -8,12 +8,16 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
-- 22 more write calls are verified live on a test administration (128 in
-  all): document updates (contact, quotation, purchase and sales invoices,
+- 26 more write calls are verified live on a test administration: document updates (contact, quotation, purchase and sales invoices,
   purchase entry, purchase and sales orders, goods receipts and deliveries,
   webhook URL), sales order print, complete and line completion, goods
   receipt and delivery creation, cash entry and sales order deletes, CRM
-  notes, events and tasks, and the mailbox upload.
+  notes, events and tasks, the mailbox upload, and the quotation review,
+  reopen, reject and accept actions (132 in all).
+- Known limit: `quotation print` gets 500 "Non autorise - Modification:
+  Statut" from Exact through the API, also on a quotation created in the
+  web interface, which prints it fine. Print the quotation there; the other
+  quotation actions then work through the CLI.
 - The webhook `--description` help says that Exact may keep its own value:
   Exact ignored it on POST and PUT in a live test.
 

@@ -15,7 +15,7 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 53 |
+| regular | POST | 151 | 70 | 57 |
 | regular | PUT | 103 | 42 | 38 |
 | regular | DELETE | 97 | 41 | 37 |
 | beta | GET | 6 | 0 | - |
@@ -73,7 +73,7 @@ administration (`scripts/live-writes.json`).
 | PUT cashflow/Payments | `payment approve`, `payment hold` | yes |
 | POST cashflow/ProcessPayments | `payment process` | no |
 | PUT cashflow/Receivables | `receivable collect`, `receivable update` | yes |
-| POST crm/AcceptQuotation | `quotation accept` | no |
+| POST crm/AcceptQuotation | `quotation accept` | yes |
 | POST crm/Accounts | `account create` | yes |
 | PUT crm/Accounts | `account update` | yes |
 | DELETE crm/Accounts | `account delete` | yes |
@@ -101,9 +101,9 @@ administration (`scripts/live-writes.json`).
 | POST crm/Quotations | `quotation create` | yes |
 | PUT crm/Quotations | `quotation update` | yes |
 | DELETE crm/Quotations | `quotation delete` | yes |
-| POST crm/RejectQuotation | `quotation reject` | no |
-| POST crm/ReopenQuotation | `quotation reopen` | no |
-| POST crm/ReviewQuotation | `quotation review` | no |
+| POST crm/RejectQuotation | `quotation reject` | yes |
+| POST crm/ReopenQuotation | `quotation reopen` | yes |
+| POST crm/ReviewQuotation | `quotation review` | yes |
 | POST customfield/UpdateCustomField | `custom-field set` | no |
 | POST documents/DocumentAttachments | `document create` | yes |
 | DELETE documents/DocumentAttachments | - | no |

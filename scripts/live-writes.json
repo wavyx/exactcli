@@ -126,5 +126,9 @@
   "PUT salesinvoice/SalesInvoices",
   "PUT salesorder/GoodsDeliveries",
   "PUT salesorder/SalesOrders",
-  "PUT webhooks/WebhookSubscriptions"
+  "PUT webhooks/WebhookSubscriptions",
+  "POST crm/ReviewQuotation",
+  "POST crm/ReopenQuotation",
+  "POST crm/RejectQuotation",
+  "POST crm/AcceptQuotation"
 ]

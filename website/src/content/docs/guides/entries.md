@@ -56,6 +56,11 @@ exactcli quotation accept <id> --action 1 --allow-writes        # 1 = create a s
 `sales-order invoice` queues the run and prints the `ProcessID`; `--wait` reads the
 result until the run ends, and exits 65 on an error status or a failed invoice.
 
+A quotation must be printed before `review`, `reject` or `accept`. In a live test, Exact
+refused `quotation print` through the API (500 "Non autorise - Modification: Statut"),
+also for a quotation created in the web interface. Print the quotation in Exact Online;
+the other actions then work from the command line.
+
 ## Update and delete
 
 Every header takes `delete`, and `update` where Exact accepts a PUT, by GUID or by
