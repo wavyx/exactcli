@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.14.0 (250 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.14.2 (250 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -5768,7 +5768,7 @@ exactcli webhook create [flags]
 - `--yes` - Confirm a DELETE
 - `--topic <value>` _(required)_ - Topic, for example Accounts or SalesInvoices
 - `--url <value>` _(required)_ - Callback URL (https only)
-- `--description <value>` - Description of the subscription
+- `--description <value>` - Description of the subscription (Exact may keep its own value)
 - `--dry-run` - Show the validated request and send nothing
 
 Examples:
@@ -5860,7 +5860,7 @@ exactcli webhook update <id> [flags]
 - `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
 - `--yes` - Confirm a DELETE
 - `--url <value>` - Callback URL (https only)
-- `--description <value>` - Description of the subscription
+- `--description <value>` - Description of the subscription (Exact may keep its own value)
 - `--dry-run` - Show the validated request and send nothing
 
 Examples:

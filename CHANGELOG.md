@@ -6,6 +6,17 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- 22 more write calls are verified live on a test administration (128 in
+  all): document updates (contact, quotation, purchase and sales invoices,
+  purchase entry, purchase and sales orders, goods receipts and deliveries,
+  webhook URL), sales order print, complete and line completion, goods
+  receipt and delivery creation, cash entry and sales order deletes, CRM
+  notes, events and tasks, and the mailbox upload.
+- The webhook `--description` help says that Exact may keep its own value:
+  Exact ignored it on POST and PUT in a live test.
+
 ## [0.14.2] - 2026-10-14
 
 ### Changed

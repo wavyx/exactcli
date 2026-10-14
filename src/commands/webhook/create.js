@@ -31,7 +31,8 @@ export default class WebhookCreateCommand extends BaseCommand {
       description: 'Callback URL (https only)',
     }),
     description: Flags.string({
-      description: 'Description of the subscription',
+      description:
+        'Description of the subscription (Exact may keep its own value)',
     }),
     'dry-run': Flags.boolean({
       description: 'Show the validated request and send nothing',
