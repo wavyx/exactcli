@@ -79,10 +79,11 @@ async function runWithWarnings(argv) {
   })
   try {
     const stdout = await runCmd(LoginCommand, argv)
-    // oclif wraps a warning over several lines and prefixes each one.
+    // oclif wraps a warning over several lines and prefixes each one:
+    // "\u203a" on most terminals, "\u00bb" on Windows.
     const warned = warnings
       .join(' ')
-      .replace(/ \u203a/g, '')
+      .replace(/ [\u203a\u00bb]/g, '')
       .replace(/\s+/g, ' ')
     return { stdout, warnings: warned }
   } finally {

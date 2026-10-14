@@ -18,6 +18,15 @@ All notable changes to this project are documented in this file. The format foll
   `wavyx/homebrew-tap` when the `TAP_TOKEN` secret is set.
 - Issue and pull request templates, dependabot and a code of conduct.
 
+### Fixed
+
+- CI on Windows: the repository keeps LF line ends, and the login test
+  accepts the Windows wrap prefix of oclif warnings.
+- Coverage on Node 20: the typed command factories decide their examples
+  and flags outside the class field initializers.
+- `npm run test:coverage` builds the oclif manifest first, so a missing or
+  stale manifest no longer lowers the coverage.
+
 ## [0.14.0] - 2026-10-14
 
 ### Added

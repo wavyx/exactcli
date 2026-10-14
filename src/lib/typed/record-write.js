@@ -91,26 +91,31 @@ const refWord = (spec) => (spec.byCode ? 'GUID or code' : 'GUID')
  * @returns {typeof BaseCommand}
  */
 export function defineRecordCreateCommand(spec) {
+  // Decided here, not in the static initializers: Node 20 does not count
+  // branches inside class field initializers for coverage.
+  const examples = spec.codeFlags
+    ? [
+        `<%= config.bin %> ${spec.topic} create --code X1 --description "New one" --dry-run`,
+        `<%= config.bin %> ${spec.topic} create --code X1 --description "New one" --set Key=value --allow-writes`,
+      ]
+    : [
+        `<%= config.bin %> ${spec.topic} create --set Key=value --dry-run`,
+        `<%= config.bin %> ${spec.topic} create --body @record.json --allow-writes`,
+      ]
+  const codeFlags = spec.codeFlags
+    ? {
+        code: Flags.string({ description: 'Code' }),
+        description: Flags.string({ description: 'Description' }),
+      }
+    : {}
+
   return class RecordCreateCommand extends BaseCommand {
     static description = `Create ${spec.singular} (POST ${spec.resource})`
-    static examples = spec.codeFlags
-      ? [
-          `<%= config.bin %> ${spec.topic} create --code X1 --description "New one" --dry-run`,
-          `<%= config.bin %> ${spec.topic} create --code X1 --description "New one" --set Key=value --allow-writes`,
-        ]
-      : [
-          `<%= config.bin %> ${spec.topic} create --set Key=value --dry-run`,
-          `<%= config.bin %> ${spec.topic} create --body @record.json --allow-writes`,
-        ]
+    static examples = examples
 
     static flags = {
       ...writeFlags,
-      ...(spec.codeFlags
-        ? {
-            code: Flags.string({ description: 'Code' }),
-            description: Flags.string({ description: 'Description' }),
-          }
-        : {}),
+      ...codeFlags,
       body: bodyFlags.body,
       set: bodyFlags.set,
       'dry-run': bodyFlags['dry-run'],

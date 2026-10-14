@@ -1,0 +1,2 @@
+# Keep LF everywhere: tests read docs/*.md and match on "\n".
+* text=auto eol=lf

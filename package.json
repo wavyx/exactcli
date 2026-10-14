@@ -325,6 +325,7 @@
     "lint:fix": "eslint --fix . && prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "pretest:coverage": "npm run build",
     "test:coverage": "vitest run --coverage",
     "prepare": "npm run build",
     "postpack": "rm -f oclif.manifest.json"
