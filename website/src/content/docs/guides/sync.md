@@ -41,6 +41,10 @@ exactcli backup --dir ./backup-acme --feed Financial/TransactionLines --feed CRM
 HMAC-SHA256 signature of each notification with the webhook secret of the app, prints
 each verified one as a JSON line, and removes its subscriptions when it stops.
 
+Use the webhook secret of the app the profile signs in with. Exact signs each
+notification with the app named in `Content.ClientId`, and a refused notification names
+that app.
+
 ```sh
 export EXACTCLI_WEBHOOK_SECRET=...     # or type it at the prompt
 exactcli webhook listen --topic Accounts --topic SalesInvoices --allow-writes

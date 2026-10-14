@@ -102,5 +102,7 @@
   "DELETE logistics/SalesItemPrices",
   "PUT logistics/SupplierItem",
   "DELETE logistics/SupplierItem",
-  "PUT documents/Documents"
+  "PUT documents/Documents",
+  "POST webhooks/WebhookSubscriptions",
+  "DELETE webhooks/WebhookSubscriptions"
 ]

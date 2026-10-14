@@ -4,6 +4,27 @@ import { createServer } from 'node:http'
 /** A notification is small; anything larger is not from Exact. */
 const MAX_BODY = 64 * 1024
 const HEX_RE = /^[0-9a-f]+$/i
+const GUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Why a notification was refused. Exact signs with the webhook secret of the
+ * app in Content.ClientId, so naming that app shows a secret of another app
+ * at once. The field is not trusted: only a GUID is echoed.
+ * @param {string} raw the request body
+ * @returns {string}
+ */
+function refusal(raw) {
+  let app
+  try {
+    app = JSON.parse(raw)?.Content?.ClientId
+  } catch {
+    // not JSON: nothing to name
+  }
+  return typeof app === 'string' && GUID_RE.test(app)
+    ? `bad signature for app ${app}: use the webhook secret of that app`
+    : 'bad signature'
+}
 
 /**
  * The raw text of the Content node of a notification. Exact signs these exact
@@ -112,7 +133,7 @@ export function startWebhookServer({ port, path, secret, onEvent, onInvalid }) {
       if (raw.trim() === '') return answer(200)
       const content = verifiedContent(raw, secret)
       if (content === null) {
-        onInvalid('bad signature')
+        onInvalid(refusal(raw))
         return answer(401)
       }
       onEvent(content)

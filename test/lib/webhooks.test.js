@@ -117,4 +117,26 @@ describe('startWebhookServer', () => {
     expect(onInvalid).toHaveBeenCalledTimes(2)
     expect(onInvalid).toHaveBeenCalledWith('bad signature')
   })
+
+  it('names the app a refused notification was signed for', async () => {
+    const onInvalid = vi.fn()
+    server = await startWebhookServer({
+      port: 0,
+      path: '/callback',
+      secret: SECRET,
+      onEvent: vi.fn(),
+      onInvalid,
+    })
+    const app = '0c2060c5-2cff-407a-8d86-3fc4c5cb669c'
+    const withApp = (id) => CONTENT.replace('{', `{"ClientId":"${id}",`)
+
+    await send(server.port, { data: body(withApp(app), sign('x')) })
+    // Only a GUID reaches the terminal: the field is not trusted.
+    await send(server.port, { data: body(withApp('a\\nb'), sign('x')) })
+
+    expect(onInvalid.mock.calls).toEqual([
+      [`bad signature for app ${app}: use the webhook secret of that app`],
+      ['bad signature'],
+    ])
+  })
 })

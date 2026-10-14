@@ -15,9 +15,9 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 42 |
+| regular | POST | 151 | 70 | 43 |
 | regular | PUT | 103 | 42 | 28 |
-| regular | DELETE | 97 | 41 | 34 |
+| regular | DELETE | 97 | 41 | 35 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 0 |
 | beta | PUT | 1 | 0 | 0 |
@@ -382,6 +382,6 @@ administration (`scripts/live-writes.json`).
 | POST vat/VATCodes | `vat-code create` | yes |
 | PUT vat/VATCodes | `vat-code update` | yes |
 | DELETE vat/VATCodes | `vat-code delete` | yes |
-| POST webhooks/WebhookSubscriptions | `webhook create`, `webhook listen` | no |
+| POST webhooks/WebhookSubscriptions | `webhook create`, `webhook listen` | yes |
 | PUT webhooks/WebhookSubscriptions | `webhook update` | no |
-| DELETE webhooks/WebhookSubscriptions | `webhook delete`, `webhook listen` | no |
+| DELETE webhooks/WebhookSubscriptions | `webhook delete`, `webhook listen` | yes |

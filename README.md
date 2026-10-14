@@ -238,7 +238,9 @@ domain of the redirect URI), checks the HMAC-SHA256 signature of each notificati
 the webhook secret of the app, prints each verified one as a JSON line, and removes its
 subscriptions when it stops (Ctrl+C, also during the set-up, or `--max-events`; `--keep`
 leaves them). That removal needs no `--yes`: it touches only the subscriptions of the
-run. A signed body with a second `Content`, or a signed `Content` nested deeper, is
+run. Use the webhook secret of the app the profile signs in with: Exact signs with the
+app named in `Content.ClientId`, and a refusal names that app. A signed body with a
+second `Content`, or a signed `Content` nested deeper, is
 refused. The secret
 comes from `EXACTCLI_WEBHOOK_SECRET` in the shell, never from a `.env` file, or from a
 prompt:

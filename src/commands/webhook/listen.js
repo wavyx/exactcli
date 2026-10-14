@@ -72,7 +72,9 @@ export default class WebhookListenCommand extends BaseCommand {
     const base = divisionPath(this.resolveDivision(), RESOURCE)
     const secret =
       process.env.EXACTCLI_WEBHOOK_SECRET ||
-      (await password({ message: 'Webhook secret of the app:' }))
+      (await password({
+        message: 'Webhook secret of the app this profile signs in with:',
+      }))
     // An empty key would let anyone sign a notification.
     if (!secret.trim()) {
       throw new ConfigError('The webhook secret is empty')

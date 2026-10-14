@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- `webhook listen` names the app of a refused notification (`Content.ClientId`):
+  Exact signs with the webhook secret of that app, so a secret of another app
+  shows at once. The prompt and the docs say which secret to use.
+- `webhook create`, `webhook delete` and `webhook listen` are verified live.
+
 ## [0.14.1] - 2026-10-14
 
 ### Added
