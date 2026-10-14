@@ -1,7 +1,7 @@
 import { Flags } from '@oclif/core'
 import { password } from '@inquirer/prompts'
 import BaseCommand from '../../base-command.js'
-import { getProfileConfig } from '../../lib/config.js'
+import { getProfileConfig, normalizeDomain } from '../../lib/config.js'
 import { ConfigError } from '../../lib/errors.js'
 import { startTunnel } from '../../lib/ngrok.js'
 import { divisionPath, unwrap } from '../../lib/odata.js'
@@ -57,9 +57,11 @@ export default class WebhookListenCommand extends BaseCommand {
     const { flags } = this
     // The subscriptions are writes: a refused one starts nothing.
     assertWritesAllowed(flags, 'POST')
+    // A pasted domain often carries the scheme and a trailing slash.
     const domain =
-      flags['ngrok-domain'] ??
-      getProfileConfig(this.activeProfile, 'ngrok_domain')
+      flags['ngrok-domain'] === undefined
+        ? getProfileConfig(this.activeProfile, 'ngrok_domain')
+        : normalizeDomain(flags['ngrok-domain'])
     if (!domain) {
       throw new ConfigError(
         'No ngrok domain: pass --ngrok-domain or run exactcli auth login',

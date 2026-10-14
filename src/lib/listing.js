@@ -121,9 +121,11 @@ export function pageBudget({
   maxPages,
   pageSize = DEFAULT_PAGE_SIZE,
 }) {
-  if (all) return maxPages
-  if (limit === undefined) return 1
-  return Math.min(maxPages, Math.ceil(limit / (top ?? pageSize)))
+  // --limit caps the walk with or without --all.
+  if (limit !== undefined) {
+    return Math.min(maxPages, Math.ceil(limit / (top ?? pageSize)))
+  }
+  return all ? maxPages : 1
 }
 
 /**
@@ -156,17 +158,20 @@ export async function collectListing(
 
   const rows = await collectPages(
     cmd.apiClient.pageOData(path, sent, { maxPages }),
-    all ? Infinity : (limit ?? Infinity),
+    limit ?? Infinity,
   )
 
   // A `__next` that survives the walk means the server has more to give.
-  // It goes to stderr, so a piped stdout stays parseable. With --all the page
-  // budget is what stopped the walk, so name that flag and not --all again.
+  // It goes to stderr, so a piped stdout stays parseable. Name the flag that
+  // stopped the walk: --limit when it was reached, else the page budget.
   if (cmd.apiClient.lastNext) {
+    const byLimit = limit !== undefined && rows.length >= limit
     process.stderr.write(
-      all
-        ? 'More results available. Raise --max-pages.\n'
-        : 'More results available. Use --all or --limit.\n',
+      !all
+        ? 'More results available. Use --all or --limit.\n'
+        : byLimit
+          ? 'More results available. Raise --limit.\n'
+          : 'More results available. Raise --max-pages.\n',
     )
   }
 

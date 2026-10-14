@@ -17,6 +17,11 @@ describe('pageBudget', () => {
     expect(pageBudget({ all: true, maxPages: 7 })).toBe(7)
   })
 
+  it('caps the pages by --limit also with --all', () => {
+    expect(pageBudget({ all: true, limit: 50, maxPages: 100 })).toBe(1)
+    expect(pageBudget({ all: true, limit: 130, maxPages: 100 })).toBe(3)
+  })
+
   it('reads one page without --all or --limit', () => {
     expect(pageBudget({ maxPages: 100 })).toBe(1)
   })
@@ -86,6 +91,46 @@ describe('collectListing', () => {
       expect(rows).toEqual([{ A: 1 }])
       expect(write).toHaveBeenCalledWith(
         'More results available. Use --all or --limit.\n',
+      )
+    } finally {
+      write.mockRestore()
+    }
+  })
+
+  it('keeps --limit with --all and points at --limit when it cuts', async () => {
+    const write = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    try {
+      const cmd = fakeCmd([[{ A: 1 }, { A: 2 }], [{ A: 3 }]], {
+        all: true,
+        limit: 1,
+      })
+      const rows = await collectListing(cmd, '/p')
+      expect(rows).toEqual([{ A: 1 }])
+      expect(write).toHaveBeenCalledWith(
+        'More results available. Raise --limit.\n',
+      )
+    } finally {
+      write.mockRestore()
+    }
+  })
+
+  it('names --max-pages when the page budget stops a walk under --limit', async () => {
+    const write = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    try {
+      // --limit 10 with one page of 2 rows allowed: the pages ran out first.
+      const cmd = fakeCmd([[{ A: 1 }, { A: 2 }], [{ A: 3 }]], {
+        all: true,
+        limit: 10,
+        'max-pages': 1,
+      })
+      const rows = await collectListing(cmd, '/p')
+      expect(rows).toEqual([{ A: 1 }, { A: 2 }])
+      expect(write).toHaveBeenCalledWith(
+        'More results available. Raise --max-pages.\n',
       )
     } finally {
       write.mockRestore()

@@ -41,7 +41,12 @@ function flagSchema(flag) {
     return s.optional()
   }
   if (Array.isArray(flag.options) && flag.options.length) {
-    s = z.enum(flag.options)
+    // A numeric option such as a type code may come as a number: accept it
+    // when its text is one of the options.
+    s = z.union([
+      z.enum(flag.options),
+      z.number().refine((n) => flag.options.includes(String(n))),
+    ])
   } else {
     // Accept numbers too - an LLM will naturally send {limit: 50}, {id: 123}.
     // toArgv stringifies before spawning, so either form is fine.

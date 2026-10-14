@@ -345,6 +345,27 @@ describe('webhook listen', () => {
     expect(mocks.startWebhookServer).not.toHaveBeenCalled()
   })
 
+  it('strips the scheme and the trailing slash of a pasted --ngrok-domain', async () => {
+    const scope = mockSubscribe('Accounts', SUB_A, { playEvent: true })
+      .delete(`${SUBS}(guid'${SUB_A}')`)
+      .reply(204)
+
+    await runCmd(Cmd, [
+      '--topic',
+      'Accounts',
+      '--max-events',
+      '1',
+      '--ngrok-domain',
+      `https://${DOMAIN}/`,
+      '--allow-writes',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(mocks.startTunnel).toHaveBeenCalledWith(
+      expect.objectContaining({ domain: DOMAIN }),
+    )
+  })
+
   it('fails with 78 without an ngrok domain', async () => {
     process.stdout.isTTY = true
     const err = await Cmd.run(['--topic', 'Accounts', '--allow-writes']).catch(

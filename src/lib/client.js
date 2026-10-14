@@ -284,7 +284,8 @@ export function createClient({
     if (!retry) return
     const seen = api.lastRateLimit
     if (!seen || seen.minutelyRemaining !== 0) return
-    const waitMs = Math.min(seen.reset - timers.now(), MAX_WAIT_MS)
+    // The minute window has its own reset; the daily one is hours away.
+    const waitMs = Math.min(seen.minutelyReset - timers.now(), MAX_WAIT_MS)
     // A reset in the past, or NaN when the header was absent, means no wait.
     if (!(waitMs > 0)) return
     debug('minutely budget spent, waiting %dms for the window', waitMs)
@@ -301,6 +302,10 @@ export function createClient({
    */
   async function transport(method, url, { path, makeBody }) {
     const maxAttempts = retry ? 3 : 1
+    // A POST or a DELETE without an answer, or with a 5xx, may have landed:
+    // sending it again could book twice. Only GET and PUT repeat safely.
+    // A 429 and a 401 come before Exact does anything, so they repeat for all.
+    const idempotent = method === 'GET' || method === 'PUT'
     let attempts = 0
     let lastWaitSeconds
     let refreshed = false
@@ -334,14 +339,16 @@ export function createClient({
         // timeout and a broken stream. That is a reachability problem (69), not
         // an internal bug (70). Retry like a 5xx; on the last attempt surface
         // the cause.
-        if (attempts < maxAttempts) {
+        if (idempotent && attempts < maxAttempts) {
           const delay = Math.min(1000 * 2 ** attempts, 30_000) + jitter()
           debug('fetch failed (%s), retrying in %dms', cause.name, delay)
           await timers.sleep(delay)
           continue
         }
         throw new ServiceUnavailableError(
-          `Cannot reach ${baseOrigin}: ${cause.message}`,
+          idempotent
+            ? `Cannot reach ${baseOrigin}: ${cause.message}`
+            : `${method} ${path} got no answer: it may have landed. Check before you send it again (${cause.message})`,
           { cause },
         )
       }
@@ -381,20 +388,24 @@ export function createClient({
 
       if (res.status === 429) {
         const now = timers.now()
-        const { reset } = api.lastRateLimit
+        const { reset, minutelyReset } = api.lastRateLimit
         const hasReset = Number.isFinite(reset)
-        const resetAt = hasReset ? reset : now + DEFAULT_WAIT_MS
         // The daily budget resets hours from now: backoff would stall the CLI
         // until then. Fail fast with the reset time instead.
         if (res.headers.get('x-ratelimit-remaining') === '0') {
+          const dailyAt = hasReset ? reset : now + DEFAULT_WAIT_MS
           const err = new RateLimitError(
-            Math.max(1, Math.ceil((resetAt - now) / 1000)),
+            Math.max(1, Math.ceil((dailyAt - now) / 1000)),
           )
           err.message = hasReset
             ? `Daily API limit reached. Resets at ${new Date(reset).toISOString()}`
             : 'Daily API limit reached. Reset time unknown'
           throw err
         }
+        // A minute 429 waits for the minute window.
+        const resetAt = Number.isFinite(minutelyReset)
+          ? minutelyReset
+          : now + DEFAULT_WAIT_MS
         const waitMs = clamp(resetAt - now, MIN_WAIT_MS, MAX_WAIT_MS)
         lastWaitSeconds = Math.ceil(waitMs / 1000)
         // Nothing left to wait for on the last attempt (and none at all with
@@ -418,7 +429,7 @@ export function createClient({
         continue
       }
 
-      if (res.status >= 500 && attempts < maxAttempts) {
+      if (res.status >= 500 && idempotent && attempts < maxAttempts) {
         const delay = Math.min(1000 * 2 ** attempts, 30_000) + jitter()
         debug('server error %d, retrying in %dms', res.status, delay)
         await timers.sleep(delay)
@@ -426,7 +437,14 @@ export function createClient({
       }
 
       if (res.status === 204) return null
-      if (!res.ok) throw ApiError.fromResponse(res.status, text, path)
+      if (!res.ok) {
+        const err = ApiError.fromResponse(res.status, text, path)
+        // A 5xx on a write that is not repeated may still have landed.
+        if (!idempotent && res.status >= 500) {
+          err.message += `. ${method} ${path} may have landed. Check before you send it again`
+        }
+        throw err
+      }
       if (!text) return null
 
       // $metadata answers XML, and some endpoints answer plain text. Only a

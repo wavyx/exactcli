@@ -353,4 +353,21 @@ describe('purchase-invoice create', () => {
     expect(err.exitCode ?? err.oclif?.exit).toBe(64)
     expect(err.message).toMatch(/option discount expects a fraction/)
   })
+
+  it('refuses an invoice type outside the purchase invoice codes with 64', async () => {
+    process.stdout.isTTY = true
+    const err = await Cmd.run([
+      '--supplier',
+      SUPPLIER,
+      '--journal',
+      '600',
+      '--type',
+      '8020',
+      '--line',
+      `${ITEM}:1:100`,
+      '--dry-run',
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(/8030, 8031, 8033, 8034/)
+  })
 })

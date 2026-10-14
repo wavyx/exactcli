@@ -116,6 +116,31 @@ describe('manifest', () => {
 })
 
 describe('applyDeletions', () => {
+  it('drops the lines of a deleted entry as the live log names them', () => {
+    // Shape of the live log: the header key (EntityType 62, the EntryID) and
+    // one key per line (EntityType 63, the line ID).
+    const dir = join(DIR, 'entry-delete')
+    const feeds = backupFeeds().filter(
+      (f) => f.name === 'Financial/SalesEntries',
+    )
+    feedStore(dir, 'Financial/SalesEntries').write([
+      { ID: 'line-1', EntryID: 'entry-a' },
+      { ID: 'line-2', EntryID: 'entry-a' },
+      { ID: 'line-3', EntryID: 'entry-b' },
+    ])
+
+    const removed = applyDeletions(
+      dir,
+      feeds,
+      new Set(['entry-a', 'line-1', 'line-2']),
+    )
+
+    expect(removed).toBe(2)
+    expect(feedStore(dir, 'Financial/SalesEntries').read()).toEqual([
+      { ID: 'line-3', EntryID: 'entry-b' },
+    ])
+  })
+
   it('removes the deleted keys from the stored feeds that have an identity', () => {
     const dir = join(DIR, 'deletions')
     const feeds = backupFeeds().filter((f) =>

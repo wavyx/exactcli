@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.12.0 (166 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.12.1 (166 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -2672,7 +2672,7 @@ exactcli purchase-invoice create [flags]
 - `--yes` - Confirm a DELETE
 - `--supplier <value>` _(required)_ - Supplier code or GUID (crm/Accounts with IsSupplier)
 - `--journal <value>` _(required)_ - Purchase journal code, for example 600
-- `--type <value>` - Invoice type: 8030 direct purchase invoice, 8031 direct purchase invoice (credit), 8033 purchase invoice, 8034 purchase invoice (credit)
+- `--type <8030|8031|8033|8034>` - Invoice type: 8030 direct purchase invoice, 8031 direct purchase invoice (credit), 8033 purchase invoice, 8034 purchase invoice (credit)
 - `--line <value>` _(required)_ - Invoice line as item:quantity:unit price[:option=value...][:description] (repeatable). Options: vat (code), vat-amount, discount (a fraction: 0.1 is 10%), from and to (YYYY-MM-DD, together), cost-center, cost-unit. A credit type takes negative quantities
 - `--description <value>` - Invoice description
 - `--date <value>` - Invoice date (YYYY-MM-DD). The financial year and period come from it, or from today without --date

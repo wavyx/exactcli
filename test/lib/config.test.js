@@ -58,6 +58,8 @@ describe('config', () => {
       ['acme.ngrok-free.app', 'acme.ngrok-free.app'],
       ['https://acme.ngrok-free.app', 'acme.ngrok-free.app'],
       ['  https://acme.ngrok-free.app/  ', 'acme.ngrok-free.app'],
+      ['http://acme.ngrok-free.app/', 'acme.ngrok-free.app'],
+      ['HTTPS://acme.ngrok-free.app//', 'acme.ngrok-free.app'],
       ['', ''],
     ])('turns %o into %o', (raw, expected) => {
       expect(normalizeDomain(raw)).toBe(expected)

@@ -99,6 +99,15 @@ describe('buildInputSchema', () => {
     expect(shape.status.safeParse('nope').success).toBe(false)
   })
 
+  it('accepts a number whose text is one of the options', () => {
+    const { type } = buildInputSchema({
+      flags: { type: { type: 'option', options: ['8030', '8033'] } },
+    })
+    expect(type.safeParse(8033).success).toBe(true)
+    expect(type.safeParse('8030').success).toBe(true)
+    expect(type.safeParse(8020).success).toBe(false)
+  })
+
   it('maps a plain option flag to a string and required flag stays required', () => {
     expect(shape.title.safeParse('Acme deal').success).toBe(true)
     expect(shape.title.safeParse(undefined).success).toBe(false)

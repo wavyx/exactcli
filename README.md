@@ -495,7 +495,9 @@ go to stderr as `{ "error", "message", "exitCode" }`.
 
 Rate limits: Exact allows 60 calls per minute and 5000 per day per administration.
 `exactcli` waits for the minute window, never retries a client error, and calls the API
-sequentially.
+sequentially. It repeats a GET or a PUT after a network failure or a 5xx, never a POST
+or a DELETE: such a write may have landed, so the command exits 69 and says so. Check
+before you send it again.
 
 ## For agents
 

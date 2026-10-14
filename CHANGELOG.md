@@ -6,6 +6,27 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-10-14
+
+### Fixed
+
+- The client never sends a POST or a DELETE again after a network failure or
+  a 5xx: the write may have landed, and a second POST could book twice. It
+  exits 69 and the message says that the write may have landed. GET and PUT still repeat; a 429 and a 401 repeat for
+  every method, since Exact did nothing then.
+- The minute rate-limit wait and the 429 backoff read
+  `X-RateLimit-Minutely-Reset`, not the daily reset: a spent minute no longer
+  costs the full 65 seconds.
+- `--limit` caps a walk with `--all` too; it was ignored.
+- `purchase-invoice create --type` takes 8030, 8031, 8033 or 8034 only: any
+  other code skipped the credit sign check.
+- `webhook listen --ngrok-domain` strips an `http://` or `https://` scheme in
+  any case and every trailing slash.
+- `backup` documents the live shape of the deleted log: it keys each
+  deleted record by the ID of its sync row (verified for sales invoices,
+  sales orders and entries), so the feeds drop deleted rows by their ID.
+- The MCP tools accept a number for an option flag such as a type code.
+
 ## [0.12.0] - 2026-10-14
 
 ### Added
@@ -54,7 +75,8 @@ All notable changes to this project are documented in this file. The format foll
 - `invoice create` and `purchase-invoice create` refuse a negative `discount`
   (a fraction from 0 to 1): a negative value turned the discount into a markup.
 - `payment process` fails with 65 when Exact answers 201 with an ErrorMessage,
-  after it prints the answer: Exact processes nothing then (verified live).
+  after it prints the answer: Exact processes nothing then (the ErrorMessage
+  answer was seen live; a successful export is not verified yet).
 
 ## [0.11.1] - 2026-09-25
 

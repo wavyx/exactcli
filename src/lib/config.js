@@ -15,8 +15,8 @@ export const PROFILE_NAME_RE = /^[A-Za-z0-9._-]+$/
 export function normalizeDomain(value) {
   return value
     .trim()
-    .replace(/^https:\/\//, '')
-    .replace(/\/$/, '')
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/+$/, '')
 }
 
 const schema = {

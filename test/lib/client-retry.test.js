@@ -71,7 +71,11 @@ describe('429 handling', () => {
   it('waits until the reset time, then succeeds', async () => {
     const scope = mockApi()
       .get(ME)
-      .reply(429, '', limits({ 'x-ratelimit-reset': String(NOW + 5000) }))
+      .reply(
+        429,
+        '',
+        limits({ 'x-ratelimit-minutely-reset': String(NOW + 5000) }),
+      )
       .get(ME)
       .reply(200, { d: { results: [] } }, limits())
 
@@ -84,7 +88,11 @@ describe('429 handling', () => {
   it('clamps the wait to 65 seconds', async () => {
     mockApi()
       .get(ME)
-      .reply(429, '', limits({ 'x-ratelimit-reset': String(NOW + 600_000) }))
+      .reply(
+        429,
+        '',
+        limits({ 'x-ratelimit-minutely-reset': String(NOW + 600_000) }),
+      )
       .get(ME)
       .reply(200, { d: {} }, limits())
 
@@ -95,7 +103,11 @@ describe('429 handling', () => {
   it('clamps the wait to one second when the reset is in the past', async () => {
     mockApi()
       .get(ME)
-      .reply(429, '', limits({ 'x-ratelimit-reset': String(NOW - 5000) }))
+      .reply(
+        429,
+        '',
+        limits({ 'x-ratelimit-minutely-reset': String(NOW - 5000) }),
+      )
       .get(ME)
       .reply(200, { d: {} }, limits())
 
@@ -118,7 +130,11 @@ describe('429 handling', () => {
     const scope = mockApi()
       .get(ME)
       .times(3)
-      .reply(429, '', limits({ 'x-ratelimit-reset': String(NOW + 5000) }))
+      .reply(
+        429,
+        '',
+        limits({ 'x-ratelimit-minutely-reset': String(NOW + 5000) }),
+      )
 
     const err = await client()
       .get(ME)
@@ -143,7 +159,7 @@ describe('429 handling', () => {
           calls++
           return ''
         },
-        limits({ 'x-ratelimit-reset': String(NOW + 12_000) }),
+        limits({ 'x-ratelimit-minutely-reset': String(NOW + 12_000) }),
       )
 
     const err = await client({ retry: false })
@@ -242,13 +258,14 @@ describe('429 handling', () => {
   })
 
   it('does not add a preemptive wait after a 429 sleep', async () => {
-    // A minutely 429 whose reset is the far daily instant: the 429 sleep and
-    // the preemptive wait target the same window and must not compound.
+    // The 429 sleep and the preemptive wait target the same minute window
+    // and must not compound; the far daily reset plays no part.
     const scope = mockApi()
       .get(ME)
       .reply(429, '', {
         'x-ratelimit-minutely-limit': '60',
         'x-ratelimit-minutely-remaining': '0',
+        'x-ratelimit-minutely-reset': String(NOW + 7000),
         'x-ratelimit-remaining': '4999',
         'x-ratelimit-reset': String(NOW + 3_600_000),
       })
@@ -256,13 +273,13 @@ describe('429 handling', () => {
       .reply(200, { d: { results: [] } }, limits())
 
     await client().get(ME)
-    expect(slept).toEqual([65_000])
+    expect(slept).toEqual([7000])
     expect(scope.isDone()).toBe(true)
   })
 })
 
 describe('preemptive minutely wait', () => {
-  it('waits for the reset before the next request', async () => {
+  it('waits for the minutely reset, not the daily one, before the next request', async () => {
     const scope = mockApi()
       .get(ME)
       .reply(
@@ -271,7 +288,8 @@ describe('preemptive minutely wait', () => {
         {
           'x-ratelimit-minutely-limit': '60',
           'x-ratelimit-minutely-remaining': '0',
-          'x-ratelimit-reset': String(NOW + 4000),
+          'x-ratelimit-minutely-reset': String(NOW + 4000),
+          'x-ratelimit-reset': String(NOW + 3_600_000),
         },
       )
       .get('/api/v1/123456/crm/Accounts')
@@ -294,7 +312,7 @@ describe('preemptive minutely wait', () => {
         { d: {} },
         {
           'x-ratelimit-minutely-remaining': '0',
-          'x-ratelimit-reset': String(NOW + 600_000),
+          'x-ratelimit-minutely-reset': String(NOW + 600_000),
         },
       )
       .get(ME)
@@ -314,7 +332,7 @@ describe('preemptive minutely wait', () => {
         { d: {} },
         {
           'x-ratelimit-minutely-remaining': '0',
-          'x-ratelimit-reset': String(NOW - 1000),
+          'x-ratelimit-minutely-reset': String(NOW - 1000),
         },
       )
       .get(ME)
@@ -357,7 +375,7 @@ describe('preemptive minutely wait', () => {
         { d: {} },
         {
           'x-ratelimit-minutely-remaining': '0',
-          'x-ratelimit-reset': String(NOW + 4000),
+          'x-ratelimit-minutely-reset': String(NOW + 4000),
         },
       )
 
@@ -610,6 +628,73 @@ describe('5xx and network failures', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('never re-sends a POST or a DELETE after a 5xx: the write may have landed', async () => {
+    const PATH = '/api/v1/123456/crm/Accounts'
+    const sends = {
+      post: (api) => api.post(PATH, {}),
+      delete: (api) => api.del(PATH),
+    }
+    for (const [method, send] of Object.entries(sends)) {
+      let calls = 0
+      const scope = mockApi()
+      scope[method](PATH)
+        .times(3)
+        .reply(500, () => {
+          calls++
+          return { error: { message: { value: 'boom' } } }
+        })
+
+      const err = await send(client()).catch((e) => e)
+      expect(err).toBeInstanceOf(ApiError)
+      expect(err.exitCode).toBe(69)
+      expect(err.message).toBe(
+        `Exact Online API 500: boom. ${method.toUpperCase()} ${PATH} may have landed. Check before you send it again`,
+      )
+      expect(calls).toBe(1)
+      nock.cleanAll()
+    }
+    expect(slept).toEqual([])
+  })
+
+  it('never re-sends a POST after a lost answer, and says it may have landed', async () => {
+    const PATH = '/api/v1/123456/crm/Accounts'
+    let calls
+    mockApi()
+      .post(PATH)
+      .times(3)
+      .replyWithError(
+        Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' }),
+      )
+    const spy = vi.spyOn(globalThis, 'fetch')
+
+    const err = await client()
+      .post(PATH, { Name: 'Acme' })
+      .catch((e) => e)
+    calls = spy.mock.calls.length
+
+    expect(err).toBeInstanceOf(ServiceUnavailableError)
+    expect(err.exitCode).toBe(69)
+    expect(err.message).toMatch(
+      /POST .*crm\/Accounts got no answer: it may have landed\. Check before you send it again/,
+    )
+    expect(calls).toBe(1)
+    expect(slept).toEqual([])
+  })
+
+  it('re-sends a PUT after a 5xx: a PUT is idempotent', async () => {
+    const PATH =
+      "/api/v1/123456/crm/Accounts(guid'11111111-1111-1111-1111-111111111111')"
+    const scope = mockApi()
+      .put(PATH)
+      .reply(503, { error: { message: { value: 'busy' } } })
+      .put(PATH)
+      .reply(204)
+
+    await client().put(PATH, { Name: 'Acme' })
+    expect(slept).toEqual([2000])
+    expect(scope.isDone()).toBe(true)
+  })
+
   it('retries when the body read fails, then succeeds', async () => {
     // A body that stalls or closes early rejects on res.text(), not on fetch.
     // nock cannot produce that, so drive the transport with a stub response.
@@ -674,14 +759,15 @@ describe('retried writes and secrecy', () => {
       bodies.push(body)
       return true
     }
+    // A PUT repeats after a 5xx; a POST never does.
     const scope = mockApi()
-      .post(ACCOUNTS, record)
+      .put(ACCOUNTS, record)
       .reply(500, { error: { message: { value: 'boom' } } })
-      .post(ACCOUNTS, record)
-      .reply(201, { d: { ID: 'g1' } }, limits())
+      .put(ACCOUNTS, record)
+      .reply(204)
 
-    const result = await client().post(ACCOUNTS, { Name: 'Acme' })
-    expect(result).toEqual({ d: { ID: 'g1' } })
+    const result = await client().put(ACCOUNTS, { Name: 'Acme' })
+    expect(result).toBeNull()
     expect(bodies).toEqual([{ Name: 'Acme' }, { Name: 'Acme' }])
     expect(scope.isDone()).toBe(true)
   })

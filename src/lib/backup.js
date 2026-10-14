@@ -133,11 +133,13 @@ export const feedStore = (dir, name) => ({
 })
 
 /**
- * Remove the deleted records from every stored feed.
- * @param {string} dir
- * @param {{ name: string, resource: object }[]} feeds every feed of the catalogue
- * @param {Set<string>} keys EntityKey values of sync/Deleted
- * @returns {number} the number of rows removed
+ * Remove the deleted records from every stored feed. The deleted log keys a
+ * record by the ID of its sync row [live 2026-10-14]: a deleted sales invoice
+ * gives one EntityType 13 key per line row; a deleted sales order gives the
+ * ID of its SalesOrderHeaders row (32, not the OrderID) and one key per line
+ * (33); a deleted entry gives one key per line (63) plus a header key (62)
+ * that the line-level entry feeds do not hold. Matching the identity is
+ * therefore enough.
  */
 export function applyDeletions(dir, feeds, keys) {
   if (keys.size === 0) return 0

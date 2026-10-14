@@ -25,6 +25,7 @@ const TYPES =
 const PURCHASE_INVOICE = 8033
 /** The credit note types: Exact refuses them with a positive total. */
 const CREDIT_TYPES = [8031, 8034]
+const TYPE_CODES = [8030, 8031, PURCHASE_INVOICE, 8034]
 /**
  * One `--line` as the API wants it. A purchase invoice line needs an item
  * (or a purchase order line): there is no ledger account on it. The item
@@ -63,9 +64,11 @@ export default class PurchaseInvoiceCreateCommand extends BaseCommand {
       required: true,
       description: 'Purchase journal code, for example 600',
     }),
-    type: Flags.integer({
+    type: Flags.string({
       description: `Invoice type: ${TYPES}`,
-      default: PURCHASE_INVOICE,
+      // Any other code would skip the credit sign check.
+      options: TYPE_CODES.map(String),
+      default: String(PURCHASE_INVOICE),
     }),
     line: Flags.string({
       required: true,
@@ -92,7 +95,8 @@ export default class PurchaseInvoiceCreateCommand extends BaseCommand {
   }
 
   async run() {
-    const { supplier, journal, type, description, date, reference } = this.flags
+    const { supplier, journal, description, date, reference } = this.flags
+    const type = Number(this.flags.type)
     const dryRun = this.flags['dry-run']
     const { path } = resolvePath(this.resolveDivision(), RESOURCE)
 
