@@ -19,8 +19,9 @@ All notable changes to this project are documented in this file. The format foll
   web interface, which prints it fine. Print the quotation there; the other
   quotation actions then work through the CLI.
 - Known limit: `bank-statement upload` creates the document, then Exact
-  answers a generic 500 on `BankStatementUploadAttachments` for CAMT.053 and
-  CODA files in a live test.
+  answers a generic 500 on `BankStatementUploadAttachments` in a live test.
+  The same CODA file imports fine in the web interface, so the limit is on
+  the API side: import the file there.
 - The webhook `--description` help says that Exact may keep its own value:
   Exact ignored it on POST and PUT in a live test.
 

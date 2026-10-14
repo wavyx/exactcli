@@ -54,3 +54,7 @@ exactcli receivable update <id> --set PaymentMethod=B --allow-writes
 exactcli bank-statement upload --file statement.cod --allow-writes
 exactcli mailbox upload --file invoice.pdf --operation 2 --allow-writes
 ```
+
+In a live test Exact created the document, then answered a generic 500 on the
+attachment (`BankStatementUploadAttachments`), although the same CODA file imported fine
+in the web interface. If the upload fails that way, import the file in Exact Online.
