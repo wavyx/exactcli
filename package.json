@@ -1,6 +1,6 @@
 {
   "name": "@wavyx/exactcli",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "publishConfig": {
     "access": "public"
   },
@@ -237,6 +237,45 @@
       },
       "alias": {
         "description": "Short names for longer commands"
+      },
+      "opportunity": {
+        "description": "Opportunities (sales pipeline)"
+      },
+      "supplier-item": {
+        "description": "Supplier item links (purchase prices per supplier)"
+      },
+      "sales-price": {
+        "description": "Sales item prices"
+      },
+      "document-folder": {
+        "description": "Document folders"
+      },
+      "time-entry": {
+        "description": "Project time entries"
+      },
+      "cost-entry": {
+        "description": "Project cost entries"
+      },
+      "warehouse": {
+        "description": "Warehouses"
+      },
+      "depreciation-method": {
+        "description": "Depreciation methods of fixed assets"
+      },
+      "sales-channel": {
+        "description": "Sales channels"
+      },
+      "task": {
+        "description": "Tasks (activities)"
+      },
+      "event": {
+        "description": "Events (activities)"
+      },
+      "communication-note": {
+        "description": "Communication notes (activities)"
+      },
+      "goods-receipt": {
+        "description": "Goods receipts of purchase orders"
       }
     },
     "hooks": {

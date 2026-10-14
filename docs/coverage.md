@@ -15,9 +15,9 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 51 | 34 |
-| regular | PUT | 103 | 25 | 18 |
-| regular | DELETE | 97 | 23 | 24 |
+| regular | POST | 151 | 70 | 42 |
+| regular | PUT | 103 | 42 | 28 |
+| regular | DELETE | 97 | 41 | 34 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 0 |
 | beta | PUT | 1 | 0 | 0 |
@@ -54,16 +54,16 @@ administration (`scripts/live-writes.json`).
 | DELETE accountancy/TaskTypes | - | no |
 | POST activities/AnnualStatements | - | no |
 | PUT activities/AnnualStatements | - | no |
-| POST activities/CommunicationNotes | - | no |
+| POST activities/CommunicationNotes | `communication-note create` | no |
 | POST activities/Complaints | - | no |
-| POST activities/Events | - | no |
+| POST activities/Events | `event create` | no |
 | POST activities/Fiscals | - | no |
 | PUT activities/Fiscals | - | no |
 | POST activities/ServiceRequests | - | no |
-| POST activities/Tasks | - | no |
-| POST assets/DepreciationMethods | - | no |
-| PUT assets/DepreciationMethods | - | no |
-| DELETE assets/DepreciationMethods | - | no |
+| POST activities/Tasks | `task create` | no |
+| POST assets/DepreciationMethods | `depreciation-method create` | yes |
+| PUT assets/DepreciationMethods | `depreciation-method update` | yes |
+| DELETE assets/DepreciationMethods | `depreciation-method delete` | yes |
 | POST cashflow/BankStatementUploadAttachments | `bank-statement upload` | no |
 | POST cashflow/BankStatementUploads | - | no |
 | POST cashflow/DirectDebitMandates | `mandate create` | yes |
@@ -76,20 +76,20 @@ administration (`scripts/live-writes.json`).
 | POST crm/AcceptQuotation | `quotation accept` | no |
 | POST crm/Accounts | `account create` | yes |
 | PUT crm/Accounts | `account update` | yes |
-| DELETE crm/Accounts | - | yes |
-| POST crm/Addresses | - | no |
-| PUT crm/Addresses | - | no |
-| DELETE crm/Addresses | - | no |
-| POST crm/BankAccounts | - | yes |
-| PUT crm/BankAccounts | - | yes |
-| DELETE crm/BankAccounts | - | no |
+| DELETE crm/Accounts | `account delete` | yes |
+| POST crm/Addresses | `address create` | yes |
+| PUT crm/Addresses | `address update` | yes |
+| DELETE crm/Addresses | `address delete` | yes |
+| POST crm/BankAccounts | `bank-account create` | yes |
+| PUT crm/BankAccounts | `bank-account update` | yes |
+| DELETE crm/BankAccounts | `bank-account delete` | yes |
 | POST crm/Contacts | `contact create` | yes |
 | PUT crm/Contacts | `contact update` | no |
-| DELETE crm/Contacts | - | yes |
+| DELETE crm/Contacts | `contact delete` | yes |
 | POST crm/EmailWithSignOffQuotation | `quotation email` | no |
-| POST crm/Opportunities | - | no |
-| PUT crm/Opportunities | - | no |
-| DELETE crm/Opportunities | - | no |
+| POST crm/Opportunities | `opportunity create` | yes |
+| PUT crm/Opportunities | `opportunity update` | yes |
+| DELETE crm/Opportunities | `opportunity delete` | yes |
 | POST crm/OptionalQuotationLineID | - | no |
 | POST crm/PrintQuotation | `quotation print` | no |
 | POST crm/QuotationLines | `quotation line-add` | yes |
@@ -107,18 +107,18 @@ administration (`scripts/live-writes.json`).
 | POST customfield/UpdateCustomField | `custom-field set` | no |
 | POST documents/DocumentAttachments | `document create` | yes |
 | DELETE documents/DocumentAttachments | - | no |
-| POST documents/DocumentFolders | - | no |
-| PUT documents/DocumentFolders | - | no |
-| DELETE documents/DocumentFolders | - | no |
+| POST documents/DocumentFolders | `document-folder create` | no |
+| PUT documents/DocumentFolders | `document-folder update` | no |
+| DELETE documents/DocumentFolders | `document-folder delete` | no |
 | POST documents/DocumentTypeFolders | - | no |
 | PUT documents/DocumentTypeFolders | - | no |
 | DELETE documents/DocumentTypeFolders | - | no |
 | POST documents/Documents | `bank-statement upload`, `document create` | yes |
-| PUT documents/Documents | - | no |
-| DELETE documents/Documents | - | yes |
-| POST financial/ExchangeRates | - | no |
-| PUT financial/ExchangeRates | - | no |
-| DELETE financial/ExchangeRates | - | no |
+| PUT documents/Documents | `document update` | yes |
+| DELETE documents/Documents | `document delete` | yes |
+| POST financial/ExchangeRates | `exchange-rate create` | yes |
+| PUT financial/ExchangeRates | `exchange-rate update` | yes |
+| DELETE financial/ExchangeRates | `exchange-rate delete` | yes |
 | POST financial/GLAccountClassificationMappings | - | no |
 | PUT financial/GLAccountClassificationMappings | - | no |
 | DELETE financial/GLAccountClassificationMappings | - | no |
@@ -175,21 +175,21 @@ administration (`scripts/live-writes.json`).
 | POST inventory/WarehouseTransfers | - | no |
 | PUT inventory/WarehouseTransfers | - | no |
 | DELETE inventory/WarehouseTransfers | - | no |
-| POST inventory/Warehouses | - | no |
-| PUT inventory/Warehouses | - | no |
-| DELETE inventory/Warehouses | - | no |
+| POST inventory/Warehouses | `warehouse create` | yes |
+| PUT inventory/Warehouses | `warehouse update` | yes |
+| DELETE inventory/Warehouses | `warehouse delete` | yes |
 | POST logistics/CustomerItems | - | no |
 | PUT logistics/CustomerItems | - | no |
 | DELETE logistics/CustomerItems | - | no |
 | POST logistics/Items | `item create` | yes |
 | PUT logistics/Items | `item update` | yes |
-| DELETE logistics/Items | - | yes |
-| POST logistics/SalesItemPrices | - | no |
-| PUT logistics/SalesItemPrices | - | no |
-| DELETE logistics/SalesItemPrices | - | no |
-| POST logistics/SupplierItem | - | yes |
-| PUT logistics/SupplierItem | - | no |
-| DELETE logistics/SupplierItem | - | no |
+| DELETE logistics/Items | `item delete` | yes |
+| POST logistics/SalesItemPrices | `sales-price create` | yes |
+| PUT logistics/SalesItemPrices | `sales-price update` | yes |
+| DELETE logistics/SalesItemPrices | `sales-price delete` | yes |
+| POST logistics/SupplierItem | `supplier-item create` | yes |
+| PUT logistics/SupplierItem | `supplier-item update` | yes |
+| DELETE logistics/SupplierItem | `supplier-item delete` | yes |
 | POST mailbox/MailMessageAttachments | `mailbox upload` | no |
 | POST mailbox/MailMessagesSent | `mailbox upload` | no |
 | POST mailbox/Mailboxes | - | no |
@@ -244,9 +244,9 @@ administration (`scripts/live-writes.json`).
 | DELETE manufacturing/Workcenters | - | no |
 | POST payroll/VariableMutations | - | no |
 | PUT payroll/VariableMutations | - | no |
-| POST project/CostTransactions | - | no |
-| PUT project/CostTransactions | - | no |
-| DELETE project/CostTransactions | - | no |
+| POST project/CostTransactions | `cost-entry create` | no |
+| PUT project/CostTransactions | `cost-entry update` | no |
+| DELETE project/CostTransactions | `cost-entry delete` | no |
 | POST project/EmployeeRestrictionItems | - | no |
 | PUT project/EmployeeRestrictionItems | - | no |
 | DELETE project/EmployeeRestrictionItems | - | no |
@@ -280,15 +280,15 @@ administration (`scripts/live-writes.json`).
 | POST project/ProjectRestrictionRebillings | - | no |
 | PUT project/ProjectRestrictionRebillings | - | no |
 | DELETE project/ProjectRestrictionRebillings | - | no |
-| POST project/Projects | - | no |
-| PUT project/Projects | - | no |
-| DELETE project/Projects | - | no |
+| POST project/Projects | `project create` | yes |
+| PUT project/Projects | `project update` | yes |
+| DELETE project/Projects | `project delete` | yes |
 | POST project/TimeCorrections | - | no |
 | PUT project/TimeCorrections | - | no |
 | DELETE project/TimeCorrections | - | no |
-| POST project/TimeTransactions | - | no |
-| PUT project/TimeTransactions | - | no |
-| DELETE project/TimeTransactions | - | no |
+| POST project/TimeTransactions | `time-entry create` | no |
+| PUT project/TimeTransactions | `time-entry update` | no |
+| DELETE project/TimeTransactions | `time-entry delete` | no |
 | POST project/WBSActivities | - | no |
 | PUT project/WBSActivities | - | no |
 | DELETE project/WBSActivities | - | no |
@@ -309,8 +309,8 @@ administration (`scripts/live-writes.json`).
 | PUT purchaseentry/PurchaseEntryLines | `purchase-entry line-update` | yes |
 | DELETE purchaseentry/PurchaseEntryLines | `purchase-entry line-delete` | yes |
 | POST purchaseorder/GoodsReceiptLines | - | no |
-| POST purchaseorder/GoodsReceipts | - | no |
-| PUT purchaseorder/GoodsReceipts | - | no |
+| POST purchaseorder/GoodsReceipts | `goods-receipt create` | no |
+| PUT purchaseorder/GoodsReceipts | `goods-receipt update` | no |
 | POST purchaseorder/PurchaseOrderLines | `purchase-order line-add` | yes |
 | PUT purchaseorder/PurchaseOrderLines | `purchase-order line-update` | yes |
 | DELETE purchaseorder/PurchaseOrderLines | `purchase-order line-delete` | yes |
@@ -321,9 +321,9 @@ administration (`scripts/live-writes.json`).
 | PUT purchaseorder/PurchaseReturnLines | - | no |
 | POST purchaseorder/PurchaseReturns | - | no |
 | PUT purchaseorder/PurchaseReturns | - | no |
-| POST sales/SalesChannels | - | no |
-| PUT sales/SalesChannels | - | no |
-| DELETE sales/SalesChannels | - | no |
+| POST sales/SalesChannels | `sales-channel create` | yes |
+| PUT sales/SalesChannels | `sales-channel update` | yes |
+| DELETE sales/SalesChannels | `sales-channel delete` | yes |
 | POST salesentry/SalesEntries | `sales-entry create` | yes |
 | PUT salesentry/SalesEntries | `sales-entry update` | yes |
 | DELETE salesentry/SalesEntries | `sales-entry delete` | yes |
@@ -348,8 +348,8 @@ administration (`scripts/live-writes.json`).
 | PUT salesorder/DropShipmentLines | - | no |
 | POST salesorder/DropShipments | - | no |
 | PUT salesorder/DropShipments | - | no |
-| POST salesorder/GoodsDeliveries | - | no |
-| PUT salesorder/GoodsDeliveries | - | no |
+| POST salesorder/GoodsDeliveries | `goods-delivery create` | no |
+| PUT salesorder/GoodsDeliveries | `goods-delivery update` | no |
 | POST salesorder/GoodsDeliveryLines | - | no |
 | PUT salesorder/GoodsDeliveryLines | - | no |
 | POST salesorder/PlannedSalesReturnLines | - | no |
@@ -375,9 +375,9 @@ administration (`scripts/live-writes.json`).
 | DELETE subscription/SubscriptionRestrictionEmployees | - | no |
 | POST subscription/SubscriptionRestrictionItems | - | no |
 | DELETE subscription/SubscriptionRestrictionItems | - | no |
-| POST subscription/Subscriptions | - | no |
-| PUT subscription/Subscriptions | - | no |
-| DELETE subscription/Subscriptions | - | no |
+| POST subscription/Subscriptions | `subscription create` | no |
+| PUT subscription/Subscriptions | `subscription update` | no |
+| DELETE subscription/Subscriptions | `subscription delete` | no |
 | DELETE system/Divisions | - | no |
 | POST vat/VATCodes | `vat-code create` | yes |
 | PUT vat/VATCodes | `vat-code update` | yes |

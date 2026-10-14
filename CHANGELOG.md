@@ -6,6 +6,27 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-14
+
+### Added
+
+- `create`, `update` and `delete` on opportunities, addresses, bank
+  accounts, supplier item links, sales prices, exchange rates, projects,
+  warehouses, sales channels, depreciation methods, document folders,
+  subscriptions, project time and cost entries; `delete` on accounts,
+  contacts and items; `update` and `delete` on documents; `create` on tasks,
+  events and communication notes; `create` and `update` on goods receipts
+  and goods deliveries. A record with a code of its own takes the code
+  wherever it takes a GUID (a contact takes GUIDs only: its Code is the one
+  of its account). One table (`src/lib/typed/records.js`) declares them.
+- Verified live: opportunities, addresses, bank accounts, supplier item
+  links, sales prices, exchange rates, projects, warehouses, sales channels,
+  depreciation methods, documents, and the deletes of accounts, contacts and
+  items. Not verified: document folders (403 on the test licence), time and
+  cost entries and subscriptions (they need an employee or a time item), the
+  activities and goods receipts and deliveries (Exact offers no DELETE to
+  undo a test).
+
 ## [0.13.0] - 2026-10-14
 
 ### Added

@@ -88,8 +88,9 @@ with `list`, `get` and `api`: pass the `service/Resource` path, for example
 | profile                                                                          | `list`, `use`, `current`                                                                                                                                    |
 | config                                                                           | `get`, `set`, `list`, `unset`                                                                                                                               |
 | division                                                                         | `list` (`--scope`), `use`, `current`                                                                                                                        |
-| account, contact, item                                                           | `list`, `create`, `update`                                                                                                                                  |
-| gl-classification, address, bank-account, item-group, currency, exchange-rate    | `list`                                                                                                                                                      |
+| account, contact, item                                                           | `list`, `create`, `update`, `delete`                                                                                                                        |
+| gl-classification, item-group, currency                                          | `list`                                                                                                                                                      |
+| address, bank-account, exchange-rate                                             | `list`, `create`, `update`, `delete`                                                                                                                        |
 | gl-account, journal, vat-code, payment-condition, cost-center, cost-unit         | `list`, `create`, `update`, `delete` (`payment-condition`: `list`, `create`)                                                                                |
 | financial-period, balance, budget, revenue, profit-loss                          | `list`                                                                                                                                                      |
 | aging-receivable, aging-payable, aging-overview, receivables-list, payables-list | `list`                                                                                                                                                      |
@@ -105,12 +106,16 @@ with `list`, `get` and `api`: pass the `service/Resource` path, for example
 | quotation                                                                        | `list`, `lines`, `create`, `update`, `delete`, `accept`, `reject`, `reopen`, `review`, `print`, `email`, `line-add`, `line-update`, `line-delete`           |
 | sales-order                                                                      | `list`, `lines`, `create`, `update`, `delete`, `invoice`, `invoice-result`, `complete`, `complete-line`, `print`, `line-add`, `line-update`, `line-delete`  |
 | payment                                                                          | `list`, `approve`, `hold`, `process`                                                                                                                        |
-| goods-delivery, receivable, project, asset, subscription                         | `list` (`receivable` adds `update`, `collect`)                                                                                                              |
-| document                                                                         | `list`, `download`, `create`                                                                                                                                |
+| goods-delivery, receivable, project, asset, subscription                         | `list` (`receivable`: `update`, `collect`; `goods-delivery`: `create`, `update`; `project`, `subscription`: `create`, `update`, `delete`)                   |
+| document                                                                         | `list`, `download`, `create`, `update`, `delete`                                                                                                            |
 | document-type                                                                    | `list`                                                                                                                                                      |
 | mailbox                                                                          | `list`, `upload`                                                                                                                                            |
 | mail-message                                                                     | `list`                                                                                                                                                      |
 | bank-statement                                                                   | `upload`                                                                                                                                                    |
+| opportunity, supplier-item, sales-price, document-folder, time-entry, cost-entry | `create`, `update`, `delete`                                                                                                                                |
+| warehouse, depreciation-method, sales-channel                                    | `create`, `update`, `delete`                                                                                                                                |
+| task, event, communication-note                                                  | `create`                                                                                                                                                    |
+| goods-receipt                                                                    | `create`, `update`                                                                                                                                          |
 | webhook                                                                          | `list`, `create`, `update`, `delete`, `listen`                                                                                                              |
 | alias                                                                            | `set`, `list`, `unset`                                                                                                                                      |
 | sync                                                                             | `sync <resource>`, `timestamp`                                                                                                                              |
@@ -271,6 +276,24 @@ exactcli gl-account create --code 799000 --description "Other income" --set Type
 exactcli journal update 800 --set Description="General journal" --allow-writes
 exactcli cost-center delete HQ --allow-writes --yes
 exactcli payment-condition create --code 30D --description "30 days" --set PaymentDays=30 --allow-writes
+```
+
+More records take `create`, `update` and `delete` the same way: GUID, or code where the
+record has one of its own (not a contact: its Code is the one of its account), plus `--set` and `--body` validated against the catalogue. Opportunities,
+addresses, bank accounts, supplier item links, sales prices, exchange rates, projects,
+warehouses, sales channels, depreciation methods, document folders, subscriptions and
+project time and cost entries take all three; accounts, contacts and items add
+`delete`; documents add `update` and `delete`; tasks, events and communication notes
+take `create`; goods receipts and goods deliveries take `create` and `update`. Some need
+set-up in the administration: time and cost entries need an employee and a time item, a
+subscription needs an item with a time unit, and a linear depreciation method takes
+its percentage as a fraction (`Percentage2=0.2`).
+
+```sh
+exactcli opportunity create --set Name="Acme renewal" --set Account=@ref:crm/Accounts:1001 \
+  --set CloseDate=2026-12-31 --set AmountFC=1000 --allow-writes
+exactcli warehouse create --code W2 --description "Second warehouse" --allow-writes
+exactcli account delete 1001 --allow-writes --yes
 ```
 
 `receivable collect` prepares receivables for a direct debit: payment method I, an
