@@ -17,7 +17,12 @@ exactcli payment process <payment-id> <payment-id> --allow-writes
 ```
 
 `payment process` exits 65 when Exact answers with an ErrorMessage: nothing was
-processed then.
+processed then. In a live test Exact refused a payment without a payment reference, and
+any payment while the bank account of the division was invalid. Set the reference first:
+
+```sh
+exactcli update cashflow/Payments <payment-id> --set PaymentReference="Invoice 1001" --allow-writes
+```
 
 ## Direct debit mandates
 

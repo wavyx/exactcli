@@ -15,7 +15,7 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 57 |
+| regular | POST | 151 | 70 | 58 |
 | regular | PUT | 103 | 42 | 38 |
 | regular | DELETE | 97 | 41 | 37 |
 | beta | GET | 6 | 0 | - |
@@ -71,7 +71,7 @@ administration (`scripts/live-writes.json`).
 | DELETE cashflow/DirectDebitMandates | `mandate delete` | yes |
 | POST cashflow/PaymentConditions | `payment-condition create` | yes |
 | PUT cashflow/Payments | `payment approve`, `payment hold` | yes |
-| POST cashflow/ProcessPayments | `payment process` | no |
+| POST cashflow/ProcessPayments | `payment process` | yes |
 | PUT cashflow/Receivables | `receivable collect`, `receivable update` | yes |
 | POST crm/AcceptQuotation | `quotation accept` | yes |
 | POST crm/Accounts | `account create` | yes |

@@ -130,5 +130,6 @@
   "POST crm/ReviewQuotation",
   "POST crm/ReopenQuotation",
   "POST crm/RejectQuotation",
-  "POST crm/AcceptQuotation"
+  "POST crm/AcceptQuotation",
+  "POST cashflow/ProcessPayments"
 ]
