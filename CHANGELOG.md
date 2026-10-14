@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.14.3] - 2026-10-14
+
 ### Changed
 
 - 27 more write calls are verified live on a test administration: document updates (contact, quotation, purchase and sales invoices,
@@ -24,6 +26,11 @@ All notable changes to this project are documented in this file. The format foll
   the API side: import the file there.
 - The webhook `--description` help says that Exact may keep its own value:
   Exact ignored it on POST and PUT in a live test.
+
+### Fixed
+
+- Release: the Homebrew job waits until npm serves a fresh version (up to
+  20 tries, 30 s apart) instead of failing on the first 404.
 
 ## [0.14.2] - 2026-10-14
 
