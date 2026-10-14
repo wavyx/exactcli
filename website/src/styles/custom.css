@@ -1,0 +1,214 @@
+/* exactcli: Starlight theme and design tokens (A3, "ledger").
+   Light is the first look, dark is fully supported. The raw tokens
+   (--bg, --accent, ...) serve the custom header, footer and home page;
+   the --sl-* tokens dress the Starlight docs with the same palette. */
+
+@import '@fontsource-variable/outfit';
+@import '@fontsource-variable/jetbrains-mono';
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --font-display: 'Outfit Variable', 'Outfit', var(--font-sans);
+  --font-mono:
+    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --sl-font: var(--font-sans);
+  --sl-font-mono: var(--font-mono);
+
+  --maxw: 1200px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-full: 999px;
+}
+
+/* ===================== LIGHT (first look) ===================== */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --sl-color-accent-low: #fbe9ea;
+  --sl-color-accent: #d0262e;
+  --sl-color-accent-high: #7a1218;
+
+  --sl-color-white: #1b1b1f;
+  --sl-color-gray-1: #26262b;
+  --sl-color-gray-2: #4a4b52;
+  --sl-color-gray-3: #6e6f78;
+  --sl-color-gray-4: #c9c9d1;
+  --sl-color-gray-5: #e4e4e9;
+  --sl-color-gray-6: #f5f5f7;
+  --sl-color-gray-7: #fafafb;
+  --sl-color-black: #ffffff;
+  --sl-color-bg-nav: color-mix(in srgb, #ffffff 88%, transparent);
+  --sl-color-bg-sidebar: #ffffff;
+  --sl-color-hairline: #ececf0;
+  --sl-color-hairline-light: #ececf0;
+  --sl-color-text-accent: #b51f27;
+
+  --bg: #ffffff;
+  --surface: #f5f5f7;
+  --surface-2: #efeff3;
+  --border: #e4e4e9;
+  --border-soft: #efeff3;
+  --border-strong: #d5d5dc;
+  --fg: #1b1b1f;
+  --fg-muted: #4a4b52;
+  --fg-subtle: #5f6068;
+  --accent: #d0262e;
+  --accent-hover: #a81d24;
+  --accent-soft: #fbe9ea;
+  --on-accent: #ffffff;
+  --credit: #2e7d57;
+  --term-bg: #1b1b1f;
+  --term-bar: #24242a;
+  --term-line: #2f2f37;
+  --shadow-lg: 0 30px 70px rgba(27, 27, 31, 0.18);
+}
+
+/* ===================== DARK ===================== */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --sl-color-accent-low: #3a1d20;
+  --sl-color-accent: #f0525a;
+  --sl-color-accent-high: #ffc9cc;
+
+  --sl-color-white: #f1f1f4;
+  --sl-color-gray-1: #e4e4ea;
+  --sl-color-gray-2: #c2c2cb;
+  --sl-color-gray-3: #8e8e99;
+  --sl-color-gray-4: #4a4a55;
+  --sl-color-gray-5: #2a2a31;
+  --sl-color-gray-6: #1c1c21;
+  --sl-color-black: #131316;
+  --sl-color-bg-nav: color-mix(in srgb, #131316 88%, transparent);
+  --sl-color-bg-sidebar: #131316;
+  --sl-color-hairline: #202026;
+  --sl-color-hairline-light: #2a2a31;
+  --sl-color-text-accent: #ff7a80;
+
+  --bg: #131316;
+  --surface: #1c1c21;
+  --surface-2: #23232a;
+  --border: #2a2a31;
+  --border-soft: #202026;
+  --border-strong: #3a3a44;
+  --fg: #f1f1f4;
+  --fg-muted: #c2c2cb;
+  --fg-subtle: #a3a3ad;
+  --accent: #f0525a;
+  --accent-hover: #ff7a80;
+  --accent-soft: #3a1d20;
+  --on-accent: #131316;
+  --credit: #4cb386;
+  --term-bg: #0a0a0c;
+  --term-bar: #17171b;
+  --term-line: #2a2a31;
+  --shadow-lg: 0 30px 70px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------------- Docs typography ---------------- */
+.sl-markdown-content :is(h1, h2, h3, h4),
+h1#_top {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.sl-markdown-content table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Current page in the sidebar: a soft tint and an accent rule, so the text
+   keeps its contrast in both themes. */
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover,
+.sidebar-content a[aria-current='page']:focus {
+  background: var(--accent-soft);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* ---------------- Wordmark (header, footer, home) ---------------- */
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--fg);
+  text-decoration: none;
+}
+.wordmark__prompt {
+  color: var(--accent);
+}
+.wordmark__caret {
+  display: inline-block;
+  width: 9px;
+  height: 18px;
+  background: var(--accent);
+}
+
+/* ---------------- Custom header inside Starlight ---------------- */
+.ecli-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 100%;
+}
+.ecli-header .nav-links {
+  display: flex;
+  gap: 22px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 15px;
+}
+.ecli-header .nav-links a {
+  color: var(--fg);
+  text-decoration: none;
+}
+.ecli-header .nav-links a:hover,
+.ecli-header .nav-links a.is-active {
+  color: var(--accent);
+}
+.ecli-header .header-spacer {
+  flex: 1 1 auto;
+}
+.ecli-header .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+@media (max-width: 50rem) {
+  .ecli-header .nav-links {
+    display: none;
+  }
+}
+
+/* ---------------- Brand footer ---------------- */
+.site-footer {
+  margin-top: 48px;
+  border-top: 1px solid var(--border-soft);
+}
+.site-footer__inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 28px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--fg-subtle);
+  font-size: 14px;
+}
+.site-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.site-footer__links a {
+  color: var(--accent);
+  text-decoration: none;
+}

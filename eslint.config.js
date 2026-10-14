@@ -35,6 +35,13 @@ export default [
     },
   },
   {
-    ignores: ['node_modules/', 'coverage/', 'oclif.manifest.json', 'tmp/'],
+    ignores: [
+      'node_modules/',
+      'coverage/',
+      'oclif.manifest.json',
+      'tmp/',
+      // The site has its own toolchain (Astro); its build output is generated.
+      'website/',
+    ],
   },
 ]

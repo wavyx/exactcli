@@ -76,3 +76,31 @@ jobs:
           gh release create "$GITHUB_REF_NAME" $PRE \
             --title "$GITHUB_REF_NAME" \
             --notes "${NOTES:-Release $GITHUB_REF_NAME}"
+
+  homebrew:
+    name: Publish the Homebrew formula
+    needs: release # built from the tarball that was just published
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # TAP_TOKEN does the cross-repo push
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Generate the formula
+        id: gen
+        run: |
+          V=$(node -p "require('./package.json').version")
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+          node scripts/gen-dist.mjs "$V"
+
+      # A cross-repo push needs a token: add a fine-grained TAP_TOKEN secret
+      # with contents:write on wavyx/homebrew-tap. Without it the script does
+      # nothing, so the release never fails. Prereleases skip.
+      - name: Push to the tap
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+          VERSION: ${{ steps.gen.outputs.v }}
+        run: bash scripts/publish-tap.sh

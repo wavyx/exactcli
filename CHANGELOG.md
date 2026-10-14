@@ -6,6 +6,16 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- The documentation site in `website/` (Astro and Starlight): the home page,
+  guides, automation pages and the command reference, which
+  `npm run docs:commands` now writes too. The docs workflow deploys it to
+  GitHub Pages.
+- `scripts/gen-dist.mjs` and a release job that push the Homebrew formula to
+  `wavyx/homebrew-tap` when the `TAP_TOKEN` secret is set.
+- Issue and pull request templates, dependabot and a code of conduct.
+
 ## [0.14.0] - 2026-10-14
 
 ### Added

@@ -1,0 +1,431 @@
+---
+/* exactcli home page: the approved A3 design. It lives outside the Starlight
+   docs collection and owns "/". It shares the tokens of custom.css with the
+   docs and reuses Starlight's theme key (`starlight-theme`), so the choice
+   of light or dark follows the visitor from page to page. */
+import '../styles/custom.css'
+import '../styles/home.css'
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/')
+const repo = 'https://github.com/wavyx/exactcli'
+const npm = 'https://www.npmjs.com/package/@wavyx/exactcli'
+const title = 'exactcli: Exact Online from your terminal'
+const description =
+  'An open-source CLI for Exact Online: typed reads, safe writes, backups and an MCP server, for terminals, CI and AI agents.'
+
+// Sample output, as exactcli prints it; ids and amounts are examples.
+const features = [
+  {
+    id: 'invoice',
+    title: 'Invoice and book by code',
+    blurb:
+      'Customers, items, ledger accounts and VAT codes by the codes you know. Credit notes and attached documents included.',
+    cmd: 'exactcli invoice create --customer 1001 --journal 700 --line WIDGET:2:100 --allow-writes',
+    out: ['InvoiceID   3f2a9c1e-...', 'OrderedBy   Acme NV', 'AmountFC    242,00 EUR', 'Status      20 Open'],
+    note: 'Validated against the API catalogue before it is sent',
+  },
+  {
+    id: 'collect',
+    title: 'Collect by direct debit',
+    blurb: 'Create SEPA Core and B2B mandates, then prepare open receivables for the collection run.',
+    cmd: 'exactcli receivable collect 26700002 --mandate <mandate-id> --allow-writes',
+    out: ['Prepared 1 receivable for collection', 'PaymentMethod   I  (collection)', 'Mandate         ACME-001  SEPA B2B'],
+    note: 'Mandates by IBAN, receivables by invoice number',
+  },
+  {
+    id: 'read',
+    title: 'Read the books your way',
+    blurb: 'Trial balance, aged receivables, open items and opening balances, as a table, JSON or CSV.',
+    cmd: 'exactcli balance list --year 2026 --output csv',
+    out: [
+      'GLAccountCode,Description,AmountDebit,AmountCredit',
+      '400000,Customers,12450.00,0.00',
+      '550000,Bank,8320.15,0.00',
+      '700000,Sales,0.00,10289.26',
+    ],
+    note: 'Pipe it to a spreadsheet, jq or your BI tool',
+  },
+  {
+    id: 'upsert',
+    title: 'Keep master data in line',
+    blurb: 'Create the record when it is missing, update it when it exists, matched on a code.',
+    cmd: 'exactcli upsert crm/Accounts --match Code=1001 --set Name="Acme NV" --allow-writes',
+    out: ['{', '  "action": "updated",', '  "key": "fc74277f-..."', '}'],
+    note: 'Ledger accounts, journals and VAT codes by code too',
+  },
+  {
+    id: 'backup',
+    title: 'Back up a whole administration',
+    blurb: 'A JSON copy of every feed, refreshed with the changes and deletions since the last run.',
+    cmd: 'exactcli backup --dir ./books',
+    out: [
+      'Financial/TransactionLines   ok   18',
+      'CRM/Accounts                 ok    3',
+      'Manufacturing/ShopOrders     forbidden',
+      'Deleted                      ok    0',
+    ],
+    note: 'The next run reads only what changed',
+  },
+  {
+    id: 'mcp',
+    title: 'Give your AI assistant the books',
+    blurb: 'An MCP server for Claude and other agents: read-only tools by default, writes only when you allow them.',
+    cmd: 'exactcli mcp --profile acme',
+    out: ['exactcli MCP server ready: 8 tools (read-only)'],
+    note: 'The same write gates as the command line',
+  },
+]
+
+const numbers = [
+  { label: 'Catalogue', value: 436, suffix: '', text: 'API resources known to the CLI, every one reachable', icon: 'db' },
+  { label: 'Commands', value: 250, suffix: '', text: 'from the trial balance to direct debit mandates', icon: 'term' },
+  { label: 'Verified live', value: 104, suffix: '', text: 'write calls tested on a real Exact Online administration', icon: 'check' },
+  { label: 'Test coverage', value: 100, suffix: '%', text: '1700+ tests run before every release', icon: 'shield' },
+]
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
+    <meta property="og:title" content="exactcli" />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wavyx.github.io/exactcli/" />
+    <script is:inline>
+      // Set the theme before paint, with Starlight's key: a stored choice
+      // wins, else the system setting.
+      (function () {
+        var t = null
+        try {
+          t = localStorage.getItem('starlight-theme')
+        } catch (e) {}
+        var dark = t === 'dark' || ((t === null || t === 'auto' || t === '') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+      })()
+    </script>
+    <style is:global>
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { margin: 0; font-family: var(--font-sans); background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    </style>
+  </head>
+
+  <body class="home">
+    <header class="home-header">
+      <div class="wrap">
+        <a href={base} class="wordmark" aria-label="exactcli home">
+          <span class="wordmark__prompt">&gt;</span>exactcli<span class="wordmark__caret" aria-hidden="true"></span>
+        </a>
+        <nav class="home-nav" aria-label="Main">
+          <a href={`${base}guides/overview/`}>Docs</a>
+          <a href={`${base}reference/commands/`}>Commands</a>
+          <a href={`${base}automation/agents/`}>For agents</a>
+          <a href={repo}>GitHub</a>
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch between light and dark">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+          </button>
+          <a href="#install" class="btn btn--primary">Install</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap">
+          <div class="hero__copy">
+            <span class="eyebrow">Open-source CLI for Exact Online</span>
+            <h1>Your Exact Online books, <em>from the terminal.</em></h1>
+            <p class="hero__lede">Read every resource of the API, book entries and invoices with typed commands, and keep production safe: writes stay off until you ask, and a profile can lock to one test division.</p>
+            <div class="hero__actions">
+              <a href="#install" class="btn btn--primary">Install exactcli</a>
+              <a href={`${base}guides/overview/`} class="btn btn--ghost">Read the docs</a>
+            </div>
+            <div class="install-line">
+              <span class="p" aria-hidden="true">$</span><code id="install-cmd">npm install -g @wavyx/exactcli</code>
+              <button type="button" class="copy" data-copy="install-cmd">Copy</button>
+            </div>
+          </div>
+
+          <div class="term" role="img" aria-label="A terminal books a sales entry with exactcli, then lists its balanced lines">
+            <div class="term__bar">
+              <span class="term__dot" style="background:#ff5f57"></span><span class="term__dot" style="background:#febc2e"></span><span class="term__dot" style="background:#28c840"></span>
+              <span class="term__title">zsh: exactcli</span>
+            </div>
+            <div class="term__body">
+              <div class="term__line"><span class="p">$</span> exactcli sales-entry create \</div>
+              <div class="term__line term__line--indent">--customer 1001 --journal 700 \</div>
+              <div class="term__line term__line--indent">--line 700000:1350:Consulting --allow-writes</div>
+              <div class="term__ok"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg>Created entry 26700002</div>
+              <div style="height:14px"></div>
+              <div class="term__line"><span class="p">$</span> exactcli sales-entry lines 26700002</div>
+              <div class="ledger-box">
+                <table class="ledger">
+                  <colgroup><col style="width:22%" /><col /><col style="width:24%" /><col style="width:24%" /></colgroup>
+                  <thead><tr><th>Account</th><th>Label</th><th class="n">Debit</th><th class="n">Credit</th></tr></thead>
+                  <tbody>
+                    <tr><td class="acct">400000</td><td class="label">Acme NV</td><td class="n dr">1 350,00</td><td class="n nil">-</td></tr>
+                    <tr class="alt"><td class="acct">700000</td><td class="label">Consulting</td><td class="n nil">-</td><td class="n cr">1 350,00</td></tr>
+                    <tr class="total"><td></td><td>Total</td><td class="n">1 350,00</td><td class="n">1 350,00</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="margin-top:14px"><span class="p">$</span><span class="caret" aria-hidden="true"></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="wrap" aria-hidden="true"><div class="double-rule"></div></div>
+
+      <section class="numbers" aria-labelledby="numbers-title">
+        <div class="wrap">
+          <div class="numbers__head">
+            <h2 class="h2" id="numbers-title">The whole API, <em>tested against the real one.</em></h2>
+            <p>Every write below was run on a real Exact Online administration before it shipped.</p>
+          </div>
+          <div class="tiles">
+            {
+              numbers.map((n) => (
+                <div class="tile">
+                  <div class="tile__head">
+                    <span class="tile__icon">
+                      {n.icon === 'db' && (
+                        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" /><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" /></svg>
+                      )}
+                      {n.icon === 'term' && (
+                        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 9l3 3-3 3M13 15h4" /></svg>
+                      )}
+                      {n.icon === 'check' && (
+                        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.5 2.5L16 9.5" /></svg>
+                      )}
+                      {n.icon === 'shield' && (
+                        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z" /><path d="M9 12l2 2 4-4" /></svg>
+                      )}
+                    </span>
+                    <span class="tile__label">{n.label}</span>
+                  </div>
+                  <span class="tile__value"><span data-count={n.value}>{n.value}</span>{n.suffix && <em>{n.suffix}</em>}</span>
+                  <span class="tile__text">{n.text}</span>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="band" aria-labelledby="audience-title">
+        <div class="wrap">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <h2 class="h2" id="audience-title">Built for the people who keep the books.</h2>
+            <p class="lead">Accountants, finance teams and the developers who script for them, in a terminal, a CI job or an AI agent.</p>
+          </div>
+          <div class="cards">
+            <article class="card">
+              <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+              <h3>Safe writes</h3>
+              <p>Nothing is written without --allow-writes, a delete also needs --yes, and --dry-run shows the validated request first. A profile can be read-only, or allowed to write to one division only.</p>
+            </article>
+            <article class="card">
+              <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 10h16M4 15h10M4 20h10"></path></svg>
+              <h3>Typed, by code</h3>
+              <p>Name customers, ledger accounts and journals by their codes. Entries, invoices, orders, quotations and their lines, master data and receivables all have their own commands.</p>
+            </article>
+            <article class="card">
+              <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 9l3 3-3 3M13 15h4"></path></svg>
+              <h3>Ready for agents</h3>
+              <p>An MCP server exposes the reads as tools, read-only by default. JSON when piped, a jq filter on every command, and exit codes a script can trust.</p>
+            </article>
+            <article class="card">
+              <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg>
+              <h3>Your data, kept</h3>
+              <p>backup copies a division to JSON files, one per sync feed, then reads only the changes and the deletions. Sync and bulk feeds page by 1000.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="features" id="features" aria-labelledby="features-title">
+        <div class="wrap">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span class="eyebrow">Key features</span>
+            <h2 class="h2" id="features-title">Each task of the month, in one line</h2>
+            <p class="lead">The work you do in the web screens, as commands you can repeat, script and review.</p>
+          </div>
+          <div class="features__body">
+            <div class="tabs" role="tablist" aria-orientation="vertical" aria-label="Key features">
+              {
+                features.map((f, i) => (
+                  <button type="button" class="tab" role="tab" id={`tab-${f.id}`} aria-controls={`panel-${f.id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>
+                    <span class="tab__title">{f.title}</span>
+                    <span class="tab__blurb">{f.blurb}</span>
+                  </button>
+                ))
+              }
+            </div>
+            <div class="term">
+              <div class="term__bar">
+                <span class="term__dot" style="background:#ff5f57"></span><span class="term__dot" style="background:#febc2e"></span><span class="term__dot" style="background:#28c840"></span>
+                <span class="term__title">zsh: exactcli</span>
+              </div>
+              <div class="term__body">
+                {
+                  features.map((f, i) => (
+                    <div class="panel" role="tabpanel" id={`panel-${f.id}`} aria-labelledby={`tab-${f.id}`} hidden={i !== 0}>
+                      <div class="term__line"><span class="p">$</span> {f.cmd}</div>
+                      <div style="height:8px" />
+                      {f.out.map((line) => <div class="term__line term__out">{line}</div>)}
+                      <div class="panel__note">
+                        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4cb386" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+                        {f.note}
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="start" id="install" aria-labelledby="start-title">
+        <div class="wrap">
+          <div style="display:flex;flex-direction:column;gap:10px;max-width:48em">
+            <span class="eyebrow">Getting started</span>
+            <h2 class="h2" id="start-title">From install to your first report in three steps</h2>
+            <p class="lead">Exact Online signs you in with OAuth. exactcli runs the callback for you and keeps the tokens in your system keychain, never in a file.</p>
+          </div>
+          <ol class="steps">
+            <li class="step">
+              <span class="step__num" aria-hidden="true">1</span>
+              <h3>Install</h3>
+              <p>With npm on Node 20 or later, or with Homebrew on macOS and Linux.</p>
+              <code class="cmd"><span class="p">$</span> npm install -g @wavyx/exactcli{'\n'}<span class="p">$</span> brew install wavyx/tap/exactcli</code>
+            </li>
+            <li class="step">
+              <span class="step__num" aria-hidden="true">2</span>
+              <h3>Register an app and sign in</h3>
+              <p>auth login prints the redirect URI. Register an app with it in Exact Online (Import/Export, App registrations), paste its Client ID and secret, and sign in in the browser.</p>
+              <code class="cmd"><span class="p">$</span> exactcli auth login{'\n'}<span class="dim">Redirect URI: https://acme.ngrok-free.app/callback</span></code>
+            </li>
+            <li class="step">
+              <span class="step__num" aria-hidden="true">3</span>
+              <h3>Pick an administration and go</h3>
+              <p>Choose the division to work in, then read. Writes stay off until you add --allow-writes.</p>
+              <code class="cmd"><span class="p">$</span> exactcli division use 123456{'\n'}<span class="p">$</span> exactcli receivable list --status 20</code>
+            </li>
+          </ol>
+          <div class="callout">
+            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4cb386" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+            <span>Working on a live administration? Lock its profile first, so no command can write to it.</span>
+            <code><span class="p">$</span> exactcli config set read_only true --profile prod</code>
+          </div>
+        </div>
+      </section>
+
+      <section class="checks" aria-labelledby="checks-title">
+        <div class="wrap">
+          <div class="checks__intro">
+            <h2 class="h2" id="checks-title">How a write reaches Exact</h2>
+            <p class="lead" style="font-size:17px">Four checks run before one request leaves your machine. A refused write costs no API call at all.</p>
+          </div>
+          <ol>
+            <li><span class="num">1</span><div><strong>Validate against the catalogue</strong><p>Method allowed, mandatory fields present, no unknown or read-only field. Exit 64 otherwise.</p></div></li>
+            <li><span class="num">2</span><div><strong>Open the write gate</strong><p>--allow-writes, and --yes for a delete. A read-only profile refuses whatever the flags say.</p></div></li>
+            <li><span class="num">3</span><div><strong>Check the division</strong><p>write_divisions keeps writes on the administrations you allow, also for raw api calls and MCP tools.</p></div></li>
+            <li><span class="num">4</span><div><strong>Send it once</strong><p>A POST is never sent twice. Without an answer, exactcli says the write may have landed, so nothing is booked double.</p></div></li>
+          </ol>
+        </div>
+      </section>
+    </main>
+
+    <footer class="home-footer">
+      <div class="wrap">
+        <span>exactcli is open source under the MIT license. It is not affiliated with or endorsed by Exact.</span>
+        <nav aria-label="Footer"><a href={repo}>GitHub</a><a href={npm}>npm</a><a href="https://wavyx.github.io/">wavyx</a></nav>
+      </div>
+    </footer>
+
+    <script>
+      // Vertical tabs: click or arrow keys move the selection; one panel shows.
+      const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.tab'))
+      const select = (next: HTMLButtonElement) => {
+        for (const tab of tabs) {
+          const on = tab === next
+          tab.setAttribute('aria-selected', on ? 'true' : 'false')
+          tab.tabIndex = on ? 0 : -1
+          const panel = document.getElementById(tab.getAttribute('aria-controls') ?? '')
+          if (panel) panel.hidden = !on
+        }
+      }
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => select(tab))
+        tab.addEventListener('keydown', (e) => {
+          const step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0
+          if (!step) return
+          e.preventDefault()
+          const next = tabs[(i + step + tabs.length) % tabs.length]
+          select(next)
+          next.focus()
+        })
+      })
+
+      // Copy the install command; fall back to selecting it.
+      for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+        button.addEventListener('click', async () => {
+          const source = document.getElementById(button.dataset.copy ?? '')
+          if (!source) return
+          try {
+            await navigator.clipboard.writeText(source.textContent ?? '')
+            button.textContent = 'Copied'
+            setTimeout(() => (button.textContent = 'Copy'), 1600)
+          } catch {
+            const range = document.createRange()
+            range.selectNodeContents(source)
+            const selection = window.getSelection()
+            selection?.removeAllRanges()
+            selection?.addRange(range)
+          }
+        })
+      }
+
+      // Light and dark, saved under Starlight's key so the docs follow.
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
+        document.documentElement.dataset.theme = next
+        try {
+          localStorage.setItem('starlight-theme', next)
+        } catch {}
+      })
+
+      // Count the numbers up once, when they come into view. The page shows
+      // the totals at rest, and a reduced-motion visitor keeps them.
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const counters = Array.from(document.querySelectorAll<HTMLElement>('[data-count]'))
+      if (!reduce && 'IntersectionObserver' in window && counters.length) {
+        const run = () => {
+          const start = performance.now()
+          const tick = (now: number) => {
+            const t = Math.min(1, (now - start) / 1400)
+            const e = 1 - Math.pow(1 - t, 3)
+            for (const el of counters) el.textContent = String(Math.round(Number(el.dataset.count) * e))
+            if (t < 1) requestAnimationFrame(tick)
+          }
+          requestAnimationFrame(tick)
+        }
+        const observer = new IntersectionObserver((entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            observer.disconnect()
+            run()
+          }
+        })
+        observer.observe(counters[0])
+      }
+    </script>
+  </body>
+</html>

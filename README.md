@@ -13,10 +13,13 @@ from scripts, CI pipelines and AI agents.
 
 Not affiliated with Exact. Exact Online is a trademark of Exact Group B.V.
 
+Documentation: [wavyx.github.io/exactcli](https://wavyx.github.io/exactcli/).
+
 ## Install
 
 ```sh
-npm install -g @wavyx/exactcli
+npm install -g @wavyx/exactcli      # Node.js 20+
+brew install wavyx/tap/exactcli     # macOS and Linux
 exactcli --help
 ```
 
@@ -48,8 +51,9 @@ server and exposes it through an [ngrok](https://ngrok.com/) static domain.
    in in the browser that opens. The command stores the tokens in the keychain and
    remembers your division.
 
-No ngrok? Use `exactcli auth login --manual`: open the printed URL yourself and paste
-the redirected URL (or the code) back into the terminal.
+No running tunnel? Use `exactcli auth login --manual`. It still needs the HTTPS redirect
+domain of your app. Open the printed URL yourself and paste the redirected URL (or the
+code) back into the terminal.
 
 Tokens refresh automatically. A refresh token that stays unused for 30 days expires:
 run any command at least once a month, or log in again.
@@ -134,7 +138,7 @@ terminal, JSON when piped.
 
 ## Catalogue and metadata
 
-The CLI ships a catalogue of the 435 REST resources of Exact Online: path, methods,
+The CLI ships a catalogue of the 436 REST resources of Exact Online: path, methods,
 fields, mandatory fields, filterable fields. It comes from the reference
 documentation and is refreshed with `npm run catalog:build`; the date of the
 catalogue is in the CHANGELOG.

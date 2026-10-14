@@ -100,10 +100,17 @@ if (invokedDirectly) {
     readFileSync(new URL('../oclif.manifest.json', import.meta.url)),
   )
   mkdirSync(new URL('../docs/', import.meta.url), { recursive: true })
-  writeFileSync(
-    new URL('../docs/commands.md', import.meta.url),
-    renderGithubMarkdown(manifest),
+  const markdown = renderGithubMarkdown(manifest)
+  writeFileSync(new URL('../docs/commands.md', import.meta.url), markdown)
+  // The same page serves the Starlight site: its frontmatter fits both.
+  const site = new URL(
+    '../website/src/content/docs/reference/',
+    import.meta.url,
   )
+  mkdirSync(site, { recursive: true })
+  writeFileSync(new URL('commands.md', site), markdown)
   const count = groupByTopic(manifest).commands.length
-  console.log(`Wrote docs/commands.md - ${count} commands`)
+  console.log(
+    `Wrote docs/commands.md and the site reference - ${count} commands`,
+  )
 }

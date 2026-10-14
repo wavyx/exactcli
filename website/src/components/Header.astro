@@ -1,0 +1,46 @@
+---
+/* exactcli: custom Starlight header. The wordmark and the main links, plus
+   Starlight's own Search, SocialIcons and ThemeSelect, so search and the
+   theme choice keep working. */
+import config from 'virtual:starlight/user-config'
+import Search from 'virtual:starlight/components/Search'
+import SocialIcons from 'virtual:starlight/components/SocialIcons'
+import ThemeSelect from 'virtual:starlight/components/ThemeSelect'
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/')
+const shouldRenderSearch =
+  config.pagefind ||
+  config.components.Search !== '@astrojs/starlight/components/Search.astro'
+
+const current = Astro.url.pathname
+const nav = [
+  { label: 'Guide', href: `${base}guides/overview/`, match: 'guides/' },
+  { label: 'Commands', href: `${base}reference/commands/`, match: 'reference/' },
+  { label: 'Agents', href: `${base}automation/agents/`, match: 'automation/' },
+  { label: 'Changelog', href: 'https://github.com/wavyx/exactcli/releases', match: null },
+]
+---
+
+<div class="ecli-header">
+  <a href={base} class="wordmark" aria-label="exactcli home">
+    <span class="wordmark__prompt">&gt;</span>exactcli<span class="wordmark__caret" aria-hidden="true"></span>
+  </a>
+  <nav class="nav-links" aria-label="Primary">
+    {
+      nav.map((item) => (
+        <a
+          href={item.href}
+          class:list={[{ 'is-active': item.match && current.includes(item.match) }]}
+        >
+          {item.label}
+        </a>
+      ))
+    }
+  </nav>
+  <div class="header-spacer"></div>
+  <div class="header-actions">
+    {shouldRenderSearch && <Search />}
+    <div class="sl-hidden md:sl-flex"><SocialIcons /></div>
+    <ThemeSelect />
+  </div>
+</div>

@@ -1,0 +1,5872 @@
+---
+title: Commands
+description: Full command reference for the exactcli command-line interface.
+---
+
+<!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
+
+Reference for `exactcli` v0.14.0 (250 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+
+## Top-level
+
+### `exactcli api`
+
+Make a raw API request (host-locked to Exact Online)
+
+```
+exactcli api <method> <path> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--query <value>` - Query parameter as key=value (repeatable)
+- `--paginate` - Follow __next and collect every d.results into one array (GET only)
+- `--max-pages <value>` - Maximum number of pages to read with --paginate
+
+Examples:
+
+```bash
+exactcli api GET crm/Accounts
+exactcli api GET /api/v1/current/Me
+exactcli api GET "/api/v1/{division}/crm/Accounts" --query '$top=5'
+exactcli api POST crm/Accounts --body '{"Name":"Acme"}' --allow-writes
+exactcli api PUT "crm/Accounts(guid'<id>')" --body @patch.json --allow-writes
+exactcli api DELETE "crm/Accounts(guid'<id>')" --allow-writes --yes
+exactcli api GET logistics/Items --paginate --output json
+exactcli api GET logistics/Items --paginate --max-pages 20
+```
+
+### `exactcli backup`
+
+Copy a division to a directory of JSON files, one per sync feed, then refresh it with the changes and deletions since the last run (GET sync/..., GET sync/Deleted)
+
+```
+exactcli backup [flags]
+```
+
+- `--dir <value>` - Backup directory (created when missing), one per division
+- `--feed <value>` - Sync feed to copy, for example Financial/TransactionLines (repeatable; default: every feed)
+- `--full` - Read every record again, not only the changes since the last run
+- `--max-pages <value>` - Maximum number of pages to read
+- `--list` - Print the names of the sync feeds and stop
+
+Examples:
+
+```bash
+exactcli backup --dir ./backup-acme
+exactcli backup --dir ./backup-acme --feed Financial/TransactionLines --feed CRM/Accounts
+exactcli backup --list
+```
+
+### `exactcli create`
+
+Create a record (POST), validated against the catalogue
+
+```
+exactcli create <resource> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+- `--force` - Send even when the resource or a field is not in the catalogue
+- `--beta` - Use the beta API namespace
+
+Examples:
+
+```bash
+exactcli create crm/Accounts --set Name=Acme --set Code=1001 --dry-run
+exactcli create crm/Accounts --set Name=Acme --allow-writes
+exactcli create salesentry/SalesEntries --body @entry.json --set Customer=@ref:crm/Accounts:1001 --allow-writes
+```
+
+### `exactcli delete`
+
+Delete a record (DELETE). Needs --allow-writes and --yes
+
+```
+exactcli delete <resource> <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the request and send nothing
+- `--force` - Send even when the resource is not in the catalogue
+- `--beta` - Use the beta API namespace
+
+Examples:
+
+```bash
+exactcli delete crm/Accounts <id> --dry-run
+exactcli delete crm/Accounts <id> --allow-writes --yes
+```
+
+### `exactcli deleted`
+
+Read the records deleted since a timestamp (sync/Deleted); pair it with sync
+
+```
+exactcli deleted [flags]
+```
+
+- `--since <value>` - Timestamp to start after (from the last run). Default: the state file, else 0
+- `--state <value>` - JSON file that remembers the last timestamp per resource; read when --since is absent, written after a complete run
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--type <value>` - Only this EntityType code
+
+Examples:
+
+```bash
+exactcli deleted --since 0
+exactcli deleted --state ./sync.json --type 10
+```
+
+### `exactcli doctor`
+
+Check the local setup: runtime, keychain, profile, ngrok, jq, token and API reachability. Exits 1 when a check fails.
+
+```
+exactcli doctor [flags]
+```
+
+- `--offline` - Skip the API reachability probe
+
+Examples:
+
+```bash
+exactcli doctor
+exactcli doctor --offline
+exactcli doctor --output json
+```
+
+### `exactcli get`
+
+Read one record of any Exact Online resource
+
+```
+exactcli get <resource> <id> [flags]
+```
+
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--beta` - Use the beta API namespace
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli get crm/Accounts 8f4b0e2a-1c3d-4e5f-9a7b-2c1d3e4f5a6b
+exactcli get system/Divisions 123456
+exactcli get crm/Accounts <id> --select Code,Name --output json
+```
+
+### `exactcli list`
+
+List the records of any Exact Online resource
+
+```
+exactcli list <resource> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--beta` - Use the beta API namespace
+- `--bulk` - Read the bulk variant: 1000 rows per page, $select required
+
+Examples:
+
+```bash
+exactcli list crm/Accounts
+exactcli list crm/Accounts --filter "Status eq 'C'" --top 20
+exactcli list financial/GLAccounts --all --output json
+exactcli list logistics/Items --select Code,Description --limit 200
+exactcli list crm/Accounts --bulk --all --output csv
+exactcli list crm/Accounts --filter "Status eq 'C'" --count
+```
+
+### `exactcli lookup`
+
+Find records by exact field values and print their keys: the step before an update
+
+```
+exactcli lookup <resource> [flags]
+```
+
+- `--match <value>` _(required)_ - Field=value that identifies the record (repeatable, all must match). A numeric Code also matches the padded form Exact stores
+- `--one` - Expect exactly one match: print it as one record, exit 65 on none or several
+
+Examples:
+
+```bash
+exactcli lookup crm/Accounts --match Code=1001
+exactcli lookup crm/Contacts --match Email=jane@acme.example --one --jq '.ID'
+```
+
+### `exactcli mcp`
+
+Run exactcli as a Model Context Protocol (MCP) server over stdio.
+
+Exposes seven generic tools that cover every resource of the catalogue
+(exact_resources, exact_metadata, exact_list, exact_get, exact_probe,
+exact_me, exact_quota) plus one tool per typed command. --allow-writes adds
+exact_write (create, update, delete with dry_run and confirm). With
+--all-tools, a delete tool needs confirm: true. Each tool call runs
+exactcli as a child process under the profile and division of the server.
+
+Register with Claude Code:
+  claude mcp add exact -- exactcli mcp
+
+Or in .mcp.json / claude_desktop_config.json:
+  {"mcpServers":{"exact":{"command":"exactcli","args":["mcp"]}}}
+
+```
+exactcli mcp [flags]
+```
+
+- `--allow-writes` - Expose mutating tools. Off by default: the server is read-only.
+- `--all-tools` - Expose every command as a tool, not only the generic and typed set
+- `--tool-timeout <value>` - Seconds a tool call may run before its child process is terminated
+
+Examples:
+
+```bash
+exactcli mcp
+exactcli mcp --division 123456
+exactcli mcp --all-tools --allow-writes
+```
+
+### `exactcli me`
+
+Show the current user and session (GET current/Me)
+
+```
+exactcli me [flags]
+```
+
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli me
+exactcli me --raw
+exactcli me --output json
+```
+
+### `exactcli metadata`
+
+Show the fields of a resource, or search the resource catalogue
+
+```
+exactcli metadata [resource] [flags]
+```
+
+- `--search <value>` - Search the catalogue for resources that match a word
+- `--mandatory` - Only the mandatory properties
+- `--filterable` - Only the properties that $filter accepts
+- `--methods` - Show the resource summary instead of the properties
+
+Examples:
+
+```bash
+exactcli metadata crm/Accounts
+exactcli metadata crm/Accounts --mandatory
+exactcli metadata --search invoice
+exactcli metadata salesentry/SalesEntries --methods --output json
+```
+
+### `exactcli probe`
+
+Compare the fields a resource really returns with the catalogue
+
+```
+exactcli probe <resource> [flags]
+```
+
+- `--top <value>` - Records to fetch, 1 to 60
+- `--filter <value>` - OData $filter expression
+- `--beta` - Use the beta API namespace
+
+Examples:
+
+```bash
+exactcli probe crm/Accounts
+exactcli probe financialtransaction/Transactions --top 5
+exactcli probe crm/Accounts --filter "Status eq 'C'" --output json
+```
+
+### `exactcli quota`
+
+Show the rate-limit budget of the division (one cheap call)
+
+```
+exactcli quota [flags]
+```
+
+Examples:
+
+```bash
+exactcli quota
+exactcli quota --output json
+```
+
+### `exactcli sync`
+
+Read the records changed since a timestamp (the sync API, 1000 per page)
+
+```
+exactcli sync <resource> [flags]
+```
+
+- `--since <value>` - Timestamp to start after (from the last run). Default: the state file, else 0
+- `--state <value>` - JSON file that remembers the last timestamp per resource; read when --since is absent, written after a complete run
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--select <value>` - Comma-separated properties for $select
+
+Examples:
+
+```bash
+exactcli sync crm/Accounts --since 0
+exactcli sync crm/Accounts --state ./sync.json
+exactcli sync financialtransaction/TransactionLines --state ./sync.json --output csv
+```
+
+### `exactcli update`
+
+Update a record (PUT), validated against the catalogue
+
+```
+exactcli update <resource> <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+- `--force` - Send even when the resource or a field is not in the catalogue
+- `--beta` - Use the beta API namespace
+
+Examples:
+
+```bash
+exactcli update crm/Accounts <id> --set Name="Acme NV" --allow-writes
+exactcli update crm/Accounts <id> --body @patch.json --dry-run
+```
+
+### `exactcli upsert`
+
+Create the record that --match finds nothing for, or update the one it finds (POST or PUT), validated against the catalogue
+
+```
+exactcli upsert <resource> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--match <value>` _(required)_ - Field=value that identifies the record (repeatable, all must match). A numeric Code also matches the padded form Exact stores
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli upsert crm/Accounts --match Code=1001 --set Name="Acme NV" --dry-run
+exactcli upsert crm/Accounts --match Code=1001 --set Name="Acme NV" --set Status=C --allow-writes
+```
+
+### `exactcli version`
+
+Show the CLI version and runtime
+
+```
+exactcli version [flags]
+```
+
+Examples:
+
+```bash
+exactcli version
+exactcli version --output json
+```
+
+## exactcli account
+
+### `exactcli account create`
+
+Create an account, customer or supplier (POST crm/Accounts)
+
+```
+exactcli account create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--name <value>` _(required)_ - Account name
+- `--code <value>` - Account code (numeric in Belgium; Exact pads it)
+- `--customer <value>` - Customer: true, false, yes, no, 1 or 0 (IsSales)
+- `--supplier <value>` - Supplier: true, false, yes, no, 1 or 0 (IsSupplier)
+- `--vat-number <value>` - VAT number, for example BE0123456789
+- `--email <value>` - E-mail address
+- `--phone <value>` - Phone number
+- `--website <value>` - Website
+- `--address <value>` - Visit address, first line
+- `--postcode <value>` - Visit address postcode
+- `--city <value>` - Visit address city
+- `--country <value>` - Country code, 2 letters, for example BE
+- `--status <value>` - Customer status: A none, S suspect, P prospect, C customer
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli account create --name Acme --customer true --status C --dry-run
+exactcli account create --name Acme --code 1001 --customer true --status C --country BE --allow-writes
+```
+
+### `exactcli account delete`
+
+Delete accounts, by GUID or code (DELETE crm/Accounts)
+
+```
+exactcli account delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli account delete <guid> --dry-run
+exactcli account delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli account list`
+
+List accounts (customers and suppliers)
+
+```
+exactcli account list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Name contains, or exact Code
+- `--status <value>` - Status code, for example C
+- `--customer <value>` - Customers only (true or false)
+- `--supplier <value>` - Suppliers only (true or false)
+
+Examples:
+
+```bash
+exactcli account list --search acme
+exactcli account list --customer yes --status C --all
+```
+
+### `exactcli account update`
+
+Update the given fields of an account (PUT crm/Accounts)
+
+```
+exactcli account update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--name <value>` - Account name
+- `--code <value>` - Account code (numeric in Belgium; Exact pads it)
+- `--customer <value>` - Customer: true, false, yes, no, 1 or 0 (IsSales)
+- `--supplier <value>` - Supplier: true, false, yes, no, 1 or 0 (IsSupplier)
+- `--vat-number <value>` - VAT number, for example BE0123456789
+- `--email <value>` - E-mail address
+- `--phone <value>` - Phone number
+- `--website <value>` - Website
+- `--address <value>` - Visit address, first line
+- `--postcode <value>` - Visit address postcode
+- `--city <value>` - Visit address city
+- `--country <value>` - Country code, 2 letters, for example BE
+- `--status <value>` - Customer status: A none, S suspect, P prospect, C customer
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli account update 1001 --name "Acme NV" --city Ghent --dry-run
+exactcli account update <id> --status C --customer true --allow-writes
+```
+
+## exactcli address
+
+### `exactcli address create`
+
+Create an address (POST crm/Addresses)
+
+```
+exactcli address create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli address create --set Key=value --dry-run
+exactcli address create --body @record.json --allow-writes
+```
+
+### `exactcli address delete`
+
+Delete addresses, by GUID (DELETE crm/Addresses)
+
+```
+exactcli address delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli address delete <guid> --dry-run
+exactcli address delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli address list`
+
+List addresses of customers and suppliers
+
+```
+exactcli address list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--account <value>` - Account GUID or code
+- `--type <value>` - Address type: 1 visit, 2 postal, 3 invoice, 4 delivery
+- `--city <value>` - City (exact match)
+- `--main <value>` - Main address of its type only (true or false)
+
+Examples:
+
+```bash
+exactcli address list --account 1001
+exactcli address list --type 3 --city Brussels --main yes --all
+```
+
+### `exactcli address update`
+
+Update an address, by GUID (PUT crm/Addresses)
+
+```
+exactcli address update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli address update <guid> --set Description="New text" --dry-run
+exactcli address update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli aging-overview
+
+### `exactcli aging-overview list`
+
+List open receivables and payables per age group
+
+```
+exactcli aging-overview list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--age-group <value>` - Age group number, 1 is the youngest
+- `--currency <value>` - Currency code, for example EUR
+
+Examples:
+
+```bash
+exactcli aging-overview list
+exactcli aging-overview list --currency EUR --output json
+```
+
+## exactcli aging-payable
+
+### `exactcli aging-payable list`
+
+List aged payables per supplier (open amounts by age group)
+
+```
+exactcli aging-payable list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Account name contains (a code goes to --account)
+- `--account <value>` - Account GUID or code
+
+Examples:
+
+```bash
+exactcli aging-payable list --search acme
+exactcli aging-payable list --account 2001 --output json
+```
+
+## exactcli aging-receivable
+
+### `exactcli aging-receivable list`
+
+List aged receivables per customer (open amounts by age group)
+
+```
+exactcli aging-receivable list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Account name contains (a code goes to --account)
+- `--account <value>` - Account GUID or code
+
+Examples:
+
+```bash
+exactcli aging-receivable list --search acme
+exactcli aging-receivable list --account 1001 --output json
+```
+
+## exactcli alias
+
+### `exactcli alias list`
+
+List the aliases
+
+```
+exactcli alias list [flags]
+```
+
+Examples:
+
+```bash
+exactcli alias list
+```
+
+### `exactcli alias set`
+
+Create or replace an alias: a short name that runs a longer command
+
+```
+exactcli alias set <name> <command> [flags]
+```
+
+Examples:
+
+```bash
+exactcli alias set unpaid "receivable list --all"
+exactcli alias set acme -- account list --filter "Name eq 'Acme NV'"
+```
+
+### `exactcli alias unset`
+
+Remove an alias
+
+```
+exactcli alias unset <name> [flags]
+```
+
+Examples:
+
+```bash
+exactcli alias unset unpaid
+```
+
+## exactcli assembly-order
+
+### `exactcli assembly-order finish`
+
+Finish an assembly order for a quantity (POST inventory/FinishAssemblyOrder)
+
+```
+exactcli assembly-order finish <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--quantity <value>` _(required)_ - Quantity finished
+- `--date <value>` - Assembly date (YYYY-MM-DD)
+- `--description <value>` - Description of the assembly order
+- `--notes <value>` - Notes
+- `--location <value>` - Storage location (GUID) of the assembled item
+
+Examples:
+
+```bash
+exactcli assembly-order finish <id> --quantity 10 --dry-run
+exactcli assembly-order finish <id> --quantity 10 --allow-writes
+```
+
+## exactcli asset
+
+### `exactcli asset list`
+
+List fixed assets (investments and their depreciation status)
+
+```
+exactcli asset list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains, or exact Code
+- `--status <value>` - Status code
+- `--from <value>` - Start date from (YYYY-MM-DD)
+- `--to <value>` - Start date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli asset list --search laptop --status 1
+exactcli asset list --from 2026-01-01 --to 2026-12-31 --all
+```
+
+## exactcli auth
+
+### `exactcli auth login`
+
+Authenticate with Exact Online (OAuth 2.0 authorization code)
+
+```
+exactcli auth login [flags]
+```
+
+- `--host <value>` - Exact Online country host (default: the host of the profile, else start.exactonline.be)
+- `--ngrok-domain <value>` - Reserved ngrok domain in front of the callback, for example acme.ngrok-free.app
+- `--port <value>` - Local port that receives the callback
+- `--client-id <value>` - OAuth client ID (env EXACTCLI_CLIENT_ID)
+- `--client-secret <value>` - OAuth client secret (env EXACTCLI_CLIENT_SECRET). Prefer the prompt: flags stay in shell history
+- `--force-login` - Show the Exact login form even when the browser has a session, to sign in as another user
+- `--manual` - Paste the redirected URL instead of catching the callback on a local port
+
+Examples:
+
+```bash
+exactcli auth login
+exactcli auth login --host start.exactonline.nl
+exactcli auth login --ngrok-domain acme.ngrok-free.app
+exactcli auth login --manual
+```
+
+### `exactcli auth logout`
+
+Remove the stored credentials of the profile
+
+```
+exactcli auth logout [flags]
+```
+
+Examples:
+
+```bash
+exactcli auth logout
+exactcli auth logout --profile acme
+```
+
+### `exactcli auth status`
+
+Show the authentication status of the profile
+
+```
+exactcli auth status [flags]
+```
+
+Examples:
+
+```bash
+exactcli auth status
+exactcli auth status --output json
+```
+
+## exactcli balance
+
+### `exactcli balance list`
+
+List the trial balance per ledger account and period
+
+```
+exactcli balance list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--year <value>` - Reporting year
+- `--period <value>` - Reporting period
+- `--gl-account <value>` - Ledger account code, for example 700000
+- `--type <value>` - Balance type: B balance sheet, W profit and loss
+- `--status <value>` - Status code: 20 open, 50 processed
+
+Examples:
+
+```bash
+exactcli balance list --year 2026 --all
+exactcli balance list --year 2026 --period 3 --type W
+```
+
+## exactcli bank-account
+
+### `exactcli bank-account create`
+
+Create a bank account (POST crm/BankAccounts)
+
+```
+exactcli bank-account create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli bank-account create --set Key=value --dry-run
+exactcli bank-account create --body @record.json --allow-writes
+```
+
+### `exactcli bank-account delete`
+
+Delete bank accounts, by GUID (DELETE crm/BankAccounts)
+
+```
+exactcli bank-account delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli bank-account delete <guid> --dry-run
+exactcli bank-account delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli bank-account list`
+
+List bank accounts of customers and suppliers
+
+```
+exactcli bank-account list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--account <value>` - Account GUID or code
+- `--main <value>` - Main bank account only (true or false)
+- `--search <value>` - Bank account number contains
+
+Examples:
+
+```bash
+exactcli bank-account list --account 1001
+exactcli bank-account list --main yes --all --output csv
+```
+
+### `exactcli bank-account update`
+
+Update a bank account, by GUID (PUT crm/BankAccounts)
+
+```
+exactcli bank-account update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli bank-account update <guid> --set Description="New text" --dry-run
+exactcli bank-account update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli bank-entry
+
+### `exactcli bank-entry create`
+
+Book a bank statement by hand from ledger account codes (POST financialtransaction/BankEntries)
+
+```
+exactcli bank-entry create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--journal <value>` _(required)_ - Code of the journal, for example 500
+- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:description] (repeatable, at least one). The account is a code or a GUID. The amount is signed from the point of view of the bank: money received is positive, money paid negative
+- `--account <value>` - Customer or supplier code or GUID (crm/Accounts) carried by every line: a receipt from a customer or a payment to a supplier
+- `--date <value>` - Date of every line (YYYY-MM-DD)
+- `--description <value>` - Description of the lines that carry none
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli bank-entry create --journal 500 --line "400000:121:Invoice 26700001" --account 1001 --dry-run
+exactcli bank-entry create --journal 500 --line 656000:-12.5:Fees --date 2026-09-03 --allow-writes
+```
+
+### `exactcli bank-entry delete`
+
+Delete bank entries, by entry GUID or number (DELETE financialtransaction/BankEntries)
+
+```
+exactcli bank-entry delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli bank-entry delete <number> --dry-run
+exactcli bank-entry delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli bank-entry line-add`
+
+Add a line to a bank entry, by entry GUID or number (POST financialtransaction/BankEntryLines)
+
+```
+exactcli bank-entry line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli bank-entry line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli bank-entry line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli bank-entry lines`
+
+List the lines of bank entries, by entry GUID or number (GET financialtransaction/BankEntryLines)
+
+```
+exactcli bank-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli bank-entry lines <guid>
+exactcli bank-entry lines <number> <number> --output json
+```
+
+### `exactcli bank-entry list`
+
+List bank entries (bank statement headers)
+
+```
+exactcli bank-entry list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--journal <value>` - Bank journal code
+- `--year <value>` - Financial year
+- `--period <value>` - Financial period
+
+Examples:
+
+```bash
+exactcli bank-entry list --journal 55 --year 2026
+exactcli bank-entry list --year 2026 --period 9 --all --output csv
+```
+
+## exactcli bank-statement
+
+### `exactcli bank-statement upload`
+
+Upload a bank statement file (CODA, MT940, CAMT) to the bank import (POST documents/Documents, POST cashflow/BankStatementUploadAttachments)
+
+```
+exactcli bank-statement upload [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--file <value>` _(required)_ - Bank statement file to upload
+- `--subject <value>` - Document subject. Default: the file name
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli bank-statement upload --file statement.cod --dry-run
+exactcli bank-statement upload --file statement.cod --subject "September 2026" --allow-writes
+```
+
+## exactcli budget
+
+### `exactcli budget list`
+
+List budgets (amounts per ledger account and period)
+
+```
+exactcli budget list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--year <value>` - Reporting year
+- `--period <value>` - Reporting period
+- `--gl-account <value>` - Ledger account code
+- `--scenario <value>` - Budget scenario code
+
+Examples:
+
+```bash
+exactcli budget list --year 2026 --gl-account 700000
+exactcli budget list --year 2026 --period 3 --scenario BUDGET --all
+```
+
+## exactcli cash-entry
+
+### `exactcli cash-entry create`
+
+Book cash movements by hand from ledger account codes (POST financialtransaction/CashEntries)
+
+```
+exactcli cash-entry create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--journal <value>` _(required)_ - Code of the journal, for example 570
+- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:description] (repeatable, at least one). The account is a code or a GUID. The amount is signed from the point of view of the cash box: money received is positive, money paid negative
+- `--account <value>` - Customer or supplier code or GUID (crm/Accounts) carried by every line: a receipt from a customer or a payment to a supplier
+- `--date <value>` - Date of every line (YYYY-MM-DD)
+- `--description <value>` - Description of the lines that carry none
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cash-entry create --journal 570 --line "400000:121:Invoice 26700001" --account 1001 --dry-run
+exactcli cash-entry create --journal 570 --line 656000:-12.5:Fees --date 2026-09-03 --allow-writes
+```
+
+### `exactcli cash-entry delete`
+
+Delete cash entries, by entry GUID or number (DELETE financialtransaction/CashEntries)
+
+```
+exactcli cash-entry delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cash-entry delete <number> --dry-run
+exactcli cash-entry delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli cash-entry line-add`
+
+Add a line to a cash entry, by entry GUID or number (POST financialtransaction/CashEntryLines)
+
+```
+exactcli cash-entry line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cash-entry line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli cash-entry line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli cash-entry lines`
+
+List the lines of cash entries, by entry GUID or number (GET financialtransaction/CashEntryLines)
+
+```
+exactcli cash-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli cash-entry lines <guid>
+exactcli cash-entry lines <number> <number> --output json
+```
+
+### `exactcli cash-entry list`
+
+List cash entries (cash book headers)
+
+```
+exactcli cash-entry list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--journal <value>` - Cash journal code
+- `--year <value>` - Financial year
+- `--period <value>` - Financial period
+
+Examples:
+
+```bash
+exactcli cash-entry list --journal 57 --year 2026
+exactcli cash-entry list --year 2026 --period 9 --all --output csv
+```
+
+## exactcli communication-note
+
+### `exactcli communication-note create`
+
+Create a communication note (POST activities/CommunicationNotes)
+
+```
+exactcli communication-note create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli communication-note create --set Key=value --dry-run
+exactcli communication-note create --body @record.json --allow-writes
+```
+
+## exactcli config
+
+### `exactcli config get`
+
+Get a config value for the active profile
+
+```
+exactcli config get <key> [flags]
+```
+
+Examples:
+
+```bash
+exactcli config get host
+exactcli config get division
+```
+
+### `exactcli config list`
+
+List all config for the active profile
+
+```
+exactcli config list [flags]
+```
+
+Examples:
+
+```bash
+exactcli config list
+```
+
+### `exactcli config set`
+
+Set a config value for the active profile
+
+```
+exactcli config set <key> <value> [flags]
+```
+
+Examples:
+
+```bash
+exactcli config set host start.exactonline.be
+exactcli config set division 123456
+exactcli config set read_only true
+exactcli config set write_divisions 123456
+```
+
+### `exactcli config unset`
+
+Remove a config key from the active profile
+
+```
+exactcli config unset <key> [flags]
+```
+
+Examples:
+
+```bash
+exactcli config unset default_output
+```
+
+## exactcli contact
+
+### `exactcli contact create`
+
+Create a contact, a person of an account (POST crm/Contacts)
+
+```
+exactcli contact create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--account <value>` _(required)_ - Account code or GUID (crm/Accounts)
+- `--first-name <value>` _(required)_ - First name
+- `--last-name <value>` _(required)_ - Last name
+- `--email <value>` - E-mail address
+- `--phone <value>` - Business phone number
+- `--mobile <value>` - Mobile phone number
+- `--job-title <value>` - Job title (JobTitleDescription)
+- `--main <value>` - Main contact of the account: true, false, yes, no, 1 or 0 (IsMainContact)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli contact create --account 1001 --first-name Jane --last-name Doe --email jane@acme.example --dry-run
+exactcli contact create --account 1001 --first-name Jane --last-name Doe --main true --allow-writes
+```
+
+### `exactcli contact delete`
+
+Delete contacts, by GUID (DELETE crm/Contacts)
+
+```
+exactcli contact delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli contact delete <guid> --dry-run
+exactcli contact delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli contact list`
+
+List contacts (the persons of an account)
+
+```
+exactcli contact list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Full name contains, or exact Code
+- `--account <value>` - Account GUID or code
+- `--email <value>` - Exact email address
+- `--since <value>` - Modified on or after (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli contact list --search jane
+exactcli contact list --account 1001 --output json
+```
+
+### `exactcli contact update`
+
+Update the given fields of a contact (PUT crm/Contacts)
+
+```
+exactcli contact update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--first-name <value>` - First name
+- `--last-name <value>` - Last name
+- `--email <value>` - E-mail address
+- `--phone <value>` - Business phone number
+- `--mobile <value>` - Mobile phone number
+- `--job-title <value>` - Job title (JobTitleDescription)
+- `--main <value>` - Main contact of the account: true, false, yes, no, 1 or 0 (IsMainContact)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli contact update <id> --email jane@acme.example --dry-run
+exactcli contact update <id> --job-title CFO --main true --allow-writes
+```
+
+## exactcli cost-center
+
+### `exactcli cost-center create`
+
+Create a cost center (POST hrm/Costcenters)
+
+```
+exactcli cost-center create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-center create --code X1 --description "New one" --dry-run
+exactcli cost-center create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli cost-center delete`
+
+Delete cost centers, by GUID or code (DELETE hrm/Costcenters)
+
+```
+exactcli cost-center delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-center delete <guid> --dry-run
+exactcli cost-center delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli cost-center list`
+
+List cost centers (the departments that costs book to)
+
+```
+exactcli cost-center list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains, or exact Code
+- `--active <value>` - Active cost centers only (true or false)
+
+Examples:
+
+```bash
+exactcli cost-center list
+exactcli cost-center list --search sales --active true
+```
+
+### `exactcli cost-center update`
+
+Update a cost center, by GUID or code (PUT hrm/Costcenters)
+
+```
+exactcli cost-center update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-center update <guid> --set Description="New text" --dry-run
+exactcli cost-center update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli cost-entry
+
+### `exactcli cost-entry create`
+
+Create a cost entry (POST project/CostTransactions)
+
+```
+exactcli cost-entry create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-entry create --set Key=value --dry-run
+exactcli cost-entry create --body @record.json --allow-writes
+```
+
+### `exactcli cost-entry delete`
+
+Delete cost entries, by GUID (DELETE project/CostTransactions)
+
+```
+exactcli cost-entry delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-entry delete <guid> --dry-run
+exactcli cost-entry delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli cost-entry update`
+
+Update a cost entry, by GUID (PUT project/CostTransactions)
+
+```
+exactcli cost-entry update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-entry update <guid> --set Description="New text" --dry-run
+exactcli cost-entry update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli cost-unit
+
+### `exactcli cost-unit create`
+
+Create a cost unit (POST hrm/Costunits)
+
+```
+exactcli cost-unit create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-unit create --code X1 --description "New one" --dry-run
+exactcli cost-unit create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli cost-unit delete`
+
+Delete cost units, by GUID or code (DELETE hrm/Costunits)
+
+```
+exactcli cost-unit delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-unit delete <guid> --dry-run
+exactcli cost-unit delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli cost-unit list`
+
+List cost units (the projects or products that costs book to)
+
+```
+exactcli cost-unit list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains, or exact Code
+
+Examples:
+
+```bash
+exactcli cost-unit list
+exactcli cost-unit list --search project --all
+```
+
+### `exactcli cost-unit update`
+
+Update a cost unit, by GUID or code (PUT hrm/Costunits)
+
+```
+exactcli cost-unit update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-unit update <guid> --set Description="New text" --dry-run
+exactcli cost-unit update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli currency
+
+### `exactcli currency list`
+
+List currencies (the currency codes of the division)
+
+```
+exactcli currency list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains
+- `--since <value>` - Modified on or after (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli currency list
+exactcli currency list --search euro --output json
+```
+
+## exactcli custom-field
+
+### `exactcli custom-field set`
+
+Set the value of a custom field on one record (POST customfield/UpdateCustomField)
+
+```
+exactcli custom-field set <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--component <value>` _(required)_ - Business component, for example Account or Item
+- `--record <value>` _(required)_ - Record (GUID) that carries the field
+- `--value <value>` _(required)_ - Value to store
+- `--caption <value>` - Description of the custom field
+- `--type <value>` - Data type of the custom field
+- `--refers-to <value>` - Referenced entity, for example Item or Account
+
+Examples:
+
+```bash
+exactcli custom-field set Segment --component Account --record <account-id> --value North --dry-run
+exactcli custom-field set Segment --component Account --record <account-id> --value North --allow-writes
+```
+
+## exactcli depreciation-method
+
+### `exactcli depreciation-method create`
+
+Create a depreciation method (POST assets/DepreciationMethods)
+
+```
+exactcli depreciation-method create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli depreciation-method create --code X1 --description "New one" --dry-run
+exactcli depreciation-method create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli depreciation-method delete`
+
+Delete depreciation methods, by GUID or code (DELETE assets/DepreciationMethods)
+
+```
+exactcli depreciation-method delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli depreciation-method delete <guid> --dry-run
+exactcli depreciation-method delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli depreciation-method update`
+
+Update a depreciation method, by GUID or code (PUT assets/DepreciationMethods)
+
+```
+exactcli depreciation-method update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli depreciation-method update <guid> --set Description="New text" --dry-run
+exactcli depreciation-method update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli division
+
+### `exactcli division current`
+
+Show the division (administration) in use
+
+```
+exactcli division current [flags]
+```
+
+Examples:
+
+```bash
+exactcli division current
+exactcli division current --output json
+```
+
+### `exactcli division list`
+
+List the divisions (administrations) of the account (GET hrm/Divisions; --scope accessible: GET system/Divisions, all: GET system/AllDivisions, recent: GET system/GetMostRecentlyUsedDivisions)
+
+```
+exactcli division list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--scope <license|accessible|all|recent>` - license: accessible divisions of this license; accessible: of every license; all: every division of this license; recent: the last five used
+
+Examples:
+
+```bash
+exactcli division list
+exactcli division list --all
+exactcli division list --output json
+exactcli division list --scope accessible
+```
+
+### `exactcli division use`
+
+Make a division (administration) the default of the profile
+
+```
+exactcli division use <code> [flags]
+```
+
+Examples:
+
+```bash
+exactcli division use 123456
+exactcli division use 123456 --profile acme
+```
+
+## exactcli document
+
+### `exactcli document create`
+
+Create a document and attach files (POST documents/Documents, POST documents/DocumentAttachments)
+
+```
+exactcli document create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--subject <value>` _(required)_ - Document subject
+- `--type <value>` _(required)_ - Document type code (183 Attachment, 55 Miscellaneous)
+- `--account <value>` - Account GUID or code
+- `--file <value>` - File to attach (repeatable)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli document create --subject "Invoice 2026-001" --type 183 --file invoice.pdf --dry-run
+exactcli document create --subject "Invoice 2026-001" --type 183 --account 1001 --file invoice.pdf --allow-writes
+```
+
+### `exactcli document delete`
+
+Delete documents, by GUID (DELETE documents/Documents)
+
+```
+exactcli document delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli document delete <guid> --dry-run
+exactcli document delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli document download`
+
+Download the attachments of a document
+
+```
+exactcli document download <id> [flags]
+```
+
+- `--out <value>` - Target directory
+- `--force` - Overwrite files that exist
+
+Examples:
+
+```bash
+exactcli document download <id>
+exactcli document download <id> --out ./attachments --force
+```
+
+### `exactcli document list`
+
+List documents
+
+```
+exactcli document list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--account <value>` - Account GUID or code
+- `--type <value>` - Document type code
+- `--from <value>` - Document date from (YYYY-MM-DD)
+- `--to <value>` - Document date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli document list --from 2026-01-01
+exactcli document list --account 1001 --type 10
+```
+
+### `exactcli document update`
+
+Update a document, by GUID (PUT documents/Documents)
+
+```
+exactcli document update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli document update <guid> --set Description="New text" --dry-run
+exactcli document update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli document-folder
+
+### `exactcli document-folder create`
+
+Create a document folder (POST documents/DocumentFolders)
+
+```
+exactcli document-folder create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli document-folder create --code X1 --description "New one" --dry-run
+exactcli document-folder create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli document-folder delete`
+
+Delete document folders, by GUID or code (DELETE documents/DocumentFolders)
+
+```
+exactcli document-folder delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli document-folder delete <guid> --dry-run
+exactcli document-folder delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli document-folder update`
+
+Update a document folder, by GUID or code (PUT documents/DocumentFolders)
+
+```
+exactcli document-folder update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli document-folder update <guid> --set Description="New text" --dry-run
+exactcli document-folder update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli document-type
+
+### `exactcli document-type list`
+
+List document types (the Type codes of documents)
+
+```
+exactcli document-type list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains
+- `--creatable <value>` - Types a POST on documents/Documents accepts (true or false)
+- `--category <value>` - Document type category ID
+
+Examples:
+
+```bash
+exactcli document-type list --creatable yes
+exactcli document-type list --search invoice --output json
+```
+
+## exactcli event
+
+### `exactcli event create`
+
+Create an event (POST activities/Events)
+
+```
+exactcli event create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli event create --set Key=value --dry-run
+exactcli event create --body @record.json --allow-writes
+```
+
+## exactcli exchange-rate
+
+### `exactcli exchange-rate create`
+
+Create an exchange rate (POST financial/ExchangeRates)
+
+```
+exactcli exchange-rate create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli exchange-rate create --set Key=value --dry-run
+exactcli exchange-rate create --body @record.json --allow-writes
+```
+
+### `exactcli exchange-rate delete`
+
+Delete exchange rates, by GUID (DELETE financial/ExchangeRates)
+
+```
+exactcli exchange-rate delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli exchange-rate delete <guid> --dry-run
+exactcli exchange-rate delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli exchange-rate list`
+
+List exchange rates (one rate per currency pair and start date)
+
+```
+exactcli exchange-rate list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--source <value>` - Foreign currency code, for example USD
+- `--target <value>` - Division currency code, for example EUR
+- `--from <value>` - Start date from (YYYY-MM-DD)
+- `--to <value>` - Start date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli exchange-rate list --source USD
+exactcli exchange-rate list --from 2026-01-01 --to 2026-03-31 --all
+```
+
+### `exactcli exchange-rate update`
+
+Update an exchange rate, by GUID (PUT financial/ExchangeRates)
+
+```
+exactcli exchange-rate update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli exchange-rate update <guid> --set Description="New text" --dry-run
+exactcli exchange-rate update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli financial-period
+
+### `exactcli financial-period list`
+
+List financial periods (the bookkeeping calendar)
+
+```
+exactcli financial-period list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--year <value>` - Financial year
+- `--period <value>` - Financial period
+- `--from <value>` - Start date from (YYYY-MM-DD)
+- `--to <value>` - Start date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli financial-period list --year 2026
+exactcli financial-period list --from 2026-01-01 --to 2026-12-31
+```
+
+## exactcli gl-account
+
+### `exactcli gl-account create`
+
+Create a ledger account (POST financial/GLAccounts)
+
+```
+exactcli gl-account create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli gl-account create --code X1 --description "New one" --dry-run
+exactcli gl-account create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli gl-account delete`
+
+Delete ledger accounts, by GUID or code (DELETE financial/GLAccounts)
+
+```
+exactcli gl-account delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli gl-account delete <guid> --dry-run
+exactcli gl-account delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli gl-account list`
+
+List general ledger accounts
+
+```
+exactcli gl-account list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--type <value>` - Account type code
+- `--search <value>` - Description contains, or exact Code
+
+Examples:
+
+```bash
+exactcli gl-account list --all
+exactcli gl-account list --search bank --type 12
+```
+
+### `exactcli gl-account update`
+
+Update a ledger account, by GUID or code (PUT financial/GLAccounts)
+
+```
+exactcli gl-account update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli gl-account update <guid> --set Description="New text" --dry-run
+exactcli gl-account update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli gl-classification
+
+### `exactcli gl-classification list`
+
+List ledger classifications (the reporting scheme elements)
+
+```
+exactcli gl-classification list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains, or exact Code
+- `--parent <value>` - Parent element GUID
+- `--namespace <value>` - Taxonomy namespace GUID (the reporting scheme)
+- `--abstract <value>` - Group elements only (true or false)
+
+Examples:
+
+```bash
+exactcli gl-classification list --search turnover
+exactcli gl-classification list --parent <guid> --all
+```
+
+## exactcli goods-delivery
+
+### `exactcli goods-delivery create`
+
+Create a goods delivery (POST salesorder/GoodsDeliveries)
+
+```
+exactcli goods-delivery create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli goods-delivery create --set Key=value --dry-run
+exactcli goods-delivery create --body @record.json --allow-writes
+```
+
+### `exactcli goods-delivery list`
+
+List goods deliveries (the shipments of sales orders)
+
+```
+exactcli goods-delivery list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--account <value>` - Delivery account GUID or code (the account that receives)
+- `--from <value>` - Delivery date from (YYYY-MM-DD)
+- `--to <value>` - Delivery date to (YYYY-MM-DD)
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli goods-delivery list --from 2026-01-01 --to 2026-01-31
+exactcli goods-delivery list --account 1001 --search urgent --all
+```
+
+### `exactcli goods-delivery update`
+
+Update a goods delivery, by GUID (PUT salesorder/GoodsDeliveries)
+
+```
+exactcli goods-delivery update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli goods-delivery update <guid> --set Description="New text" --dry-run
+exactcli goods-delivery update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli goods-receipt
+
+### `exactcli goods-receipt create`
+
+Create a goods receipt (POST purchaseorder/GoodsReceipts)
+
+```
+exactcli goods-receipt create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli goods-receipt create --set Key=value --dry-run
+exactcli goods-receipt create --body @record.json --allow-writes
+```
+
+### `exactcli goods-receipt update`
+
+Update a goods receipt, by GUID (PUT purchaseorder/GoodsReceipts)
+
+```
+exactcli goods-receipt update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli goods-receipt update <guid> --set Description="New text" --dry-run
+exactcli goods-receipt update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli invoice
+
+### `exactcli invoice create`
+
+Create a sales invoice from codes (POST salesinvoice/SalesInvoices)
+
+```
+exactcli invoice create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--customer <value>` _(required)_ - Customer code or GUID (crm/Accounts with IsSales)
+- `--journal <value>` _(required)_ - Sales journal code, for example 700
+- `--line <value>` _(required)_ - Invoice line as item:quantity:unit price[:option=value...][:description] (repeatable). Options: vat (code), discount (a fraction: 0.1 is 10%), gl-account (revenue account code or GUID, instead of the one of the item), cost-center, cost-unit
+- `--description <value>` - Invoice description
+- `--credit-note` - Create a credit note (Type 8021). The lines carry negative quantities: Exact books the signs as given
+- `--remarks <value>` - Remarks printed on the invoice
+- `--reference <value>` - Reference of the customer (YourRef)
+- `--payment-condition <value>` - Payment condition code (PaymentCondition)
+- `--date <value>` - Invoice date (YYYY-MM-DD)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli invoice create --customer 1001 --journal 700 --line Default:2:100 --dry-run
+exactcli invoice create --customer 1001 --journal 700 --line Default:2:100 --allow-writes
+```
+
+## exactcli item
+
+### `exactcli item create`
+
+Create an item, a product or a service (POST logistics/Items)
+
+```
+exactcli item create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` _(required)_ - Item code
+- `--description <value>` _(required)_ - Item description
+- `--sales-price <value>` - Standard sales price (StandardSalesPrice)
+- `--cost-price <value>` - Standard cost price (CostPriceStandard)
+- `--unit <value>` - Unit code, for example pc
+- `--sales <value>` - Sales item: true, false, yes, no, 1 or 0 (IsSalesItem)
+- `--purchase <value>` - Purchase item: true, false, yes, no, 1 or 0 (IsPurchaseItem)
+- `--stock <value>` - Stock item: true, false, yes, no, 1 or 0 (IsStockItem)
+- `--gl-revenue <value>` - Revenue ledger account code or GUID (GLRevenue)
+- `--gl-costs <value>` - Costs ledger account code or GUID (GLCosts)
+- `--group <value>` - Item group code or GUID (ItemGroup)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli item create --code WIDGET --description Widget --sales-price 99.5 --sales true --dry-run
+exactcli item create --code WIDGET --description Widget --gl-revenue 700000 --allow-writes
+```
+
+### `exactcli item delete`
+
+Delete items, by GUID or code (DELETE logistics/Items)
+
+```
+exactcli item delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli item delete <guid> --dry-run
+exactcli item delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli item list`
+
+List items (products and services)
+
+```
+exactcli item list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains, or exact Code
+- `--sales <value>` - Sales items only (true or false)
+- `--purchase <value>` - Purchase items only (true or false)
+- `--stock <value>` - Stock items only (true or false)
+
+Examples:
+
+```bash
+exactcli item list --search widget
+exactcli item list --sales yes --stock yes --all
+```
+
+### `exactcli item update`
+
+Update the given fields of an item (PUT logistics/Items). The code is the key and stays as it is
+
+```
+exactcli item update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--description <value>` - Item description
+- `--sales-price <value>` - Standard sales price (StandardSalesPrice)
+- `--cost-price <value>` - Standard cost price (CostPriceStandard)
+- `--unit <value>` - Unit code, for example pc
+- `--sales <value>` - Sales item: true, false, yes, no, 1 or 0 (IsSalesItem)
+- `--purchase <value>` - Purchase item: true, false, yes, no, 1 or 0 (IsPurchaseItem)
+- `--stock <value>` - Stock item: true, false, yes, no, 1 or 0 (IsStockItem)
+- `--gl-revenue <value>` - Revenue ledger account code or GUID (GLRevenue)
+- `--gl-costs <value>` - Costs ledger account code or GUID (GLCosts)
+- `--group <value>` - Item group code or GUID (ItemGroup)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli item update WIDGET --description "Widget XL" --sales-price 120 --dry-run
+exactcli item update <id> --gl-revenue 700000 --stock false --allow-writes
+```
+
+## exactcli item-group
+
+### `exactcli item-group list`
+
+List item groups (the ledger accounts that items book to)
+
+```
+exactcli item-group list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains, or exact Code
+- `--default <value>` - Default group flag: 1 default, 0 other
+
+Examples:
+
+```bash
+exactcli item-group list
+exactcli item-group list --search parts --default 1
+```
+
+## exactcli journal
+
+### `exactcli journal create`
+
+Create a journal (POST financial/Journals)
+
+```
+exactcli journal create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli journal create --code X1 --description "New one" --dry-run
+exactcli journal create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli journal delete`
+
+Delete journals, by GUID or code (DELETE financial/Journals)
+
+```
+exactcli journal delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli journal delete <guid> --dry-run
+exactcli journal delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli journal list`
+
+List journals (cash, bank, sales, purchase, general)
+
+```
+exactcli journal list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains, or exact Code
+- `--type <value>` - Journal type: 10 cash, 12 bank, 16 payment service, 20 sales, 22 purchase, 90 general
+
+Examples:
+
+```bash
+exactcli journal list
+exactcli journal list --type 12 --search bank
+```
+
+### `exactcli journal update`
+
+Update a journal, by GUID or code (PUT financial/Journals)
+
+```
+exactcli journal update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli journal update <guid> --set Description="New text" --dry-run
+exactcli journal update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli journal-entry
+
+### `exactcli journal-entry create`
+
+Post a general journal entry (OD) from ledger account codes (POST generaljournalentry/GeneralJournalEntries)
+
+```
+exactcli journal-entry create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--journal <value>` _(required)_ - Journal code, for example 800
+- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:description] (repeatable, at least two). The account is a code or a GUID; debit is positive, credit negative
+- `--date <value>` - Date of every line (YYYY-MM-DD)
+- `--description <value>` - Description of the lines that carry none
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli journal-entry create --journal 800 --line 499000:50:Rent --line 580600:-50 --dry-run
+exactcli journal-entry create --journal 800 --line 499000:50 --line 580600:-50 --date 2026-09-03 --allow-writes
+```
+
+### `exactcli journal-entry delete`
+
+Delete general journal entries, by entry GUID or number (DELETE generaljournalentry/GeneralJournalEntries)
+
+```
+exactcli journal-entry delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli journal-entry delete <number> --dry-run
+exactcli journal-entry delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli journal-entry lines`
+
+List the lines of general journal entries, by entry GUID or number (GET generaljournalentry/GeneralJournalEntryLines)
+
+```
+exactcli journal-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli journal-entry lines <guid>
+exactcli journal-entry lines <number> <number> --output json
+```
+
+### `exactcli journal-entry list`
+
+List general journal entries (manual bookings)
+
+```
+exactcli journal-entry list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--journal <value>` - Journal code
+- `--year <value>` - Financial year
+- `--period <value>` - Financial period
+- `--status <value>` - Status code, for example 20 (open) or 50 (processed)
+
+Examples:
+
+```bash
+exactcli journal-entry list --journal 800 --year 2026
+exactcli journal-entry list --year 2026 --period 9 --status 20 --all
+```
+
+## exactcli mail-message
+
+### `exactcli mail-message list`
+
+List sent mail messages (digital postbox and scan service)
+
+```
+exactcli mail-message list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--operation <value>` - Scan service operation: 1 purchase invoice without details, 2 with details, 3 sales invoice, 4 bank statement
+- `--status <value>` - Recipient status: 5 rejected, 10 draft, 20 open, 25 prepared, 30 approved, 40 realized, 42 in process, 43 at the scanning service, 45 error, 46 blocked, 50 processed
+- `--from <value>` - Sent date from (YYYY-MM-DD)
+- `--to <value>` - Sent date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli mail-message list --from 2026-01-01
+exactcli mail-message list --operation 2 --status 50
+```
+
+## exactcli mailbox
+
+### `exactcli mailbox list`
+
+List mailboxes (the addresses of the digital postbox)
+
+```
+exactcli mailbox list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains
+- `--account <value>` - Account GUID or code (the owner of the mailbox)
+- `--type <value>` - Mailbox type: 0 unknown, 1 Exact, 2 government, 3 manual input
+
+Examples:
+
+```bash
+exactcli mailbox list --search postbox
+exactcli mailbox list --account 1001 --type 1
+```
+
+### `exactcli mailbox upload`
+
+Send files to the digital postbox or the scan service of the division (POST mailbox/MailMessagesSent, POST mailbox/MailMessageAttachments)
+
+```
+exactcli mailbox upload [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--file <value>` _(required)_ - File to send (repeatable)
+- `--to <value>` - Recipient mailbox GUID. Default: the scan service mailbox of the division, else its default mailbox
+- `--subject <value>` - Message subject. Default: the name of the first file
+- `--operation <value>` - Scan service operation: 1 purchase invoice without details, 2 with details, 3 sales invoice, 4 bank statement
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli mailbox upload --file invoice.pdf --operation 2 --dry-run
+exactcli mailbox upload --file invoice.pdf --file receipt.pdf --operation 1 --allow-writes
+exactcli mailbox upload --file statement.xml --to <mailbox-id> --subject "Bank export" --allow-writes
+```
+
+## exactcli mandate
+
+### `exactcli mandate create`
+
+Create a direct debit mandate for an account and one of its bank accounts (POST cashflow/DirectDebitMandates)
+
+```
+exactcli mandate create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--account <value>` _(required)_ - Account code or GUID (the debtor)
+- `--iban <value>` - IBAN of a bank account of the account
+- `--bank-account <value>` - Bank account GUID (crm/BankAccounts), instead of --iban
+- `--reference <value>` _(required)_ - Mandate reference (unique per mandate)
+- `--type <core|b2b>` - SEPA scheme
+- `--payment-type <one-off|recurrent>` - One collection or a series
+- `--signature-date <value>` - Date the debtor signed (YYYY-MM-DD)
+- `--description <value>` - Description
+- `--main` - Make it the main mandate of the account
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli mandate create --account 1001 --iban BE68539007547034 --reference ACME-001 --type b2b --signature-date 2026-10-01 --dry-run
+exactcli mandate create --account 1001 --bank-account <guid> --reference ACME-001 --allow-writes
+```
+
+### `exactcli mandate delete`
+
+Delete direct debit mandates, by GUID (DELETE cashflow/DirectDebitMandates)
+
+```
+exactcli mandate delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli mandate delete <guid> --dry-run
+exactcli mandate delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli mandate list`
+
+List direct debit mandates (SEPA Core and B2B) of customers
+
+```
+exactcli mandate list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--account <value>` - Account GUID or code
+- `--reference <value>` - Mandate reference
+- `--type <value>` - Type: 0 Core, 1 B2B
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli mandate list --account 1001
+exactcli mandate list --type 1 --output json
+```
+
+### `exactcli mandate update`
+
+Update a direct debit mandate, by GUID (PUT cashflow/DirectDebitMandates)
+
+```
+exactcli mandate update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli mandate update <guid> --set Description="New text" --dry-run
+exactcli mandate update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli opening-balance
+
+### `exactcli opening-balance list`
+
+List the opening balance of each balance sheet account that is not zero (GET openingbalance/CurrentYear/AfterEntry, GET openingbalance/CurrentYear/Processed, GET openingbalance/PreviousYear/AfterEntry, GET openingbalance/PreviousYear/Processed)
+
+```
+exactcli opening-balance list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--year <current|previous>` - Reporting year: the current one or the one before
+- `--processed` - Count the processed entries only (default: every entry, also the ones not processed yet)
+
+Examples:
+
+```bash
+exactcli opening-balance list
+exactcli opening-balance list --year previous --processed --output csv
+```
+
+## exactcli opportunity
+
+### `exactcli opportunity create`
+
+Create an opportunity (POST crm/Opportunities)
+
+```
+exactcli opportunity create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli opportunity create --set Key=value --dry-run
+exactcli opportunity create --body @record.json --allow-writes
+```
+
+### `exactcli opportunity delete`
+
+Delete opportunities, by GUID (DELETE crm/Opportunities)
+
+```
+exactcli opportunity delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli opportunity delete <guid> --dry-run
+exactcli opportunity delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli opportunity update`
+
+Update an opportunity, by GUID (PUT crm/Opportunities)
+
+```
+exactcli opportunity update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli opportunity update <guid> --set Description="New text" --dry-run
+exactcli opportunity update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli payables-list
+
+### `exactcli payables-list list`
+
+List open payable invoices per supplier (financial report)
+
+```
+exactcli payables-list list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Account name contains (a code goes to --account)
+- `--account <value>` - Account GUID or code
+- `--due-from <value>` - Due date from (YYYY-MM-DD)
+- `--due-to <value>` - Due date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli payables-list list --due-from 2026-09-01 --due-to 2026-09-30
+exactcli payables-list list --search acme --all --output csv
+```
+
+## exactcli payment
+
+### `exactcli payment approve`
+
+Approve a payment: set PaymentMethod B, electronic (PUT cashflow/Payments). The payment shows on the payments page again and can be processed
+
+```
+exactcli payment approve <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--method <B|I|K|V>` - PaymentMethod: B electronic (approved), I collection, K cash (held), V credit card
+- `--dry-run` - Show the request and send nothing
+
+Examples:
+
+```bash
+exactcli payment approve <payment-id> --dry-run
+exactcli payment approve <payment-id> --allow-writes
+exactcli payment approve <payment-id> --method K --allow-writes
+```
+
+### `exactcli payment hold`
+
+Hold a payment: set PaymentMethod K, cash (PUT cashflow/Payments). The payment leaves the payments page until "payment approve" puts it back
+
+```
+exactcli payment hold <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the request and send nothing
+
+Examples:
+
+```bash
+exactcli payment hold <payment-id> --dry-run
+exactcli payment hold <payment-id> --allow-writes
+```
+
+### `exactcli payment list`
+
+List payments (outstanding supplier items to pay)
+
+```
+exactcli payment list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--account <value>` - Supplier GUID or code
+- `--entry <value>` - The purchase entry (GUID) that created the payment
+- `--due-from <value>` - Due date from (YYYY-MM-DD)
+- `--due-to <value>` - Due date to (YYYY-MM-DD)
+- `--status <value>` - Status: 20 open, 30 selected, 40 processed, 50 matched
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli payment list --status 20 --due-to 2026-09-30
+exactcli payment list --account 2001 --all --output csv
+exactcli payment list --entry <purchase-entry-id>
+```
+
+### `exactcli payment process`
+
+Process approved payments (POST cashflow/ProcessPayments). The answer carries SuccessMessage, ErrorMessage and the BankExportDocumentsUrl of the files to send to the bank
+
+```
+exactcli payment process <payment> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli payment process <payment-id> --dry-run
+exactcli payment process <payment-id> <payment-id> --allow-writes
+```
+
+## exactcli payment-condition
+
+### `exactcli payment-condition create`
+
+Create a payment condition (POST cashflow/PaymentConditions)
+
+```
+exactcli payment-condition create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli payment-condition create --code X1 --description "New one" --dry-run
+exactcli payment-condition create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli payment-condition list`
+
+List payment conditions
+
+```
+exactcli payment-condition list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains, or exact Code
+- `--method <value>` - Payment method: B on credit, I collection, K cash, Q PSP
+- `--days <value>` - Payment days
+
+Examples:
+
+```bash
+exactcli payment-condition list
+exactcli payment-condition list --method B --days 30
+```
+
+## exactcli profile
+
+### `exactcli profile current`
+
+Show the active profile
+
+```
+exactcli profile current [flags]
+```
+
+Examples:
+
+```bash
+exactcli profile current
+```
+
+### `exactcli profile list`
+
+List all configured profiles
+
+```
+exactcli profile list [flags]
+```
+
+Examples:
+
+```bash
+exactcli profile list
+```
+
+### `exactcli profile use`
+
+Switch the active profile
+
+```
+exactcli profile use <name> [flags]
+```
+
+Examples:
+
+```bash
+exactcli profile use work
+```
+
+## exactcli profit-loss
+
+### `exactcli profit-loss list`
+
+List the profit and loss overview (revenue, costs and result of the current year and period)
+
+```
+exactcli profit-loss list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+
+Examples:
+
+```bash
+exactcli profit-loss list
+exactcli profit-loss list --output json
+```
+
+## exactcli project
+
+### `exactcli project create`
+
+Create a project (POST project/Projects)
+
+```
+exactcli project create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli project create --code X1 --description "New one" --dry-run
+exactcli project create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli project delete`
+
+Delete projects, by GUID or code (DELETE project/Projects)
+
+```
+exactcli project delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli project delete <guid> --dry-run
+exactcli project delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli project list`
+
+List projects (time and cost projects with their account)
+
+```
+exactcli project list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--account <value>` - Account GUID or code (the customer of the project)
+- `--search <value>` - Description contains, or exact Code
+- `--type <value>` - Project type code
+- `--from <value>` - Start date from (YYYY-MM-DD)
+- `--to <value>` - Start date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli project list --account 1001 --search website
+exactcli project list --type 1 --from 2026-01-01 --all --output csv
+```
+
+### `exactcli project update`
+
+Update a project, by GUID or code (PUT project/Projects)
+
+```
+exactcli project update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli project update <guid> --set Description="New text" --dry-run
+exactcli project update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli purchase-entry
+
+### `exactcli purchase-entry create`
+
+Post a purchase entry from codes (POST purchaseentry/PurchaseEntries)
+
+```
+exactcli purchase-entry create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--supplier <value>` _(required)_ - Supplier code or GUID (crm/Accounts with IsSupplier)
+- `--journal <value>` _(required)_ - Purchase journal code, for example 600
+- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:option=value...][:description] (repeatable). The account is a code or a GUID; the amount is a decimal. Options: vat, vat-amount, from, to, quantity, cost-center, cost-unit, non-deductible, private-use. from and to (YYYY-MM-DD) spread the amount over a period
+- `--credit-note` - Post a credit note (Type 31). The lines carry negative amounts: Exact books the signs as given
+- `--description <value>` - Entry description
+- `--date <value>` - Entry date (YYYY-MM-DD)
+- `--invoice <value>` - Invoice number (InvoiceNumber)
+- `--file <value>` - File to attach (repeatable). The files land on one new document of type 20, and the entry links that document
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-entry create --supplier 1001 --journal 600 --line 700000:100 --dry-run
+exactcli purchase-entry create --supplier 1001 --journal 600 --line 700000:100 --allow-writes
+exactcli purchase-entry create --supplier 1001 --journal 600 --line 700000:100 --file invoice.pdf --allow-writes
+```
+
+### `exactcli purchase-entry delete`
+
+Delete purchase entries, by entry GUID or number (DELETE purchaseentry/PurchaseEntries)
+
+```
+exactcli purchase-entry delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-entry delete <number> --dry-run
+exactcli purchase-entry delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli purchase-entry line-add`
+
+Add a line to a purchase entry, by entry GUID or number (POST purchaseentry/PurchaseEntryLines)
+
+```
+exactcli purchase-entry line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-entry line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli purchase-entry line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli purchase-entry line-delete`
+
+Delete lines of purchase entries, by GUID (DELETE purchaseentry/PurchaseEntryLines)
+
+```
+exactcli purchase-entry line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-entry delete <guid> --dry-run
+exactcli purchase-entry delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli purchase-entry line-update`
+
+Update a line of a purchase entry, by GUID (PUT purchaseentry/PurchaseEntryLines)
+
+```
+exactcli purchase-entry line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-entry update <guid> --set Description="New text" --dry-run
+exactcli purchase-entry update <guid> --body @patch.json --allow-writes
+```
+
+### `exactcli purchase-entry lines`
+
+List the lines of purchase entries, by entry GUID or number (GET purchaseentry/PurchaseEntryLines)
+
+```
+exactcli purchase-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli purchase-entry lines <guid>
+exactcli purchase-entry lines <number> <number> --output json
+```
+
+### `exactcli purchase-entry list`
+
+List purchase entries (the accounting ledger of purchases)
+
+```
+exactcli purchase-entry list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+
+Examples:
+
+```bash
+exactcli purchase-entry list
+exactcli purchase-entry list --filter "EntryDate ge datetime'2026-01-01'" --all
+exactcli purchase-entry list --limit 200 --output json
+```
+
+### `exactcli purchase-entry update`
+
+Update a purchase entry, by entry GUID or number (PUT purchaseentry/PurchaseEntries)
+
+```
+exactcli purchase-entry update <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-entry update <number> --set Description="New text" --dry-run
+exactcli purchase-entry update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli purchase-invoice
+
+### `exactcli purchase-invoice create`
+
+Create a purchase invoice from codes (POST purchase/PurchaseInvoices)
+
+```
+exactcli purchase-invoice create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--supplier <value>` _(required)_ - Supplier code or GUID (crm/Accounts with IsSupplier)
+- `--journal <value>` _(required)_ - Purchase journal code, for example 600
+- `--type <8030|8031|8033|8034>` - Invoice type: 8030 direct purchase invoice, 8031 direct purchase invoice (credit), 8033 purchase invoice, 8034 purchase invoice (credit)
+- `--line <value>` _(required)_ - Invoice line as item:quantity:unit price[:option=value...][:description] (repeatable). Options: vat (code), vat-amount, discount (a fraction: 0.1 is 10%), from and to (YYYY-MM-DD, together), cost-center, cost-unit. A credit type takes negative quantities
+- `--description <value>` - Invoice description
+- `--date <value>` - Invoice date (YYYY-MM-DD). The financial year and period come from it, or from today without --date
+- `--reference <value>` - Invoice number of the supplier (YourRef)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-invoice create --supplier 2001 --journal 600 --line Default:2:100 --dry-run
+exactcli purchase-invoice create --supplier 2001 --journal 600 --line Default:2:100 --reference INV-2026-42 --allow-writes
+```
+
+### `exactcli purchase-invoice delete`
+
+Delete purchase invoices, by invoice GUID or entry number (DELETE purchase/PurchaseInvoices)
+
+```
+exactcli purchase-invoice delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-invoice delete <number> --dry-run
+exactcli purchase-invoice delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli purchase-invoice lines`
+
+List the lines of purchase invoices, by invoice GUID or entry number (GET purchase/PurchaseInvoiceLines)
+
+```
+exactcli purchase-invoice lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli purchase-invoice lines <guid>
+exactcli purchase-invoice lines <number> <number> --output json
+```
+
+### `exactcli purchase-invoice list`
+
+List purchase invoices (the invoices received from suppliers)
+
+```
+exactcli purchase-invoice list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--supplier <value>` - Supplier GUID or code
+- `--from <value>` - Invoice date from (YYYY-MM-DD)
+- `--to <value>` - Invoice date to (YYYY-MM-DD)
+- `--status <value>` - Status code: 10 draft, 20 open, 50 processed
+
+Examples:
+
+```bash
+exactcli purchase-invoice list --from 2026-01-01 --to 2026-01-31
+exactcli purchase-invoice list --supplier 2001 --status 20 --output json
+```
+
+### `exactcli purchase-invoice update`
+
+Update a purchase invoice, by invoice GUID or entry number (PUT purchase/PurchaseInvoices)
+
+```
+exactcli purchase-invoice update <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-invoice update <number> --set Description="New text" --dry-run
+exactcli purchase-invoice update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli purchase-order
+
+### `exactcli purchase-order create`
+
+Create a purchase order from codes (POST purchaseorder/PurchaseOrders)
+
+```
+exactcli purchase-order create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--supplier <value>` _(required)_ - Supplier code or GUID (crm/Accounts with IsSupplier)
+- `--line <value>` _(required)_ - Order line as item:quantity:unit price[:description] (repeatable)
+- `--description <value>` - Order description
+- `--date <value>` - Order date (YYYY-MM-DD)
+- `--receipt-date <value>` - Expected receipt date (YYYY-MM-DD)
+- `--reference <value>` - Reference of the supplier (YourRef)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order create --supplier 2001 --line Default:2:100 --dry-run
+exactcli purchase-order create --supplier 2001 --line Default:2:100 --receipt-date 2026-09-10 --allow-writes
+```
+
+### `exactcli purchase-order delete`
+
+Delete purchase orders, by order GUID or number (DELETE purchaseorder/PurchaseOrders)
+
+```
+exactcli purchase-order delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order delete <number> --dry-run
+exactcli purchase-order delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli purchase-order line-add`
+
+Add a line to a purchase order, by order GUID or number (POST purchaseorder/PurchaseOrderLines)
+
+```
+exactcli purchase-order line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli purchase-order line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli purchase-order line-delete`
+
+Delete lines of purchase orders, by GUID (DELETE purchaseorder/PurchaseOrderLines)
+
+```
+exactcli purchase-order line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order delete <guid> --dry-run
+exactcli purchase-order delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli purchase-order line-update`
+
+Update a line of a purchase order, by GUID (PUT purchaseorder/PurchaseOrderLines)
+
+```
+exactcli purchase-order line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order update <guid> --set Description="New text" --dry-run
+exactcli purchase-order update <guid> --body @patch.json --allow-writes
+```
+
+### `exactcli purchase-order lines`
+
+List the lines of purchase orders, by order GUID or number (GET purchaseorder/PurchaseOrderLines)
+
+```
+exactcli purchase-order lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli purchase-order lines <guid>
+exactcli purchase-order lines <number> <number> --output json
+```
+
+### `exactcli purchase-order list`
+
+List purchase orders (the orders placed with suppliers)
+
+```
+exactcli purchase-order list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--supplier <value>` - Supplier GUID or code (the account that delivers)
+- `--from <value>` - Order date from (YYYY-MM-DD)
+- `--to <value>` - Order date to (YYYY-MM-DD)
+- `--status <value>` - Order status: 10 open, 20 partial, 30 complete, 40 cancelled
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli purchase-order list --from 2026-01-01 --to 2026-01-31
+exactcli purchase-order list --supplier 2001 --status 10 --all
+```
+
+### `exactcli purchase-order update`
+
+Update a purchase order, by order GUID or number (PUT purchaseorder/PurchaseOrders)
+
+```
+exactcli purchase-order update <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order update <number> --set Description="New text" --dry-run
+exactcli purchase-order update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli quotation
+
+### `exactcli quotation accept`
+
+Accept a quotation, with an optional follow-up (POST crm/AcceptQuotation)
+
+```
+exactcli quotation accept <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--action <value>` - Follow-up: 0 none, 1 sales order, 2 sales invoice, 3 project, 4 project WBS, 5 subscription
+- `--invoice-journal <value>` - Journal code of the sales invoice (action 2)
+- `--your-ref <value>` - Purchase order number of the customer
+- `--reason <value>` - Reason code (GUID) of the acceptance
+- `--opportunity-stage <value>` - Stage (GUID) of the linked opportunity afterwards
+- `--notification-layout <value>` - Email layout (GUID) of the notification
+
+Examples:
+
+```bash
+exactcli quotation accept <id> --dry-run
+exactcli quotation accept <id> --action 1 --allow-writes
+exactcli quotation accept <id> --action 2 --invoice-journal 70 --allow-writes
+```
+
+### `exactcli quotation create`
+
+Create a quotation from codes (POST crm/Quotations)
+
+```
+exactcli quotation create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--account <value>` _(required)_ - Account code or GUID that asked for the quotation (OrderAccount)
+- `--line <value>` _(required)_ - Quotation line as item:quantity:unit price[:description] (repeatable)
+- `--description <value>` - Quotation description
+- `--date <value>` - Quotation date (YYYY-MM-DD)
+- `--close-date <value>` - Date on which the customer accepted or rejected the quotation (YYYY-MM-DD)
+- `--reference <value>` - Reference of the customer (YourRef)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation create --account 1001 --line Default:2:100 --dry-run
+exactcli quotation create --account 1001 --line Default:2:100 --close-date 2026-09-30 --allow-writes
+```
+
+### `exactcli quotation delete`
+
+Delete quotations, by quotation GUID or number (DELETE crm/Quotations)
+
+```
+exactcli quotation delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation delete <number> --dry-run
+exactcli quotation delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli quotation email`
+
+Email a quotation that the customer signs off online (POST crm/EmailWithSignOffQuotation)
+
+```
+exactcli quotation email <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--email-layout <value>` _(required)_ - Email layout (GUID) of the message text
+- `--layout <value>` - Document layout (GUID) of the PDF
+- `--subject <value>` - Subject of the email
+- `--extra-text <value>` - Extra text on the document and in the email
+- `--action <value>` - Follow-up: 0 none, 1 sales order, 2 sales invoice, 3 project, 4 project WBS, 5 subscription
+- `--invoice-journal <value>` - Journal code of the sales invoice (action 2)
+- `--your-ref <value>` - Purchase order number of the customer
+- `--allow-your-ref` - Let the customer enter a purchase order number
+- `--accept-layout <value>` - Email layout (GUID) sent on acceptance
+- `--reject-layout <value>` - Email layout (GUID) sent on rejection
+- `--date <value>` - Date printed on the quotation (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli quotation email <id> --email-layout <layout-id> --dry-run
+exactcli quotation email <id> --email-layout <layout-id> --action 1 --allow-writes
+```
+
+### `exactcli quotation line-add`
+
+Add a line to a quotation, by quotation GUID or number (POST crm/QuotationLines)
+
+```
+exactcli quotation line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli quotation line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli quotation line-delete`
+
+Delete lines of quotations, by GUID (DELETE crm/QuotationLines)
+
+```
+exactcli quotation line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation delete <guid> --dry-run
+exactcli quotation delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli quotation line-update`
+
+Update a line of a quotation, by GUID (PUT crm/QuotationLines)
+
+```
+exactcli quotation line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation update <guid> --set Description="New text" --dry-run
+exactcli quotation update <guid> --body @patch.json --allow-writes
+```
+
+### `exactcli quotation lines`
+
+List the lines of quotations, by quotation GUID or number; a number matches every version (GET crm/QuotationLines)
+
+```
+exactcli quotation lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli quotation lines <guid>
+exactcli quotation lines <number> <number> --output json
+```
+
+### `exactcli quotation list`
+
+List quotations (the offers sent to prospects and customers)
+
+```
+exactcli quotation list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--account <value>` - Account GUID or code (the account that requested the quotation)
+- `--from <value>` - Quotation date from (YYYY-MM-DD)
+- `--to <value>` - Quotation date to (YYYY-MM-DD)
+- `--status <value>` - Status code: 5 rejected, 20 draft, 25 open, 40 printed, 50 accepted
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli quotation list --from 2026-01-01 --to 2026-01-31
+exactcli quotation list --account 1001 --status 25 --all
+```
+
+### `exactcli quotation print`
+
+Print a quotation to a PDF document, and email it (POST crm/PrintQuotation)
+
+```
+exactcli quotation print <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--layout <value>` - Document layout (GUID) of the PDF
+- `--email-layout <value>` - Email layout (GUID) of the message text
+- `--extra-text <value>` - Extra text on the document and in the email
+- `--email` - Send the document to the customer by email
+- `--date <value>` - Date printed on the quotation (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli quotation print <id> --dry-run
+exactcli quotation print <id> --email --allow-writes
+```
+
+### `exactcli quotation reject`
+
+Reject a quotation (POST crm/RejectQuotation)
+
+```
+exactcli quotation reject <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--reason <value>` - Reason code (GUID) of the rejection
+- `--opportunity-stage <value>` - Stage (GUID) of the linked opportunity afterwards
+- `--notification-layout <value>` - Email layout (GUID) of the notification
+
+Examples:
+
+```bash
+exactcli quotation reject <id> --dry-run
+exactcli quotation reject <id> --allow-writes
+```
+
+### `exactcli quotation reopen`
+
+Reopen an accepted or rejected quotation (POST crm/ReopenQuotation)
+
+```
+exactcli quotation reopen <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation reopen <id> --dry-run
+exactcli quotation reopen <id> --allow-writes
+```
+
+### `exactcli quotation review`
+
+Review a quotation: a new version replaces it (POST crm/ReviewQuotation)
+
+```
+exactcli quotation review <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--description <value>` - Description of the new quotation
+- `--date <value>` - Date of the new quotation (YYYY-MM-DD)
+- `--copy-prices` - Copy the item prices of the original
+- `--account <value>` - Order account (code or GUID) of the new quotation
+- `--payment-condition <value>` - Payment condition code
+- `--document <value>` - Document (GUID) linked to the new quotation
+
+Examples:
+
+```bash
+exactcli quotation review <id> --dry-run
+exactcli quotation review <id> --allow-writes
+```
+
+### `exactcli quotation update`
+
+Update the header fields of a quotation (PUT crm/Quotations). Lines stay as they are
+
+```
+exactcli quotation update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--description <value>` - Quotation description
+- `--date <value>` - Quotation date (YYYY-MM-DD)
+- `--close-date <value>` - Date on which the customer accepted or rejected the quotation (YYYY-MM-DD)
+- `--reference <value>` - Reference of the customer (YourRef)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation update <id> --close-date 2026-09-30 --dry-run
+exactcli quotation update <id> --description "Spring offer" --reference PO-42 --allow-writes
+```
+
+## exactcli receivable
+
+### `exactcli receivable collect`
+
+Prepare receivables for a direct debit collection: payment method I, optionally a mandate and a payment reference (PUT cashflow/Receivables)
+
+```
+exactcli receivable collect <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--mandate <value>` - Direct debit mandate GUID (mandate list shows them)
+- `--reference <value>` - Payment reference for the bank file (one receivable only)
+- `--description <value>` - Description
+- `--dry-run` - Show the validated requests and send nothing
+
+Examples:
+
+```bash
+exactcli receivable collect 26700002 --dry-run
+exactcli receivable collect <receivable-id> --mandate <mandate-id> --allow-writes
+```
+
+### `exactcli receivable list`
+
+List receivables (outstanding customer items)
+
+```
+exactcli receivable list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains
+- `--account <value>` - Account GUID or code
+- `--due-from <value>` - Due date from (YYYY-MM-DD)
+- `--due-to <value>` - Due date to (YYYY-MM-DD)
+- `--status <value>` - Status: 20 open, 30 selected, 40 processed, 50 matched
+
+Examples:
+
+```bash
+exactcli receivable list --status 20 --due-to 2026-09-30
+exactcli receivable list --account 1001 --all --output csv
+```
+
+### `exactcli receivable update`
+
+Update a receivable, by GUID (PUT cashflow/Receivables)
+
+```
+exactcli receivable update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli receivable update <guid> --set Description="New text" --dry-run
+exactcli receivable update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli receivables-list
+
+### `exactcli receivables-list list`
+
+List open receivable invoices per customer (financial report)
+
+```
+exactcli receivables-list list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Account name contains (a code goes to --account)
+- `--account <value>` - Account GUID or code
+- `--due-from <value>` - Due date from (YYYY-MM-DD)
+- `--due-to <value>` - Due date to (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli receivables-list list --due-to 2026-09-30
+exactcli receivables-list list --account 1001 --output json
+```
+
+## exactcli return
+
+### `exactcli return process`
+
+Set the status of a return request (VAT or payroll declaration) (POST financial/ProcessReturn)
+
+```
+exactcli return process <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--status <value>` _(required)_ - New status: 5 rejected, 50 processed
+
+Examples:
+
+```bash
+exactcli return process <request-id> --status 50 --dry-run
+exactcli return process <request-id> --status 50 --allow-writes
+```
+
+## exactcli revenue
+
+### `exactcli revenue list`
+
+List the revenue per reporting year and period
+
+```
+exactcli revenue list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--year <value>` - Reporting year
+- `--period <value>` - Reporting period
+
+Examples:
+
+```bash
+exactcli revenue list --year 2026
+exactcli revenue list --year 2026 --period 3 --output json
+```
+
+## exactcli sales-channel
+
+### `exactcli sales-channel create`
+
+Create a sales channel (POST sales/SalesChannels)
+
+```
+exactcli sales-channel create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-channel create --code X1 --description "New one" --dry-run
+exactcli sales-channel create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli sales-channel delete`
+
+Delete sales channels, by GUID or code (DELETE sales/SalesChannels)
+
+```
+exactcli sales-channel delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-channel delete <guid> --dry-run
+exactcli sales-channel delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-channel update`
+
+Update a sales channel, by GUID or code (PUT sales/SalesChannels)
+
+```
+exactcli sales-channel update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-channel update <guid> --set Description="New text" --dry-run
+exactcli sales-channel update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli sales-entry
+
+### `exactcli sales-entry create`
+
+Post a sales entry from codes (POST salesentry/SalesEntries)
+
+```
+exactcli sales-entry create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--customer <value>` _(required)_ - Customer code or GUID (crm/Accounts with IsSales)
+- `--journal <value>` _(required)_ - Sales journal code, for example 700
+- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:option=value...][:description] (repeatable). The account is a code or a GUID; the amount is a decimal. Options: vat, vat-amount, from, to, quantity, cost-center, cost-unit. from and to (YYYY-MM-DD) spread the amount over a period
+- `--credit-note` - Post a credit note (Type 21). The lines carry negative amounts: Exact books the signs as given
+- `--description <value>` - Entry description
+- `--date <value>` - Entry date (YYYY-MM-DD)
+- `--invoice <value>` - Invoice reference (YourRef)
+- `--file <value>` - File to attach (repeatable). The files land on one new document of type 10, and the entry links that document
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100 --dry-run
+exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100 --allow-writes
+exactcli sales-entry create --customer 1001 --journal 700 --line 700000:100 --file invoice.pdf --allow-writes
+```
+
+### `exactcli sales-entry delete`
+
+Delete sales entries, by entry GUID or number (DELETE salesentry/SalesEntries)
+
+```
+exactcli sales-entry delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-entry delete <number> --dry-run
+exactcli sales-entry delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-entry line-add`
+
+Add a line to a sales entry, by entry GUID or number (POST salesentry/SalesEntryLines)
+
+```
+exactcli sales-entry line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-entry line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli sales-entry line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli sales-entry line-delete`
+
+Delete lines of sales entries, by GUID (DELETE salesentry/SalesEntryLines)
+
+```
+exactcli sales-entry line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-entry delete <guid> --dry-run
+exactcli sales-entry delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-entry line-update`
+
+Update a line of a sales entry, by GUID (PUT salesentry/SalesEntryLines)
+
+```
+exactcli sales-entry line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-entry update <guid> --set Description="New text" --dry-run
+exactcli sales-entry update <guid> --body @patch.json --allow-writes
+```
+
+### `exactcli sales-entry lines`
+
+List the lines of sales entries, by entry GUID or number (GET salesentry/SalesEntryLines)
+
+```
+exactcli sales-entry lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli sales-entry lines <guid>
+exactcli sales-entry lines <number> <number> --output json
+```
+
+### `exactcli sales-entry list`
+
+List sales entries (the accounting ledger of sales)
+
+```
+exactcli sales-entry list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+
+Examples:
+
+```bash
+exactcli sales-entry list
+exactcli sales-entry list --filter "EntryDate ge datetime'2026-01-01'" --all
+exactcli sales-entry list --limit 200 --output json
+```
+
+### `exactcli sales-entry update`
+
+Update a sales entry, by entry GUID or number (PUT salesentry/SalesEntries)
+
+```
+exactcli sales-entry update <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-entry update <number> --set Description="New text" --dry-run
+exactcli sales-entry update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli sales-invoice
+
+### `exactcli sales-invoice delete`
+
+Delete sales invoices, by invoice GUID or number (DELETE salesinvoice/SalesInvoices)
+
+```
+exactcli sales-invoice delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-invoice delete <number> --dry-run
+exactcli sales-invoice delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-invoice line-add`
+
+Add a line to a sales invoice, by invoice GUID or number (POST salesinvoice/SalesInvoiceLines)
+
+```
+exactcli sales-invoice line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-invoice line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli sales-invoice line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli sales-invoice line-delete`
+
+Delete lines of sales invoices, by GUID (DELETE salesinvoice/SalesInvoiceLines)
+
+```
+exactcli sales-invoice line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-invoice delete <guid> --dry-run
+exactcli sales-invoice delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-invoice line-update`
+
+Update a line of a sales invoice, by GUID (PUT salesinvoice/SalesInvoiceLines)
+
+```
+exactcli sales-invoice line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-invoice update <guid> --set Description="New text" --dry-run
+exactcli sales-invoice update <guid> --body @patch.json --allow-writes
+```
+
+### `exactcli sales-invoice lines`
+
+List the lines of sales invoices, by invoice GUID or number (GET salesinvoice/SalesInvoiceLines)
+
+```
+exactcli sales-invoice lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli sales-invoice lines <guid>
+exactcli sales-invoice lines <number> <number> --output json
+```
+
+### `exactcli sales-invoice list`
+
+List sales invoices (the invoices sent to customers)
+
+```
+exactcli sales-invoice list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--customer <value>` - Customer GUID or code (the account that ordered)
+- `--from <value>` - Invoice date from (YYYY-MM-DD)
+- `--to <value>` - Invoice date to (YYYY-MM-DD)
+- `--status <value>` - Status code: 20 open (a draft in the web interface, not printed yet), 50 processed (printed), 10 draft (rare)
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli sales-invoice list --from 2026-01-01 --to 2026-01-31
+exactcli sales-invoice list --customer 1001 --status 20 --all
+```
+
+### `exactcli sales-invoice print`
+
+Print a sales invoice to a PDF document, and send it by email, postbox or Peppol (POST salesinvoice/PrintedSalesInvoices)
+
+```
+exactcli sales-invoice print <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--layout <value>` - Document layout (GUID) of the PDF
+- `--email-layout <value>` - Email layout (GUID) of the message text
+- `--extra-text <value>` - Extra text on the document and in the email
+- `--email` - Send the document to the customer by email
+- `--sender <value>` - Email address of the sender
+- `--postbox` - Send the invoice to the postbox of the customer
+- `--postbox-sender <value>` - Postbox (GUID) that sends the message
+- `--peppol` - Send the invoice through Peppol
+- `--by-account` - Take the output preference of the account
+- `--date <value>` - Invoice date (YYYY-MM-DD)
+- `--reporting-year <value>` - Reporting year
+- `--reporting-period <value>` - Reporting period
+
+Examples:
+
+```bash
+exactcli sales-invoice print <id> --dry-run
+exactcli sales-invoice print <id> --email --allow-writes
+exactcli sales-invoice print <id> --peppol --allow-writes
+```
+
+### `exactcli sales-invoice update`
+
+Update a sales invoice, by invoice GUID or number (PUT salesinvoice/SalesInvoices)
+
+```
+exactcli sales-invoice update <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-invoice update <number> --set Description="New text" --dry-run
+exactcli sales-invoice update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli sales-order
+
+### `exactcli sales-order complete`
+
+Complete a sales order: close what is not delivered or invoiced (POST salesorder/CompleteSalesOrder)
+
+```
+exactcli sales-order complete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--delivery` - Complete the remaining goods delivery
+- `--invoice` - Complete the outstanding invoice amount
+
+Examples:
+
+```bash
+exactcli sales-order complete <id> --dry-run
+exactcli sales-order complete <id> --delivery --invoice --allow-writes
+```
+
+### `exactcli sales-order complete-line`
+
+Complete one sales order line (POST salesorder/CompleteSalesOrderLine)
+
+```
+exactcli sales-order complete-line <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--delivery` - Complete the remaining goods delivery
+- `--invoice` - Complete the outstanding invoice amount
+
+Examples:
+
+```bash
+exactcli sales-order complete-line <id> --dry-run
+exactcli sales-order complete-line <id> --allow-writes
+```
+
+### `exactcli sales-order create`
+
+Create a sales order from codes (POST salesorder/SalesOrders)
+
+```
+exactcli sales-order create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--customer <value>` _(required)_ - Customer code or GUID (crm/Accounts with IsSales)
+- `--line <value>` _(required)_ - Order line as item:quantity:unit price[:description] (repeatable)
+- `--description <value>` - Order description
+- `--date <value>` - Order date (YYYY-MM-DD)
+- `--delivery-date <value>` - Delivery date (YYYY-MM-DD)
+- `--reference <value>` - Reference of the customer (YourRef)
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order create --customer 1001 --line Default:2:100 --dry-run
+exactcli sales-order create --customer 1001 --line Default:2:100 --delivery-date 2026-09-10 --allow-writes
+```
+
+### `exactcli sales-order delete`
+
+Delete sales orders, by order GUID or number (DELETE salesorder/SalesOrders)
+
+```
+exactcli sales-order delete <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order delete <number> --dry-run
+exactcli sales-order delete <number> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-order invoice`
+
+Invoice sales orders: Exact queues the run and answers a ProcessID (POST salesinvoice/InvoiceSalesOrders); --wait reads the result (GET read/salesinvoice/InvoiceSalesOrderResult)
+
+```
+exactcli sales-order invoice <order> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--journal <value>` _(required)_ - Code of the sales journal, for example 700
+- `--create-mode <value>` - CreateMode: 0 one invoice per customer, 1 one invoice per sales order
+- `--invoice-mode <value>` - InvoiceMode: 0 invoice the quantity delivered (default), 1 the quantity ordered
+- `--invoice-date <value>` - Invoice date (YYYY-MM-DD, UserInvoiceDate). Exact applies it only in the QuickBooks integration
+- `--wait` - Wait for the queued run to end and print its result (exit 65 on an error status)
+- `--interval <value>` - Seconds between two result reads with --wait
+- `--wait-timeout <value>` - Seconds to wait with --wait; then exit 75 and name the ProcessID
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order invoice <order-id> --journal 700 --dry-run
+exactcli sales-order invoice <order-id> <order-id> --journal 700 --create-mode 0 --allow-writes
+exactcli sales-order invoice <order-id> --journal 700 --wait --allow-writes
+```
+
+### `exactcli sales-order invoice-result`
+
+Read the result of a queued sales order invoicing run (GET read/salesinvoice/InvoiceSalesOrderResult)
+
+```
+exactcli sales-order invoice-result <process> [flags]
+```
+
+Examples:
+
+```bash
+exactcli sales-order invoice-result <process-id>
+exactcli sales-order invoice-result <process-id> --output json
+```
+
+### `exactcli sales-order line-add`
+
+Add a line to a sales order, by order GUID or number (POST salesorder/SalesOrderLines)
+
+```
+exactcli sales-order line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli sales-order line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli sales-order line-delete`
+
+Delete lines of sales orders, by GUID (DELETE salesorder/SalesOrderLines)
+
+```
+exactcli sales-order line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order delete <guid> --dry-run
+exactcli sales-order delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-order line-update`
+
+Update a line of a sales order, by GUID (PUT salesorder/SalesOrderLines)
+
+```
+exactcli sales-order line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order update <guid> --set Description="New text" --dry-run
+exactcli sales-order update <guid> --body @patch.json --allow-writes
+```
+
+### `exactcli sales-order lines`
+
+List the lines of sales orders, by order GUID or number (GET salesorder/SalesOrderLines)
+
+```
+exactcli sales-order lines <ref> [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+
+Examples:
+
+```bash
+exactcli sales-order lines <guid>
+exactcli sales-order lines <number> <number> --output json
+```
+
+### `exactcli sales-order list`
+
+List sales orders (the orders placed by customers)
+
+```
+exactcli sales-order list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--customer <value>` - Customer GUID or code (the account that ordered)
+- `--from <value>` - Order date from (YYYY-MM-DD)
+- `--to <value>` - Order date to (YYYY-MM-DD)
+- `--status <value>` - Status code: 12 open, 20 partial, 21 complete, 45 cancelled
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli sales-order list --from 2026-01-01 --to 2026-01-31
+exactcli sales-order list --customer 1001 --status 12 --all
+```
+
+### `exactcli sales-order print`
+
+Print a sales order to a PDF document, and email it (POST salesorder/PrintedSalesOrders)
+
+```
+exactcli sales-order print <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--layout <value>` - Document layout (GUID) of the PDF
+- `--email-layout <value>` - Email layout (GUID) of the message text
+- `--extra-text <value>` - Extra text on the document and in the email
+- `--email` - Send the document to the customer by email
+- `--sender <value>` - Email address of the sender
+
+Examples:
+
+```bash
+exactcli sales-order print <id> --dry-run
+exactcli sales-order print <id> --allow-writes
+```
+
+### `exactcli sales-order update`
+
+Update a sales order, by order GUID or number (PUT salesorder/SalesOrders)
+
+```
+exactcli sales-order update <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order update <number> --set Description="New text" --dry-run
+exactcli sales-order update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli sales-price
+
+### `exactcli sales-price create`
+
+Create a sales price (POST logistics/SalesItemPrices)
+
+```
+exactcli sales-price create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-price create --set Key=value --dry-run
+exactcli sales-price create --body @record.json --allow-writes
+```
+
+### `exactcli sales-price delete`
+
+Delete sales prices, by GUID (DELETE logistics/SalesItemPrices)
+
+```
+exactcli sales-price delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-price delete <guid> --dry-run
+exactcli sales-price delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-price update`
+
+Update a sales price, by GUID (PUT logistics/SalesItemPrices)
+
+```
+exactcli sales-price update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-price update <guid> --set Description="New text" --dry-run
+exactcli sales-price update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli stock-count
+
+### `exactcli stock-count process`
+
+Process a stock count (POST inventory/ProcessStockCount)
+
+```
+exactcli stock-count process <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli stock-count process <id> --dry-run
+exactcli stock-count process <id> --allow-writes
+```
+
+## exactcli subscription
+
+### `exactcli subscription create`
+
+Create a subscription (POST subscription/Subscriptions)
+
+```
+exactcli subscription create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli subscription create --set Key=value --dry-run
+exactcli subscription create --body @record.json --allow-writes
+```
+
+### `exactcli subscription delete`
+
+Delete subscriptions, by GUID (DELETE subscription/Subscriptions)
+
+```
+exactcli subscription delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli subscription delete <guid> --dry-run
+exactcli subscription delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli subscription list`
+
+List subscriptions (recurring invoice contracts)
+
+```
+exactcli subscription list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--account <value>` - Account GUID or code (the account that is invoiced)
+- `--from <value>` - Start date from (YYYY-MM-DD)
+- `--to <value>` - Start date to (YYYY-MM-DD)
+- `--search <value>` - Description contains
+
+Examples:
+
+```bash
+exactcli subscription list --account 1001
+exactcli subscription list --from 2026-01-01 --search hosting --all
+```
+
+### `exactcli subscription update`
+
+Update a subscription, by GUID (PUT subscription/Subscriptions)
+
+```
+exactcli subscription update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli subscription update <guid> --set Description="New text" --dry-run
+exactcli subscription update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli supplier-item
+
+### `exactcli supplier-item create`
+
+Create a supplier item link (POST logistics/SupplierItem)
+
+```
+exactcli supplier-item create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli supplier-item create --set Key=value --dry-run
+exactcli supplier-item create --body @record.json --allow-writes
+```
+
+### `exactcli supplier-item delete`
+
+Delete supplier item links, by GUID (DELETE logistics/SupplierItem)
+
+```
+exactcli supplier-item delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli supplier-item delete <guid> --dry-run
+exactcli supplier-item delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli supplier-item update`
+
+Update a supplier item link, by GUID (PUT logistics/SupplierItem)
+
+```
+exactcli supplier-item update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli supplier-item update <guid> --set Description="New text" --dry-run
+exactcli supplier-item update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli sync
+
+### `exactcli sync timestamp`
+
+Find the sync timestamp of a date for one feed, to start a sync from that date
+
+```
+exactcli sync timestamp [flags]
+```
+
+- `--endpoint <value>` _(required)_ - Feed name, for example Accounts or TransactionLines (the list: metadata read/sync/Sync/SyncTimestamp)
+- `--modified <value>` _(required)_ - Date (YYYY-MM-DD): the first timestamp at or after it
+
+Examples:
+
+```bash
+exactcli sync timestamp --endpoint Accounts --modified 2026-01-01
+exactcli sync timestamp --endpoint TransactionLines --modified 2026-01-01 --output json
+```
+
+## exactcli task
+
+### `exactcli task create`
+
+Create a task (POST activities/Tasks)
+
+```
+exactcli task create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli task create --set Key=value --dry-run
+exactcli task create --body @record.json --allow-writes
+```
+
+## exactcli time-entry
+
+### `exactcli time-entry create`
+
+Create a time entry (POST project/TimeTransactions)
+
+```
+exactcli time-entry create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli time-entry create --set Key=value --dry-run
+exactcli time-entry create --body @record.json --allow-writes
+```
+
+### `exactcli time-entry delete`
+
+Delete time entries, by GUID (DELETE project/TimeTransactions)
+
+```
+exactcli time-entry delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli time-entry delete <guid> --dry-run
+exactcli time-entry delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli time-entry update`
+
+Update a time entry, by GUID (PUT project/TimeTransactions)
+
+```
+exactcli time-entry update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli time-entry update <guid> --set Description="New text" --dry-run
+exactcli time-entry update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli transaction-line
+
+### `exactcli transaction-line list`
+
+List transaction lines (general ledger detail)
+
+```
+exactcli transaction-line list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--year <value>` - Financial year
+- `--period <value>` - Financial period
+- `--from <value>` - Date from (YYYY-MM-DD)
+- `--to <value>` - Date to (YYYY-MM-DD)
+- `--gl-account <value>` - General ledger account code
+- `--account <value>` - Account GUID or code
+- `--journal <value>` - Journal code
+
+Examples:
+
+```bash
+exactcli transaction-line list --year 2026 --period 9
+exactcli transaction-line list --from 2026-01-01 --to 2026-01-31 --gl-account 700000
+exactcli transaction-line list --account 1001 --all --output csv
+```
+
+## exactcli vat-code
+
+### `exactcli vat-code create`
+
+Create a VAT code (POST vat/VATCodes)
+
+```
+exactcli vat-code create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli vat-code create --code X1 --description "New one" --dry-run
+exactcli vat-code create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli vat-code delete`
+
+Delete VAT codes, by GUID or code (DELETE vat/VATCodes)
+
+```
+exactcli vat-code delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli vat-code delete <guid> --dry-run
+exactcli vat-code delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli vat-code list`
+
+List VAT codes
+
+```
+exactcli vat-code list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--search <value>` - Description contains, or exact Code
+- `--type <value>` - Calculation type: B (base only), E (excluding), I (including), N (no VAT)
+- `--blocked <value>` - Blocked codes only (true or false)
+
+Examples:
+
+```bash
+exactcli vat-code list
+exactcli vat-code list --type E --blocked no
+```
+
+### `exactcli vat-code update`
+
+Update a VAT code, by GUID or code (PUT vat/VATCodes)
+
+```
+exactcli vat-code update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli vat-code update <guid> --set Description="New text" --dry-run
+exactcli vat-code update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli warehouse
+
+### `exactcli warehouse create`
+
+Create a warehouse (POST inventory/Warehouses)
+
+```
+exactcli warehouse create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli warehouse create --code X1 --description "New one" --dry-run
+exactcli warehouse create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli warehouse delete`
+
+Delete warehouses, by GUID or code (DELETE inventory/Warehouses)
+
+```
+exactcli warehouse delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli warehouse delete <guid> --dry-run
+exactcli warehouse delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli warehouse update`
+
+Update a warehouse, by GUID or code (PUT inventory/Warehouses)
+
+```
+exactcli warehouse update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli warehouse update <guid> --set Description="New text" --dry-run
+exactcli warehouse update <guid> --body @patch.json --allow-writes
+```
+
+## exactcli warehouse-transfer
+
+### `exactcli warehouse-transfer process`
+
+Process a warehouse transfer (POST inventory/ProcessWarehouseTransfer)
+
+```
+exactcli warehouse-transfer process <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+- `--date <value>` - Transfer date (YYYY-MM-DD)
+
+Examples:
+
+```bash
+exactcli warehouse-transfer process <id> --dry-run
+exactcli warehouse-transfer process <id> --allow-writes
+```
+
+## exactcli webhook
+
+### `exactcli webhook create`
+
+Subscribe to a webhook topic (POST webhooks/WebhookSubscriptions)
+
+```
+exactcli webhook create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--topic <value>` _(required)_ - Topic, for example Accounts or SalesInvoices
+- `--url <value>` _(required)_ - Callback URL (https only)
+- `--description <value>` - Description of the subscription
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli webhook create --topic Accounts --url https://acme.example/hooks/exact --dry-run
+exactcli webhook create --topic SalesInvoices --url https://acme.example/hooks/exact --allow-writes
+```
+
+### `exactcli webhook delete`
+
+Delete a webhook subscription (DELETE webhooks/WebhookSubscriptions). Needs --allow-writes and --yes
+
+```
+exactcli webhook delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the request and send nothing
+
+Examples:
+
+```bash
+exactcli webhook delete <id> --dry-run
+exactcli webhook delete <id> --allow-writes --yes
+```
+
+### `exactcli webhook list`
+
+List webhook subscriptions (the callbacks Exact calls per topic)
+
+```
+exactcli webhook list [flags]
+```
+
+- `--filter <value>` - OData $filter expression
+- `--select <value>` - Comma-separated properties for $select
+- `--expand <value>` - OData $expand expression
+- `--orderby <value>` - OData $orderby expression
+- `--top <value>` - Page size ($top), max 60
+- `--all` - Follow every page, up to --max-pages
+- `--max-pages <value>` - Maximum number of pages to read
+- `--raw` - Print the raw API envelope
+- `--count` - Print the number of matching records ($count), not the records
+- `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
+- `--topic <value>` - Subscription topic, for example Accounts or Items
+- `--search <value>` - Description contains
+- `--instant <value>` - Instant delivery subscriptions only (true or false)
+
+Examples:
+
+```bash
+exactcli webhook list --topic Accounts
+exactcli webhook list --search acme --output json
+```
+
+### `exactcli webhook listen`
+
+Subscribe to webhook topics and print each verified notification as a JSON line (POST webhooks/WebhookSubscriptions, DELETE webhooks/WebhookSubscriptions on exit)
+
+```
+exactcli webhook listen [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--topic <value>` _(required)_ - Topic, for example Accounts or SalesInvoices (repeatable)
+- `--port <value>` - Local port of the receiver
+- `--ngrok-domain <value>` - Reserved ngrok domain; defaults to the one of the profile (the domain of the redirect URI)
+- `--max-events <value>` - Stop after this many notifications
+- `--keep` - Keep the subscriptions when the command stops
+
+Examples:
+
+```bash
+exactcli webhook listen --topic Accounts --allow-writes
+exactcli webhook listen --topic SalesInvoices --topic Items --max-events 10 --allow-writes
+```
+
+### `exactcli webhook update`
+
+Update the callback URL or the description of a webhook subscription (PUT webhooks/WebhookSubscriptions)
+
+```
+exactcli webhook update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--url <value>` - Callback URL (https only)
+- `--description <value>` - Description of the subscription
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli webhook update <id> --url https://acme.example/hooks/exact-v2 --dry-run
+exactcli webhook update <id> --description "Production hook" --allow-writes
+```
+

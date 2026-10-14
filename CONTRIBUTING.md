@@ -38,6 +38,9 @@ types where they help.
 - New commands extend `BaseCommand`, spread the shared flags, and end with
   `outputResults` or `outputAction` so `--output`, `--jq` and `--fields` work.
 - `docs/commands.md` is generated: run `npm run docs:commands`, do not edit it by hand.
+  The same run writes the command reference of the site.
+- The site lives in `website/` (Astro and Starlight): `cd website && npm install && npm
+run dev`. The docs workflow deploys it to GitHub Pages on a push to `main`.
 - A typed command names the calls it makes at the end of its description, for example
   `(POST crm/Accounts)`. `npm run docs:coverage` reads these names to generate
   `docs/coverage.md`. After a live check of a write call on a test administration, add
@@ -47,5 +50,6 @@ types where they help.
 ## Release
 
 Maintainers bump `package.json`, update `CHANGELOG.md`, tag `vX.Y.Z` and push the tag.
-The release workflow publishes to npm (OIDC trusted publishing) and creates the GitHub
-release from the changelog section.
+The release workflow publishes to npm (OIDC trusted publishing), creates the GitHub
+release from the changelog section, and pushes the Homebrew formula to
+`wavyx/homebrew-tap` when the `TAP_TOKEN` secret is set.
