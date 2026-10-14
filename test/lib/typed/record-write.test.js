@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mockApi, runCmd } from '../../helpers.js'
 import {
+  defineRecordCreateCommand,
   defineRecordDeleteCommand,
   defineRecordUpdateCommand,
 } from '../../../src/lib/typed/record-write.js'
@@ -178,5 +179,149 @@ describe('defineRecordUpdateCommand', () => {
     expect(
       exit(await fail(Update, ['42', '--set', 'Description=x', '--dry-run'])),
     ).toBe(64)
+  })
+})
+
+describe('code references and create', () => {
+  const GL = '/api/v1/123/financial/GLAccounts'
+  const glSpec = {
+    topic: 'gl-account',
+    resource: 'financial/GLAccounts',
+    singular: 'a ledger account',
+    plural: 'ledger accounts',
+    byCode: true,
+    codeFlags: true,
+  }
+  const GlCreate = defineRecordCreateCommand(glSpec)
+  const GlUpdate = defineRecordUpdateCommand(glSpec)
+  const GlDelete = defineRecordDeleteCommand(glSpec)
+  /** The Code lookup of resolveRef on ledger accounts. */
+  const mockCode = (code, id) =>
+    mockApi()
+      .get(GL)
+      .query((q) => q.$filter === `Code eq '${code}'`)
+      .reply(200, { d: { results: [{ ID: id, Code: code }] } })
+
+  it('names the reference kinds in the descriptions', () => {
+    expect(GlDelete.description).toBe(
+      'Delete ledger accounts, by GUID or code (DELETE financial/GLAccounts)',
+    )
+    expect(GlCreate.description).toBe(
+      'Create a ledger account (POST financial/GLAccounts)',
+    )
+    expect(Delete.description).toContain('by GUID (')
+  })
+
+  it('creates from --code and --description, merged over --set', async () => {
+    const scope = mockApi()
+      .post(GL, { Type: 110, Code: '799000', Description: 'Test income' })
+      .reply(201, { d: { __metadata: { uri: 'x' }, ID: A, Code: '799000' } })
+
+    const out = JSON.parse(
+      await runCmd(GlCreate, [
+        '--code',
+        '799000',
+        '--description',
+        'Test income',
+        '--set',
+        'Type=110',
+        '--allow-writes',
+      ]),
+    )
+
+    expect(scope.isDone()).toBe(true)
+    expect(out).toEqual({ ID: A, Code: '799000' })
+  })
+
+  it('create --dry-run validates and sends nothing; a missing field fails 64', async () => {
+    const post = mockApi().post(GL).reply(201, { d: {} })
+    const out = JSON.parse(
+      await runCmd(GlCreate, [
+        '--code',
+        '799000',
+        '--description',
+        'Test',
+        '--dry-run',
+      ]),
+    )
+    expect(post.isDone()).toBe(false)
+    expect(out.body).toEqual({ Code: '799000', Description: 'Test' })
+
+    const err = await fail(GlCreate, ['--code', '799000', '--dry-run'])
+    expect(exit(err)).toBe(64)
+    expect(err.message).toMatch(/missing mandatory fields: Description/)
+  })
+
+  it('create merges --body under --code, and a bare --set reads no stdin', async () => {
+    let out = JSON.parse(
+      await runCmd(GlCreate, [
+        '--body',
+        '{"Type":110,"Description":"From body"}',
+        '--code',
+        '799000',
+        '--dry-run',
+      ]),
+    )
+    expect(out.body).toEqual({
+      Type: 110,
+      Description: 'From body',
+      Code: '799000',
+    })
+
+    const MandateCreate = defineRecordCreateCommand(spec)
+    out = JSON.parse(
+      await runCmd(MandateCreate, [
+        '--set',
+        `Account=@guid:${A}`,
+        '--set',
+        `BankAccount=@guid:${B}`,
+        '--dry-run',
+      ]),
+    )
+    expect(out.body).toEqual({ Account: A, BankAccount: B })
+
+    const err = await fail(GlCreate, ['--description', 'No code', '--dry-run'])
+    expect(exit(err)).toBe(64)
+    expect(err.message).toMatch(/missing mandatory fields: Code/)
+  })
+
+  it('a create without code flags takes --set only', async () => {
+    const MandateCreate = defineRecordCreateCommand(spec)
+    expect(MandateCreate.flags).not.toHaveProperty('code')
+    expect(MandateCreate.examples[0]).toContain('--set')
+  })
+
+  it('updates and deletes by code after the gate', async () => {
+    const scope = mockCode('799000', A)
+      .put(`${GL}(guid'${A}')`, { Description: 'Renamed' })
+      .reply(204)
+    const out = JSON.parse(
+      await runCmd(GlUpdate, [
+        '799000',
+        '--set',
+        'Description=Renamed',
+        '--allow-writes',
+      ]),
+    )
+    expect(scope.isDone()).toBe(true)
+    expect(out).toEqual({ ok: true, key: A })
+
+    const lookup = mockCode('799000', A)
+    expect(exit(await fail(GlDelete, ['799000', '--allow-writes']))).toBe(77)
+    expect(lookup.isDone()).toBe(false)
+    nock.cleanAll()
+
+    const del = mockCode('799000', A).delete(`${GL}(guid'${A}')`).reply(204)
+    process.stdout.isTTY = false
+    const deleted = JSON.parse(
+      await runCmd(GlDelete, ['799000', A, '--allow-writes', '--yes']),
+    )
+    expect(del.isDone()).toBe(true)
+    // The code and the GUID name one record: one DELETE.
+    expect(deleted).toEqual({ deleted: [A] })
+  })
+
+  it('refuses an empty code with 64', async () => {
+    expect(exit(await fail(GlDelete, [' ', '--dry-run']))).toBe(64)
   })
 })

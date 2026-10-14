@@ -25,6 +25,10 @@ export const lineDescriptors = {
     number: 'InvoiceNumber',
     resource: 'salesinvoice/SalesInvoiceLines',
     link: 'InvoiceID',
+    // Exact takes the ledger account of the item when a line has none, so
+    // the catalogue's mandatory GLAccount does not bind line-add [live
+    // 2026-10-14].
+    filledByExact: ['GLAccount'],
     description:
       'List the lines of sales invoices, by invoice GUID or number (GET salesinvoice/SalesInvoiceLines)',
     columns: [

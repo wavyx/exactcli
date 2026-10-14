@@ -71,10 +71,14 @@ export function defineLineAddCommand(d) {
           { exitCode: 64 },
         )
       }
-      // The check runs with a placeholder link: the lookup comes later.
+      // The check runs with a placeholder link, since the lookup comes
+      // later, and with placeholders for the fields Exact fills itself.
+      const filled = Object.fromEntries(
+        (d.filledByExact ?? []).map((field) => [field, null]),
+      )
       validateWrite({
         resource: d.resource,
-        body: { ...fields, [d.link]: null },
+        body: { ...filled, ...fields, [d.link]: null },
         method: 'POST',
       })
       // A refused write costs no call at all. A dry run needs no permission.

@@ -1,9 +1,9 @@
-import { Args } from '@oclif/core'
+import { Args, Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { bodyFlags } from '../../commands/create.js'
 import { CliError } from '../errors.js'
-import { divisionPath } from '../odata.js'
-import { GUID_RE } from '../refs.js'
+import { autoColumns, divisionPath, normalize, unwrap } from '../odata.js'
+import { GUID_RE, resolveRef } from '../refs.js'
 import {
   applyRefs,
   assertWritesAllowed,
@@ -20,20 +20,132 @@ import {
  * @property {string} resource `service/Resource`, keyed by an ID GUID
  * @property {string} singular for example "a direct debit mandate"
  * @property {string} plural for example "direct debit mandates"
+ * @property {boolean} [byCode] a reference may also be the Code of the record
+ * @property {boolean} [codeFlags] create takes --code and --description
  */
 
 /**
- * The GUIDs of the arguments, without duplicates. A GUID lands in a path, so
- * anything else could change the request.
+ * The references of the arguments, without duplicates: GUIDs, and codes when
+ * the spec allows them. A GUID lands in a path and a code in a quoted filter,
+ * so anything else is refused here.
  * @param {string[]} argv
+ * @param {RecordSpec} spec
  * @returns {string[]}
  */
-function guids(argv) {
-  const bad = argv.find((ref) => !GUID_RE.test(ref))
+function checkRefs(argv, spec) {
+  const bad = argv.find(
+    (ref) => !GUID_RE.test(ref) && !(spec.byCode && ref.trim() !== ''),
+  )
   if (bad !== undefined) {
-    throw new CliError(`Expected a GUID, received ${bad}`, { exitCode: 64 })
+    throw new CliError(
+      `Expected a GUID${spec.byCode ? ' or a code' : ''}, received ${bad}`,
+      { exitCode: 64 },
+    )
   }
-  return [...new Set(argv.map((ref) => ref.toLowerCase()))]
+  return [
+    ...new Set(
+      argv.map((ref) => (GUID_RE.test(ref) ? ref.toLowerCase() : ref)),
+    ),
+  ]
+}
+
+/**
+ * The GUIDs of checked references: a code is looked up, one after the other.
+ * Call it after the write gate.
+ * @param {{ apiClient: object, resolveDivision: () => number }} cmd
+ * @param {RecordSpec} spec
+ * @param {string[]} refs
+ * @returns {Promise<string[]>}
+ */
+async function recordKeys(cmd, spec, refs) {
+  const keys = []
+  for (const ref of refs) {
+    const key = GUID_RE.test(ref)
+      ? ref
+      : (await resolveRef(cmd, spec.resource, ref)).toLowerCase()
+    if (!keys.includes(key)) keys.push(key)
+  }
+  return keys
+}
+
+/**
+ * The fields that the --code and --description flags name.
+ * @param {{ code?: string, description?: string }} flags
+ * @returns {object}
+ */
+function namedFields({ code, description }) {
+  const fields = {}
+  if (code !== undefined) fields.Code = code
+  if (description !== undefined) fields.Description = description
+  return fields
+}
+
+/** How a command names its references. */
+const refWord = (spec) => (spec.byCode ? 'GUID or code' : 'GUID')
+
+/**
+ * Build the command that creates one record of a resource, from --code and
+ * --description when the spec has them, plus --set and --body, validated
+ * against the catalogue.
+ * @param {RecordSpec} spec
+ * @returns {typeof BaseCommand}
+ */
+export function defineRecordCreateCommand(spec) {
+  return class RecordCreateCommand extends BaseCommand {
+    static description = `Create ${spec.singular} (POST ${spec.resource})`
+    static examples = spec.codeFlags
+      ? [
+          `<%= config.bin %> ${spec.topic} create --code X1 --description "New one" --dry-run`,
+          `<%= config.bin %> ${spec.topic} create --code X1 --description "New one" --set Key=value --allow-writes`,
+        ]
+      : [
+          `<%= config.bin %> ${spec.topic} create --set Key=value --dry-run`,
+          `<%= config.bin %> ${spec.topic} create --body @record.json --allow-writes`,
+        ]
+
+    static flags = {
+      ...writeFlags,
+      ...(spec.codeFlags
+        ? {
+            code: Flags.string({ description: 'Code' }),
+            description: Flags.string({ description: 'Description' }),
+          }
+        : {}),
+      body: bodyFlags.body,
+      set: bodyFlags.set,
+      'dry-run': bodyFlags['dry-run'],
+    }
+
+    async run() {
+      const { flags } = this
+      const dryRun = flags['dry-run']
+      // Piped stdin is the body only when no flag names a field: a script
+      // that passes --code must not hang on an open stdin.
+      const named = flags.code !== undefined || flags.description !== undefined
+      const body = {
+        ...(named && !flags.body ? {} : await readBody(flags)),
+        ...parseSet(flags.set),
+      }
+      Object.assign(body, namedFields(flags))
+      validateWrite({ resource: spec.resource, body, method: 'POST' })
+      // A refused write costs no call at all. A dry run needs no permission.
+      if (!dryRun) assertWritesAllowed(flags, 'POST')
+
+      const path = divisionPath(this.resolveDivision(), spec.resource)
+      const resolved = await applyRefs(this, body)
+      if (dryRun) {
+        await this.outputResults(
+          describeRequest({ method: 'POST', path, body: resolved }),
+          {},
+        )
+        return
+      }
+      const record = normalize(
+        unwrap(await this.apiClient.post(path, resolved)),
+      )
+      await this.outputResults(record, autoColumns([record]))
+    }
+  }
 }
 
 /**
@@ -44,7 +156,7 @@ function guids(argv) {
  */
 export function defineRecordDeleteCommand(spec) {
   return class RecordDeleteCommand extends BaseCommand {
-    static description = `Delete ${spec.plural}, by GUID (DELETE ${spec.resource})`
+    static description = `Delete ${spec.plural}, by ${refWord(spec)} (DELETE ${spec.resource})`
     static examples = [
       `<%= config.bin %> ${spec.topic} delete <guid> --dry-run`,
       `<%= config.bin %> ${spec.topic} delete <guid> <guid> --allow-writes --yes`,
@@ -56,7 +168,7 @@ export function defineRecordDeleteCommand(spec) {
     static args = {
       id: Args.string({
         required: true,
-        description: 'ID GUID (repeat for more)',
+        description: `ID ${refWord(spec)} (repeat for more)`,
       }),
     }
 
@@ -64,10 +176,12 @@ export function defineRecordDeleteCommand(spec) {
 
     async run() {
       const { argv } = await this.parse(RecordDeleteCommand)
-      const ids = guids(argv)
+      const refs = checkRefs(argv, spec)
       const dryRun = this.flags['dry-run']
       validateWrite({ resource: spec.resource, body: {}, method: 'DELETE' })
+      // The gate comes before the code lookups.
       if (!dryRun) assertWritesAllowed(this.flags, 'DELETE')
+      const ids = await recordKeys(this, spec, refs)
 
       const base = divisionPath(this.resolveDivision(), spec.resource)
       const paths = ids.map((id) => `${base}(guid'${id}')`)
@@ -109,14 +223,14 @@ export function defineRecordDeleteCommand(spec) {
  */
 export function defineRecordUpdateCommand(spec) {
   return class RecordUpdateCommand extends BaseCommand {
-    static description = `Update ${spec.singular}, by GUID (PUT ${spec.resource})`
+    static description = `Update ${spec.singular}, by ${refWord(spec)} (PUT ${spec.resource})`
     static examples = [
       `<%= config.bin %> ${spec.topic} update <guid> --set Description="New text" --dry-run`,
       `<%= config.bin %> ${spec.topic} update <guid> --body @patch.json --allow-writes`,
     ]
 
     static args = {
-      id: Args.string({ required: true, description: 'ID GUID' }),
+      id: Args.string({ required: true, description: `ID ${refWord(spec)}` }),
     }
 
     static flags = {
@@ -128,7 +242,7 @@ export function defineRecordUpdateCommand(spec) {
 
     async run() {
       const { args } = await this.parse(RecordUpdateCommand)
-      const [id] = guids([args.id])
+      const refs = checkRefs([args.id], spec)
       const dryRun = this.flags['dry-run']
       const body = {
         ...(await readBody(this.flags)),
@@ -142,6 +256,7 @@ export function defineRecordUpdateCommand(spec) {
       validateWrite({ resource: spec.resource, body, method: 'PUT' })
       if (!dryRun) assertWritesAllowed(this.flags, 'PUT')
 
+      const [id] = await recordKeys(this, spec, refs)
       const path = `${divisionPath(this.resolveDivision(), spec.resource)}(guid'${id}')`
       const resolved = await applyRefs(this, body)
       if (dryRun) {

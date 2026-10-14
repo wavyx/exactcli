@@ -82,38 +82,39 @@ with `list`, `get` and `api`: pass the `service/Resource` path, for example
 
 ## Commands
 
-| Topic                                                                                       | Commands                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| auth                                                                                        | `login`, `logout`, `status`                                                                                                                                 |
-| profile                                                                                     | `list`, `use`, `current`                                                                                                                                    |
-| config                                                                                      | `get`, `set`, `list`, `unset`                                                                                                                               |
-| division                                                                                    | `list` (`--scope`), `use`, `current`                                                                                                                        |
-| account, contact, item                                                                      | `list`, `create`, `update`                                                                                                                                  |
-| address, bank-account, item-group, currency, exchange-rate                                  | `list`                                                                                                                                                      |
-| gl-account, gl-classification, journal, vat-code, payment-condition, cost-center, cost-unit | `list`                                                                                                                                                      |
-| financial-period, balance, budget, revenue, profit-loss                                     | `list`                                                                                                                                                      |
-| aging-receivable, aging-payable, aging-overview, receivables-list, payables-list            | `list`                                                                                                                                                      |
-| sales-entry, purchase-entry                                                                 | `list`, `lines`, `create` (with `--file`), `update`, `delete`, `line-add`, `line-update`, `line-delete`                                                     |
-| journal-entry, bank-entry                                                                   | `list`, `lines`, `create`, `delete`, `line-add`                                                                                                             |
-| cash-entry                                                                                  | `list`, `lines`, `delete`, `line-add`                                                                                                                       |
-| transaction-line, opening-balance                                                           | `list`                                                                                                                                                      |
-| mandate                                                                                     | `list`, `create`, `update`, `delete`                                                                                                                        |
-| sales-invoice                                                                               | `list`, `lines`, `update`, `delete`, `print`                                                                                                                |
-| invoice                                                                                     | `create`                                                                                                                                                    |
-| purchase-invoice, purchase-order                                                            | `list`, `lines`, `create`, `update`, `delete`                                                                                                               |
-| quotation                                                                                   | `list`, `lines`, `create`, `update`, `delete`, `accept`, `reject`, `reopen`, `review`, `print`, `email`                                                     |
-| sales-order                                                                                 | `list`, `lines`, `create`, `update`, `delete`, `invoice`, `invoice-result`, `complete`, `complete-line`, `print`                                            |
-| payment                                                                                     | `list`, `approve`, `hold`, `process`                                                                                                                        |
-| goods-delivery, receivable, project, asset, subscription                                    | `list`                                                                                                                                                      |
-| document                                                                                    | `list`, `download`, `create`                                                                                                                                |
-| document-type                                                                               | `list`                                                                                                                                                      |
-| mailbox                                                                                     | `list`, `upload`                                                                                                                                            |
-| mail-message                                                                                | `list`                                                                                                                                                      |
-| bank-statement                                                                              | `upload`                                                                                                                                                    |
-| webhook                                                                                     | `list`, `create`, `update`, `delete`, `listen`                                                                                                              |
-| alias                                                                                       | `set`, `list`, `unset`                                                                                                                                      |
-| sync                                                                                        | `sync <resource>`, `timestamp`                                                                                                                              |
-| (root)                                                                                      | `me`, `list`, `get`, `create`, `update`, `delete`, `lookup`, `upsert`, `deleted`, `backup`, `api`, `probe`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
+| Topic                                                                            | Commands                                                                                                                                                    |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| auth                                                                             | `login`, `logout`, `status`                                                                                                                                 |
+| profile                                                                          | `list`, `use`, `current`                                                                                                                                    |
+| config                                                                           | `get`, `set`, `list`, `unset`                                                                                                                               |
+| division                                                                         | `list` (`--scope`), `use`, `current`                                                                                                                        |
+| account, contact, item                                                           | `list`, `create`, `update`                                                                                                                                  |
+| gl-classification, address, bank-account, item-group, currency, exchange-rate    | `list`                                                                                                                                                      |
+| gl-account, journal, vat-code, payment-condition, cost-center, cost-unit         | `list`, `create`, `update`, `delete` (`payment-condition`: `list`, `create`)                                                                                |
+| financial-period, balance, budget, revenue, profit-loss                          | `list`                                                                                                                                                      |
+| aging-receivable, aging-payable, aging-overview, receivables-list, payables-list | `list`                                                                                                                                                      |
+| sales-entry, purchase-entry                                                      | `list`, `lines`, `create` (with `--file`), `update`, `delete`, `line-add`, `line-update`, `line-delete`                                                     |
+| journal-entry                                                                    | `list`, `lines`, `create`, `delete`                                                                                                                         |
+| bank-entry                                                                       | `list`, `lines`, `create`, `delete`, `line-add`                                                                                                             |
+| cash-entry                                                                       | `list`, `lines`, `create`, `delete`, `line-add`                                                                                                             |
+| transaction-line, opening-balance                                                | `list`                                                                                                                                                      |
+| mandate                                                                          | `list`, `create`, `update`, `delete`                                                                                                                        |
+| sales-invoice                                                                    | `list`, `lines`, `update`, `delete`, `print`, `line-add`, `line-update`, `line-delete`                                                                      |
+| invoice                                                                          | `create`                                                                                                                                                    |
+| purchase-invoice, purchase-order                                                 | `list`, `lines`, `create`, `update`, `delete` (`purchase-order` adds `line-add`, `line-update`, `line-delete`)                                              |
+| quotation                                                                        | `list`, `lines`, `create`, `update`, `delete`, `accept`, `reject`, `reopen`, `review`, `print`, `email`, `line-add`, `line-update`, `line-delete`           |
+| sales-order                                                                      | `list`, `lines`, `create`, `update`, `delete`, `invoice`, `invoice-result`, `complete`, `complete-line`, `print`, `line-add`, `line-update`, `line-delete`  |
+| payment                                                                          | `list`, `approve`, `hold`, `process`                                                                                                                        |
+| goods-delivery, receivable, project, asset, subscription                         | `list` (`receivable` adds `update`, `collect`)                                                                                                              |
+| document                                                                         | `list`, `download`, `create`                                                                                                                                |
+| document-type                                                                    | `list`                                                                                                                                                      |
+| mailbox                                                                          | `list`, `upload`                                                                                                                                            |
+| mail-message                                                                     | `list`                                                                                                                                                      |
+| bank-statement                                                                   | `upload`                                                                                                                                                    |
+| webhook                                                                          | `list`, `create`, `update`, `delete`, `listen`                                                                                                              |
+| alias                                                                            | `set`, `list`, `unset`                                                                                                                                      |
+| sync                                                                             | `sync <resource>`, `timestamp`                                                                                                                              |
+| (root)                                                                           | `me`, `list`, `get`, `create`, `update`, `delete`, `lookup`, `upsert`, `deleted`, `backup`, `api`, `probe`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
 
 Full reference with every flag: [docs/commands.md](docs/commands.md) or
 `exactcli <command> --help`. End-to-end flows (login, entries, invoices, documents,
@@ -237,8 +238,9 @@ prompt:
 exactcli webhook listen --topic Accounts --topic SalesInvoices --allow-writes
 ```
 
-The lines of an existing entry: `line-add` on the five entry topics (by entry GUID or
-number; the entry link comes from the argument only), `line-update` and `line-delete`
+The lines of an existing entry: `line-add` on sales, purchase, bank and cash entries (by
+entry GUID or number; the entry link comes from the argument only; Exact refuses a POST
+of a general journal entry line, although its reference lists one), `line-update` and `line-delete`
 by line GUID on sales and purchase entries, the two whose lines take a PUT and a
 DELETE:
 
@@ -247,6 +249,38 @@ exactcli sales-entry line-add 26700002 --set GLAccount=@ref:financial/GLAccounts
   --set AmountFC=100 --set VATCode=F --allow-writes
 exactcli sales-entry line-update <line-id> --set Description="Fee" --allow-writes
 exactcli purchase-entry line-delete <line-id> --allow-writes --yes
+```
+
+The lines of sales invoices, sales orders, purchase orders and quotations take the
+same three commands. A PUT that changes only the quantity re-prices the line from the
+item: send the price with it. Exact answers 403 to a POST of a purchase invoice line,
+so `purchase-invoice` has no `line-add`.
+
+```sh
+exactcli sales-order line-add 12 --set Item=@ref:logistics/Items:WIDGET --set Quantity=2 \
+  --set UnitPrice=100 --allow-writes
+exactcli quotation line-update <line-id> --set Quantity=3 --set UnitPrice=100 --allow-writes
+```
+
+Master data by code: ledger accounts, journals, VAT codes, cost centers and cost units
+take `create` (`--code`, `--description`, `--set`), `update` and `delete` by GUID or code;
+payment conditions take `create` only, as Exact offers no PUT or DELETE there:
+
+```sh
+exactcli gl-account create --code 799000 --description "Other income" --set Type=110 --allow-writes
+exactcli journal update 800 --set Description="General journal" --allow-writes
+exactcli cost-center delete HQ --allow-writes --yes
+exactcli payment-condition create --code 30D --description "30 days" --set PaymentDays=30 --allow-writes
+```
+
+`receivable collect` prepares receivables for a direct debit: payment method I, an
+optional mandate, description and payment reference; it takes a receivable GUID or the
+invoice number of one open receivable. `receivable update` sets any field by GUID:
+
+```sh
+exactcli receivable collect 26700002 --mandate <mandate-id> --allow-writes
+exactcli receivable update <id> --set PaymentMethod=B --allow-writes
+exactcli cash-entry create --journal 570 --line 604000:-20:"Office supplies" --allow-writes
 ```
 
 Direct debit mandates (SEPA Core or B2B). `mandate create` finds the bank account of

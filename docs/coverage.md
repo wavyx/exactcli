@@ -15,9 +15,9 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 41 | 20 |
-| regular | PUT | 103 | 15 | 7 |
-| regular | DELETE | 97 | 14 | 14 |
+| regular | POST | 151 | 51 | 34 |
+| regular | PUT | 103 | 25 | 18 |
+| regular | DELETE | 97 | 23 | 24 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 0 |
 | beta | PUT | 1 | 0 | 0 |
@@ -69,10 +69,10 @@ administration (`scripts/live-writes.json`).
 | POST cashflow/DirectDebitMandates | `mandate create` | yes |
 | PUT cashflow/DirectDebitMandates | `mandate update` | yes |
 | DELETE cashflow/DirectDebitMandates | `mandate delete` | yes |
-| POST cashflow/PaymentConditions | - | no |
+| POST cashflow/PaymentConditions | `payment-condition create` | yes |
 | PUT cashflow/Payments | `payment approve`, `payment hold` | yes |
 | POST cashflow/ProcessPayments | `payment process` | no |
-| PUT cashflow/Receivables | - | no |
+| PUT cashflow/Receivables | `receivable collect`, `receivable update` | yes |
 | POST crm/AcceptQuotation | `quotation accept` | no |
 | POST crm/Accounts | `account create` | yes |
 | PUT crm/Accounts | `account update` | yes |
@@ -92,9 +92,9 @@ administration (`scripts/live-writes.json`).
 | DELETE crm/Opportunities | - | no |
 | POST crm/OptionalQuotationLineID | - | no |
 | POST crm/PrintQuotation | `quotation print` | no |
-| POST crm/QuotationLines | - | no |
-| PUT crm/QuotationLines | - | no |
-| DELETE crm/QuotationLines | - | no |
+| POST crm/QuotationLines | `quotation line-add` | yes |
+| PUT crm/QuotationLines | `quotation line-update` | yes |
+| DELETE crm/QuotationLines | `quotation line-delete` | yes |
 | POST crm/QuotationOrderChargeLines | - | no |
 | PUT crm/QuotationOrderChargeLines | - | no |
 | DELETE crm/QuotationOrderChargeLines | - | no |
@@ -122,29 +122,29 @@ administration (`scripts/live-writes.json`).
 | POST financial/GLAccountClassificationMappings | - | no |
 | PUT financial/GLAccountClassificationMappings | - | no |
 | DELETE financial/GLAccountClassificationMappings | - | no |
-| POST financial/GLAccounts | - | no |
-| PUT financial/GLAccounts | - | no |
-| DELETE financial/GLAccounts | - | no |
-| POST financial/Journals | - | no |
-| PUT financial/Journals | - | no |
-| DELETE financial/Journals | - | no |
+| POST financial/GLAccounts | `gl-account create` | yes |
+| PUT financial/GLAccounts | `gl-account update` | yes |
+| DELETE financial/GLAccounts | `gl-account delete` | yes |
+| POST financial/Journals | `journal create` | yes |
+| PUT financial/Journals | `journal update` | yes |
+| DELETE financial/Journals | `journal delete` | yes |
 | POST financial/OfficialReturns | - | no |
 | POST financial/ProcessReturn | `return process` | no |
 | POST financialtransaction/BankEntries | `bank-entry create` | yes |
 | DELETE financialtransaction/BankEntries | `bank-entry delete` | yes |
-| POST financialtransaction/BankEntryLines | `bank-entry line-add` | no |
-| POST financialtransaction/CashEntries | - | no |
+| POST financialtransaction/BankEntryLines | `bank-entry line-add` | yes |
+| POST financialtransaction/CashEntries | `cash-entry create` | yes |
 | DELETE financialtransaction/CashEntries | `cash-entry delete` | no |
-| POST financialtransaction/CashEntryLines | `cash-entry line-add` | no |
+| POST financialtransaction/CashEntryLines | `cash-entry line-add` | yes |
 | POST generaljournalentry/GeneralJournalEntries | `journal-entry create` | yes |
 | DELETE generaljournalentry/GeneralJournalEntries | `journal-entry delete` | yes |
-| POST generaljournalentry/GeneralJournalEntryLines | `journal-entry line-add` | no |
-| POST hrm/Costcenters | - | no |
-| PUT hrm/Costcenters | - | no |
-| DELETE hrm/Costcenters | - | no |
-| POST hrm/Costunits | - | no |
-| PUT hrm/Costunits | - | no |
-| DELETE hrm/Costunits | - | no |
+| POST generaljournalentry/GeneralJournalEntryLines | - | no |
+| POST hrm/Costcenters | `cost-center create` | yes |
+| PUT hrm/Costcenters | `cost-center update` | yes |
+| DELETE hrm/Costcenters | `cost-center delete` | yes |
+| POST hrm/Costunits | `cost-unit create` | yes |
+| PUT hrm/Costunits | `cost-unit update` | yes |
+| DELETE hrm/Costunits | `cost-unit delete` | yes |
 | POST inventory/AssemblyBillOfMaterialHeader | - | no |
 | PUT inventory/AssemblyBillOfMaterialHeader | - | no |
 | DELETE inventory/AssemblyBillOfMaterialHeader | - | no |
@@ -305,15 +305,15 @@ administration (`scripts/live-writes.json`).
 | POST purchaseentry/PurchaseEntries | `purchase-entry create` | yes |
 | PUT purchaseentry/PurchaseEntries | `purchase-entry update` | no |
 | DELETE purchaseentry/PurchaseEntries | `purchase-entry delete` | yes |
-| POST purchaseentry/PurchaseEntryLines | `purchase-entry line-add` | no |
-| PUT purchaseentry/PurchaseEntryLines | `purchase-entry line-update` | no |
-| DELETE purchaseentry/PurchaseEntryLines | `purchase-entry line-delete` | no |
+| POST purchaseentry/PurchaseEntryLines | `purchase-entry line-add` | yes |
+| PUT purchaseentry/PurchaseEntryLines | `purchase-entry line-update` | yes |
+| DELETE purchaseentry/PurchaseEntryLines | `purchase-entry line-delete` | yes |
 | POST purchaseorder/GoodsReceiptLines | - | no |
 | POST purchaseorder/GoodsReceipts | - | no |
 | PUT purchaseorder/GoodsReceipts | - | no |
-| POST purchaseorder/PurchaseOrderLines | - | no |
-| PUT purchaseorder/PurchaseOrderLines | - | no |
-| DELETE purchaseorder/PurchaseOrderLines | - | no |
+| POST purchaseorder/PurchaseOrderLines | `purchase-order line-add` | yes |
+| PUT purchaseorder/PurchaseOrderLines | `purchase-order line-update` | yes |
+| DELETE purchaseorder/PurchaseOrderLines | `purchase-order line-delete` | yes |
 | POST purchaseorder/PurchaseOrders | `purchase-order create` | yes |
 | PUT purchaseorder/PurchaseOrders | `purchase-order update` | no |
 | DELETE purchaseorder/PurchaseOrders | `purchase-order delete` | yes |
@@ -332,9 +332,9 @@ administration (`scripts/live-writes.json`).
 | DELETE salesentry/SalesEntryLines | `sales-entry line-delete` | yes |
 | POST salesinvoice/InvoiceSalesOrders | `sales-order invoice` | yes |
 | POST salesinvoice/PrintedSalesInvoices | `sales-invoice print` | yes |
-| POST salesinvoice/SalesInvoiceLines | - | no |
-| PUT salesinvoice/SalesInvoiceLines | - | no |
-| DELETE salesinvoice/SalesInvoiceLines | - | no |
+| POST salesinvoice/SalesInvoiceLines | `sales-invoice line-add` | yes |
+| PUT salesinvoice/SalesInvoiceLines | `sales-invoice line-update` | yes |
+| DELETE salesinvoice/SalesInvoiceLines | `sales-invoice line-delete` | yes |
 | POST salesinvoice/SalesInvoiceOrderChargeLines | - | no |
 | PUT salesinvoice/SalesInvoiceOrderChargeLines | - | no |
 | DELETE salesinvoice/SalesInvoiceOrderChargeLines | - | no |
@@ -359,9 +359,9 @@ administration (`scripts/live-writes.json`).
 | PUT salesorder/PlannedSalesReturns | - | no |
 | DELETE salesorder/PlannedSalesReturns | - | no |
 | POST salesorder/PrintedSalesOrders | `sales-order print` | no |
-| POST salesorder/SalesOrderLines | - | no |
-| PUT salesorder/SalesOrderLines | - | no |
-| DELETE salesorder/SalesOrderLines | - | no |
+| POST salesorder/SalesOrderLines | `sales-order line-add` | yes |
+| PUT salesorder/SalesOrderLines | `sales-order line-update` | yes |
+| DELETE salesorder/SalesOrderLines | `sales-order line-delete` | yes |
 | POST salesorder/SalesOrderOrderChargeLines | - | no |
 | PUT salesorder/SalesOrderOrderChargeLines | - | no |
 | DELETE salesorder/SalesOrderOrderChargeLines | - | no |
@@ -379,9 +379,9 @@ administration (`scripts/live-writes.json`).
 | PUT subscription/Subscriptions | - | no |
 | DELETE subscription/Subscriptions | - | no |
 | DELETE system/Divisions | - | no |
-| POST vat/VATCodes | - | no |
-| PUT vat/VATCodes | - | no |
-| DELETE vat/VATCodes | - | no |
+| POST vat/VATCodes | `vat-code create` | yes |
+| PUT vat/VATCodes | `vat-code update` | yes |
+| DELETE vat/VATCodes | `vat-code delete` | yes |
 | POST webhooks/WebhookSubscriptions | `webhook create`, `webhook listen` | no |
 | PUT webhooks/WebhookSubscriptions | `webhook update` | no |
 | DELETE webhooks/WebhookSubscriptions | `webhook delete`, `webhook listen` | no |

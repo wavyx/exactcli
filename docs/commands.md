@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.12.1 (166 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.13.0 (196 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -858,7 +858,7 @@ exactcli bank-entry create [flags]
 
 - `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
 - `--yes` - Confirm a DELETE
-- `--journal <value>` _(required)_ - Code of the bank journal, for example 500
+- `--journal <value>` _(required)_ - Code of the journal, for example 500
 - `--line <value>` _(required)_ - Line as <gl account>:<amount>[:description] (repeatable, at least one). The account is a code or a GUID. The amount is signed from the point of view of the bank: money received is positive, money paid negative
 - `--account <value>` - Customer or supplier code or GUID (crm/Accounts) carried by every line: a receipt from a customer or a payment to a supplier
 - `--date <value>` - Date of every line (YYYY-MM-DD)
@@ -1021,6 +1021,30 @@ exactcli budget list --year 2026 --period 3 --scenario BUDGET --all
 ```
 
 ## exactcli cash-entry
+
+### `exactcli cash-entry create`
+
+Book cash movements by hand from ledger account codes (POST financialtransaction/CashEntries)
+
+```
+exactcli cash-entry create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--journal <value>` _(required)_ - Code of the journal, for example 570
+- `--line <value>` _(required)_ - Line as <gl account>:<amount>[:description] (repeatable, at least one). The account is a code or a GUID. The amount is signed from the point of view of the cash box: money received is positive, money paid negative
+- `--account <value>` - Customer or supplier code or GUID (crm/Accounts) carried by every line: a receipt from a customer or a payment to a supplier
+- `--date <value>` - Date of every line (YYYY-MM-DD)
+- `--description <value>` - Description of the lines that carry none
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cash-entry create --journal 570 --line "400000:121:Invoice 26700001" --account 1001 --dry-run
+exactcli cash-entry create --journal 570 --line 656000:-12.5:Fees --date 2026-09-03 --allow-writes
+```
 
 ### `exactcli cash-entry delete`
 
@@ -1264,6 +1288,48 @@ exactcli contact update <id> --job-title CFO --main true --allow-writes
 
 ## exactcli cost-center
 
+### `exactcli cost-center create`
+
+Create a cost center (POST hrm/Costcenters)
+
+```
+exactcli cost-center create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-center create --code X1 --description "New one" --dry-run
+exactcli cost-center create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli cost-center delete`
+
+Delete cost centers, by GUID or code (DELETE hrm/Costcenters)
+
+```
+exactcli cost-center delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-center delete <guid> --dry-run
+exactcli cost-center delete <guid> <guid> --allow-writes --yes
+```
+
 ### `exactcli cost-center list`
 
 List cost centers (the departments that costs book to)
@@ -1292,7 +1358,70 @@ exactcli cost-center list
 exactcli cost-center list --search sales --active true
 ```
 
+### `exactcli cost-center update`
+
+Update a cost center, by GUID or code (PUT hrm/Costcenters)
+
+```
+exactcli cost-center update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-center update <guid> --set Description="New text" --dry-run
+exactcli cost-center update <guid> --body @patch.json --allow-writes
+```
+
 ## exactcli cost-unit
+
+### `exactcli cost-unit create`
+
+Create a cost unit (POST hrm/Costunits)
+
+```
+exactcli cost-unit create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-unit create --code X1 --description "New one" --dry-run
+exactcli cost-unit create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli cost-unit delete`
+
+Delete cost units, by GUID or code (DELETE hrm/Costunits)
+
+```
+exactcli cost-unit delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-unit delete <guid> --dry-run
+exactcli cost-unit delete <guid> <guid> --allow-writes --yes
+```
 
 ### `exactcli cost-unit list`
 
@@ -1319,6 +1448,27 @@ Examples:
 ```bash
 exactcli cost-unit list
 exactcli cost-unit list --search project --all
+```
+
+### `exactcli cost-unit update`
+
+Update a cost unit, by GUID or code (PUT hrm/Costunits)
+
+```
+exactcli cost-unit update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli cost-unit update <guid> --set Description="New text" --dry-run
+exactcli cost-unit update <guid> --body @patch.json --allow-writes
 ```
 
 ## exactcli currency
@@ -1607,6 +1757,48 @@ exactcli financial-period list --from 2026-01-01 --to 2026-12-31
 
 ## exactcli gl-account
 
+### `exactcli gl-account create`
+
+Create a ledger account (POST financial/GLAccounts)
+
+```
+exactcli gl-account create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli gl-account create --code X1 --description "New one" --dry-run
+exactcli gl-account create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli gl-account delete`
+
+Delete ledger accounts, by GUID or code (DELETE financial/GLAccounts)
+
+```
+exactcli gl-account delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli gl-account delete <guid> --dry-run
+exactcli gl-account delete <guid> <guid> --allow-writes --yes
+```
+
 ### `exactcli gl-account list`
 
 List general ledger accounts
@@ -1633,6 +1825,27 @@ Examples:
 ```bash
 exactcli gl-account list --all
 exactcli gl-account list --search bank --type 12
+```
+
+### `exactcli gl-account update`
+
+Update a ledger account, by GUID or code (PUT financial/GLAccounts)
+
+```
+exactcli gl-account update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli gl-account update <guid> --set Description="New text" --dry-run
+exactcli gl-account update <guid> --body @patch.json --allow-writes
 ```
 
 ## exactcli gl-classification
@@ -1852,6 +2065,48 @@ exactcli item-group list --search parts --default 1
 
 ## exactcli journal
 
+### `exactcli journal create`
+
+Create a journal (POST financial/Journals)
+
+```
+exactcli journal create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli journal create --code X1 --description "New one" --dry-run
+exactcli journal create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli journal delete`
+
+Delete journals, by GUID or code (DELETE financial/Journals)
+
+```
+exactcli journal delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli journal delete <guid> --dry-run
+exactcli journal delete <guid> <guid> --allow-writes --yes
+```
+
 ### `exactcli journal list`
 
 List journals (cash, bank, sales, purchase, general)
@@ -1878,6 +2133,27 @@ Examples:
 ```bash
 exactcli journal list
 exactcli journal list --type 12 --search bank
+```
+
+### `exactcli journal update`
+
+Update a journal, by GUID or code (PUT financial/Journals)
+
+```
+exactcli journal update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli journal update <guid> --set Description="New text" --dry-run
+exactcli journal update <guid> --body @patch.json --allow-writes
 ```
 
 ## exactcli journal-entry
@@ -1922,27 +2198,6 @@ Examples:
 ```bash
 exactcli journal-entry delete <number> --dry-run
 exactcli journal-entry delete <number> <guid> --allow-writes --yes
-```
-
-### `exactcli journal-entry line-add`
-
-Add a line to a general journal entry, by entry GUID or number (POST generaljournalentry/GeneralJournalEntryLines)
-
-```
-exactcli journal-entry line-add <ref> [flags]
-```
-
-- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
-- `--yes` - Confirm a DELETE
-- `--body <value>` - Request body (JSON string, @file, or piped stdin)
-- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
-- `--dry-run` - Show the validated request and send nothing
-
-Examples:
-
-```bash
-exactcli journal-entry line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
-exactcli journal-entry line-add <guid> --body @line.json --allow-writes
 ```
 
 ### `exactcli journal-entry lines`
@@ -2341,6 +2596,29 @@ exactcli payment process <payment-id> <payment-id> --allow-writes
 ```
 
 ## exactcli payment-condition
+
+### `exactcli payment-condition create`
+
+Create a payment condition (POST cashflow/PaymentConditions)
+
+```
+exactcli payment-condition create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli payment-condition create --code X1 --description "New one" --dry-run
+exactcli payment-condition create --code X1 --description "New one" --set Key=value --allow-writes
+```
 
 ### `exactcli payment-condition list`
 
@@ -2826,6 +3104,67 @@ exactcli purchase-order delete <number> --dry-run
 exactcli purchase-order delete <number> <guid> --allow-writes --yes
 ```
 
+### `exactcli purchase-order line-add`
+
+Add a line to a purchase order, by order GUID or number (POST purchaseorder/PurchaseOrderLines)
+
+```
+exactcli purchase-order line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli purchase-order line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli purchase-order line-delete`
+
+Delete lines of purchase orders, by GUID (DELETE purchaseorder/PurchaseOrderLines)
+
+```
+exactcli purchase-order line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order delete <guid> --dry-run
+exactcli purchase-order delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli purchase-order line-update`
+
+Update a line of a purchase order, by GUID (PUT purchaseorder/PurchaseOrderLines)
+
+```
+exactcli purchase-order line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli purchase-order update <guid> --set Description="New text" --dry-run
+exactcli purchase-order update <guid> --body @patch.json --allow-writes
+```
+
 ### `exactcli purchase-order lines`
 
 List the lines of purchase orders, by order GUID or number (GET purchaseorder/PurchaseOrderLines)
@@ -3004,6 +3343,67 @@ exactcli quotation email <id> --email-layout <layout-id> --dry-run
 exactcli quotation email <id> --email-layout <layout-id> --action 1 --allow-writes
 ```
 
+### `exactcli quotation line-add`
+
+Add a line to a quotation, by quotation GUID or number (POST crm/QuotationLines)
+
+```
+exactcli quotation line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli quotation line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli quotation line-delete`
+
+Delete lines of quotations, by GUID (DELETE crm/QuotationLines)
+
+```
+exactcli quotation line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation delete <guid> --dry-run
+exactcli quotation delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli quotation line-update`
+
+Update a line of a quotation, by GUID (PUT crm/QuotationLines)
+
+```
+exactcli quotation line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli quotation update <guid> --set Description="New text" --dry-run
+exactcli quotation update <guid> --body @patch.json --allow-writes
+```
+
 ### `exactcli quotation lines`
 
 List the lines of quotations, by quotation GUID or number; a number matches every version (GET crm/QuotationLines)
@@ -3174,6 +3574,28 @@ exactcli quotation update <id> --description "Spring offer" --reference PO-42 --
 
 ## exactcli receivable
 
+### `exactcli receivable collect`
+
+Prepare receivables for a direct debit collection: payment method I, optionally a mandate and a payment reference (PUT cashflow/Receivables)
+
+```
+exactcli receivable collect <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--mandate <value>` - Direct debit mandate GUID (mandate list shows them)
+- `--reference <value>` - Payment reference for the bank file (one receivable only)
+- `--description <value>` - Description
+- `--dry-run` - Show the validated requests and send nothing
+
+Examples:
+
+```bash
+exactcli receivable collect 26700002 --dry-run
+exactcli receivable collect <receivable-id> --mandate <mandate-id> --allow-writes
+```
+
 ### `exactcli receivable list`
 
 List receivables (outstanding customer items)
@@ -3203,6 +3625,27 @@ Examples:
 ```bash
 exactcli receivable list --status 20 --due-to 2026-09-30
 exactcli receivable list --account 1001 --all --output csv
+```
+
+### `exactcli receivable update`
+
+Update a receivable, by GUID (PUT cashflow/Receivables)
+
+```
+exactcli receivable update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli receivable update <guid> --set Description="New text" --dry-run
+exactcli receivable update <guid> --body @patch.json --allow-writes
 ```
 
 ## exactcli receivables-list
@@ -3492,6 +3935,67 @@ exactcli sales-invoice delete <number> --dry-run
 exactcli sales-invoice delete <number> <guid> --allow-writes --yes
 ```
 
+### `exactcli sales-invoice line-add`
+
+Add a line to a sales invoice, by invoice GUID or number (POST salesinvoice/SalesInvoiceLines)
+
+```
+exactcli sales-invoice line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-invoice line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli sales-invoice line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli sales-invoice line-delete`
+
+Delete lines of sales invoices, by GUID (DELETE salesinvoice/SalesInvoiceLines)
+
+```
+exactcli sales-invoice line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-invoice delete <guid> --dry-run
+exactcli sales-invoice delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-invoice line-update`
+
+Update a line of a sales invoice, by GUID (PUT salesinvoice/SalesInvoiceLines)
+
+```
+exactcli sales-invoice line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-invoice update <guid> --set Description="New text" --dry-run
+exactcli sales-invoice update <guid> --body @patch.json --allow-writes
+```
+
 ### `exactcli sales-invoice lines`
 
 List the lines of sales invoices, by invoice GUID or number (GET salesinvoice/SalesInvoiceLines)
@@ -3730,6 +4234,67 @@ exactcli sales-order invoice-result <process-id>
 exactcli sales-order invoice-result <process-id> --output json
 ```
 
+### `exactcli sales-order line-add`
+
+Add a line to a sales order, by order GUID or number (POST salesorder/SalesOrderLines)
+
+```
+exactcli sales-order line-add <ref> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order line-add <number> --set GLAccount=@ref:financial/GLAccounts:700000 --set AmountFC=100 --dry-run
+exactcli sales-order line-add <guid> --body @line.json --allow-writes
+```
+
+### `exactcli sales-order line-delete`
+
+Delete lines of sales orders, by GUID (DELETE salesorder/SalesOrderLines)
+
+```
+exactcli sales-order line-delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order delete <guid> --dry-run
+exactcli sales-order delete <guid> <guid> --allow-writes --yes
+```
+
+### `exactcli sales-order line-update`
+
+Update a line of a sales order, by GUID (PUT salesorder/SalesOrderLines)
+
+```
+exactcli sales-order line-update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli sales-order update <guid> --set Description="New text" --dry-run
+exactcli sales-order update <guid> --body @patch.json --allow-writes
+```
+
 ### `exactcli sales-order lines`
 
 List the lines of sales orders, by order GUID or number (GET salesorder/SalesOrderLines)
@@ -3941,6 +4506,48 @@ exactcli transaction-line list --account 1001 --all --output csv
 
 ## exactcli vat-code
 
+### `exactcli vat-code create`
+
+Create a VAT code (POST vat/VATCodes)
+
+```
+exactcli vat-code create [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--code <value>` - Code
+- `--description <value>` - Description
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli vat-code create --code X1 --description "New one" --dry-run
+exactcli vat-code create --code X1 --description "New one" --set Key=value --allow-writes
+```
+
+### `exactcli vat-code delete`
+
+Delete VAT codes, by GUID or code (DELETE vat/VATCodes)
+
+```
+exactcli vat-code delete <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli vat-code delete <guid> --dry-run
+exactcli vat-code delete <guid> <guid> --allow-writes --yes
+```
+
 ### `exactcli vat-code list`
 
 List VAT codes
@@ -3968,6 +4575,27 @@ Examples:
 ```bash
 exactcli vat-code list
 exactcli vat-code list --type E --blocked no
+```
+
+### `exactcli vat-code update`
+
+Update a VAT code, by GUID or code (PUT vat/VATCodes)
+
+```
+exactcli vat-code update <id> [flags]
+```
+
+- `--allow-writes` - Allow this command to write (POST, PUT, DELETE). Env: EXACTCLI_ALLOW_WRITES=1
+- `--yes` - Confirm a DELETE
+- `--body <value>` - Request body (JSON string, @file, or piped stdin)
+- `--set <value>` - Field as Key=value (repeatable). Values: text, number, true, false, null, @str:text, @guid:id, @ref:service/Resource:code
+- `--dry-run` - Show the validated request and send nothing
+
+Examples:
+
+```bash
+exactcli vat-code update <guid> --set Description="New text" --dry-run
+exactcli vat-code update <guid> --body @patch.json --allow-writes
 ```
 
 ## exactcli warehouse-transfer

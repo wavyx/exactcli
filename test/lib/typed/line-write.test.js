@@ -145,4 +145,12 @@ describe('defineLineAddCommand', () => {
   it('fails with 64 on an unknown field', async () => {
     expect(exit(await fail([ENTRY, '--set', 'Nope=1', '--dry-run']))).toBe(64)
   })
+
+  it('lets Exact fill the ledger account of a sales invoice line', async () => {
+    const Invoice = defineLineAddCommand(lineDescriptors.salesInvoice)
+    const out = JSON.parse(
+      await runCmd(Invoice, [ENTRY, '--set', `Item=@guid:${GL}`, '--dry-run']),
+    )
+    expect(out.body).toEqual({ Item: GL, InvoiceID: ENTRY })
+  })
 })

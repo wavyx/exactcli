@@ -6,6 +6,28 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-14
+
+### Added
+
+- `gl-account`, `journal`, `vat-code`, `cost-center` and `cost-unit` take
+  `create` (`--code`, `--description`, `--set`), `update` and `delete` by GUID
+  or code; `payment-condition create` (no PUT or DELETE in Exact). Verified
+  live.
+- `cash-entry create`, built like `bank-entry create` (verified live).
+- `receivable collect <ref...>`: payment method I, optional mandate,
+  description and payment reference, by receivable GUID or invoice number;
+  `receivable update` by GUID (verified live).
+- `line-add`, `line-update`, `line-delete` on sales invoices, sales orders,
+  purchase orders and quotations (verified live). A sales invoice line may
+  leave out the ledger account: Exact takes the one of the item (verified
+  live).
+
+### Removed
+
+- `journal-entry line-add`: Exact answers 500 "This method is currently not
+  supported" to a POST of a general journal entry line (verified live).
+
 ## [0.12.1] - 2026-10-14
 
 ### Fixed
