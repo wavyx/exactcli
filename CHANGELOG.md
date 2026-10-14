@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-10-14
+
 ### Changed
 
 - `webhook listen` names the app of a refused notification (`Content.ClientId`):
