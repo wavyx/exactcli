@@ -70,5 +70,13 @@ export default class PaymentProcessCommand extends BaseCommand {
 
     const record = normalize(unwrap(await this.apiClient.post(path, body)))
     await this.outputResults(record, autoColumns([record]))
+    // Exact answers 201 even when it processes nothing (verified live): the
+    // refusal lives in ErrorMessage, and a script must not read a success.
+    if (record.ErrorMessage) {
+      throw new CliError(
+        `Exact did not process every payment: ${record.ErrorMessage}`,
+        { exitCode: 65 },
+      )
+    }
   }
 }

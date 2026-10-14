@@ -15,6 +15,7 @@ import {
   DATE_RE,
   NUMBER_RE,
   assertDate,
+  assertPeriod,
   parseLine,
   parseNumber,
   resolveLines,
@@ -236,18 +237,6 @@ describe('parseLine options', () => {
     }
   })
 
-  it('bounds a number option with a maximum', () => {
-    const spec = {
-      ...ENTRY,
-      options: { rate: { field: 'Rate', type: 'number', max: 1 } },
-    }
-    expect(parseLine('610000:10:rate=-0.5', spec).Rate).toBe(-0.5)
-    const err = fail(() => parseLine('610000:10:rate=2', spec))
-    expect(err.message).toBe(
-      '--line option rate expects a number up to 1, received: 610000:10:rate=2',
-    )
-  })
-
   it('reads an option-like part as text when the spec has no options', () => {
     expect(parseLine('Default:2:100:note=x', ORDER)).toEqual({
       Item: 'Default',
@@ -350,5 +339,27 @@ describe('resolveLines', () => {
 
   it('returns an empty list for no lines', async () => {
     expect(await resolveLines(cmd, [], 'Item', 'logistics/Items')).toEqual([])
+  })
+})
+
+describe('assertPeriod', () => {
+  it('accepts no period, or both bounds in order', () => {
+    expect(() => assertPeriod({}, 'x')).not.toThrow()
+    expect(() =>
+      assertPeriod({ From: '2026-01-01', To: '2026-01-01' }, 'x'),
+    ).not.toThrow()
+  })
+
+  it('throws 64 on one bound, or bounds out of order', () => {
+    const cases = [
+      [{ From: '2026-01-01' }, 'needs from and to together'],
+      [{ To: '2026-01-01' }, 'needs from and to together'],
+      [{ From: '2026-02-01', To: '2026-01-31' }, 'has from after to'],
+    ]
+    for (const [line, reason] of cases) {
+      const err = fail(() => assertPeriod(line, 'L'))
+      expect(err.exitCode).toBe(64)
+      expect(err.message).toBe(`--line ${reason}, received: L`)
+    }
   })
 })

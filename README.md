@@ -82,35 +82,38 @@ with `list`, `get` and `api`: pass the `service/Resource` path, for example
 
 ## Commands
 
-| Topic                                                                                       | Commands                                                                                                                      |
-| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| auth                                                                                        | `login`, `logout`, `status`                                                                                                   |
-| profile                                                                                     | `list`, `use`, `current`                                                                                                      |
-| config                                                                                      | `get`, `set`, `list`, `unset`                                                                                                 |
-| division                                                                                    | `list`, `use`, `current`                                                                                                      |
-| account, contact, item                                                                      | `list`, `create`, `update`                                                                                                    |
-| address, bank-account, item-group, currency, exchange-rate                                  | `list`                                                                                                                        |
-| gl-account, gl-classification, journal, vat-code, payment-condition, cost-center, cost-unit | `list`                                                                                                                        |
-| financial-period, balance, budget, revenue, profit-loss                                     | `list`                                                                                                                        |
-| aging-receivable, aging-payable, aging-overview, receivables-list, payables-list            | `list`                                                                                                                        |
-| sales-entry, purchase-entry                                                                 | `list`, `create` (with `--file`)                                                                                              |
-| journal-entry, bank-entry                                                                   | `list`, `create`                                                                                                              |
-| transaction-line, cash-entry                                                                | `list`                                                                                                                        |
-| sales-invoice                                                                               | `list`                                                                                                                        |
-| invoice                                                                                     | `create`                                                                                                                      |
-| purchase-invoice, purchase-order                                                            | `list`, `create`                                                                                                              |
-| quotation                                                                                   | `list`, `create`, `update`                                                                                                    |
-| sales-order                                                                                 | `list`, `create`, `invoice`                                                                                                   |
-| payment                                                                                     | `list`, `approve`, `hold`, `process`                                                                                          |
-| goods-delivery, receivable, project, asset, subscription                                    | `list`                                                                                                                        |
-| document                                                                                    | `list`, `download`, `create`                                                                                                  |
-| document-type                                                                               | `list`                                                                                                                        |
-| mailbox                                                                                     | `list`, `upload`                                                                                                              |
-| mail-message                                                                                | `list`                                                                                                                        |
-| bank-statement                                                                              | `upload`                                                                                                                      |
-| webhook                                                                                     | `list`, `create`, `update`, `delete`                                                                                          |
-| sync                                                                                        | `sync <resource>`, `timestamp`                                                                                                |
-| (root)                                                                                      | `me`, `list`, `get`, `create`, `update`, `delete`, `deleted`, `api`, `probe`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
+| Topic                                                                                       | Commands                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| auth                                                                                        | `login`, `logout`, `status`                                                                                                                                 |
+| profile                                                                                     | `list`, `use`, `current`                                                                                                                                    |
+| config                                                                                      | `get`, `set`, `list`, `unset`                                                                                                                               |
+| division                                                                                    | `list` (`--scope`), `use`, `current`                                                                                                                        |
+| account, contact, item                                                                      | `list`, `create`, `update`                                                                                                                                  |
+| address, bank-account, item-group, currency, exchange-rate                                  | `list`                                                                                                                                                      |
+| gl-account, gl-classification, journal, vat-code, payment-condition, cost-center, cost-unit | `list`                                                                                                                                                      |
+| financial-period, balance, budget, revenue, profit-loss                                     | `list`                                                                                                                                                      |
+| aging-receivable, aging-payable, aging-overview, receivables-list, payables-list            | `list`                                                                                                                                                      |
+| sales-entry, purchase-entry                                                                 | `list`, `lines`, `create` (with `--file`), `update`, `delete`, `line-add`, `line-update`, `line-delete`                                                     |
+| journal-entry, bank-entry                                                                   | `list`, `lines`, `create`, `delete`, `line-add`                                                                                                             |
+| cash-entry                                                                                  | `list`, `lines`, `delete`, `line-add`                                                                                                                       |
+| transaction-line, opening-balance                                                           | `list`                                                                                                                                                      |
+| mandate                                                                                     | `list`, `create`, `update`, `delete`                                                                                                                        |
+| sales-invoice                                                                               | `list`, `lines`, `update`, `delete`, `print`                                                                                                                |
+| invoice                                                                                     | `create`                                                                                                                                                    |
+| purchase-invoice, purchase-order                                                            | `list`, `lines`, `create`, `update`, `delete`                                                                                                               |
+| quotation                                                                                   | `list`, `lines`, `create`, `update`, `delete`, `accept`, `reject`, `reopen`, `review`, `print`, `email`                                                     |
+| sales-order                                                                                 | `list`, `lines`, `create`, `update`, `delete`, `invoice`, `invoice-result`, `complete`, `complete-line`, `print`                                            |
+| payment                                                                                     | `list`, `approve`, `hold`, `process`                                                                                                                        |
+| goods-delivery, receivable, project, asset, subscription                                    | `list`                                                                                                                                                      |
+| document                                                                                    | `list`, `download`, `create`                                                                                                                                |
+| document-type                                                                               | `list`                                                                                                                                                      |
+| mailbox                                                                                     | `list`, `upload`                                                                                                                                            |
+| mail-message                                                                                | `list`                                                                                                                                                      |
+| bank-statement                                                                              | `upload`                                                                                                                                                    |
+| webhook                                                                                     | `list`, `create`, `update`, `delete`, `listen`                                                                                                              |
+| alias                                                                                       | `set`, `list`, `unset`                                                                                                                                      |
+| sync                                                                                        | `sync <resource>`, `timestamp`                                                                                                                              |
+| (root)                                                                                      | `me`, `list`, `get`, `create`, `update`, `delete`, `lookup`, `upsert`, `deleted`, `backup`, `api`, `probe`, `metadata`, `quota`, `mcp`, `doctor`, `version` |
 
 Full reference with every flag: [docs/commands.md](docs/commands.md) or
 `exactcli <command> --help`. End-to-end flows (login, entries, invoices, documents,
@@ -206,13 +209,65 @@ division without the code or the module is skipped with a note on stderr). `--li
 applies per division. The MCP tools do not take `--all-divisions`: the server owns the
 division.
 
-The lines of invoices, entries, orders and quotations, by GUID or by number:
+The lines of invoices, entries, orders and quotations, by GUID or by number. The same
+headers take `delete` (all ten) and `update` (where Exact accepts a PUT), by GUID or
+number; a number that names several headers, such as the versions of a quotation, must
+be replaced by the GUID of one:
 
 ```sh
 exactcli sales-invoice lines 26700001 26700002
 exactcli purchase-entry lines 26600001 --output json
 exactcli journal-entry lines <entry-id>
 exactcli sales-order lines 12
+exactcli sales-entry update 26700005 --set Description="Corrected" --allow-writes
+exactcli purchase-invoice delete 26600001 26600002 --allow-writes --yes
+```
+
+`webhook listen` subscribes to topics through the ngrok domain of the profile (the
+domain of the redirect URI), checks the HMAC-SHA256 signature of each notification with
+the webhook secret of the app, prints each verified one as a JSON line, and removes its
+subscriptions when it stops (Ctrl+C, also during the set-up, or `--max-events`; `--keep`
+leaves them). That removal needs no `--yes`: it touches only the subscriptions of the
+run. A signed body with a second `Content`, or a signed `Content` nested deeper, is
+refused. The secret
+comes from `EXACTCLI_WEBHOOK_SECRET` in the shell, never from a `.env` file, or from a
+prompt:
+
+```sh
+exactcli webhook listen --topic Accounts --topic SalesInvoices --allow-writes
+```
+
+The lines of an existing entry: `line-add` on the five entry topics (by entry GUID or
+number; the entry link comes from the argument only), `line-update` and `line-delete`
+by line GUID on sales and purchase entries, the two whose lines take a PUT and a
+DELETE:
+
+```sh
+exactcli sales-entry line-add 26700002 --set GLAccount=@ref:financial/GLAccounts:700000 \
+  --set AmountFC=100 --set VATCode=F --allow-writes
+exactcli sales-entry line-update <line-id> --set Description="Fee" --allow-writes
+exactcli purchase-entry line-delete <line-id> --allow-writes --yes
+```
+
+Direct debit mandates (SEPA Core or B2B). `mandate create` finds the bank account of
+the debtor by IBAN, or takes its GUID:
+
+```sh
+exactcli mandate list --account 1001
+exactcli mandate create --account 1001 --iban BE68539007547034 --reference ACME-001 \
+  --type b2b --signature-date 2026-10-01 --allow-writes
+exactcli mandate update <id> --set CancellationDate=2026-10-14 --allow-writes
+exactcli mandate delete <id> --allow-writes --yes
+```
+
+Opening balances, and the divisions of other scopes:
+
+```sh
+exactcli opening-balance list                          # current year, every entry
+exactcli opening-balance list --year previous --processed
+exactcli division list --scope accessible              # every license (accountants)
+exactcli division list --scope all                     # also divisions without access
+exactcli division list --scope recent                  # the five used last
 ```
 
 Typed writes build the nested bodies of Exact from codes (all behind `--allow-writes`):
@@ -233,7 +288,7 @@ exactcli quotation create --account 1001 --line Default:2:100 --close-date 2026-
 exactcli purchase-invoice create --supplier 2001 --journal 600 --line Default:2:100 --reference INV-2026-42 --allow-writes
 exactcli purchase-order create --supplier 2001 --line Default:2:100 --receipt-date 2026-09-10 --allow-writes
 exactcli bank-entry create --journal 500 --line 400000:121:"Invoice 26700001" --account 1001 --allow-writes
-exactcli sales-order invoice <order-id> --journal 700 --async --allow-writes
+exactcli sales-order invoice <order-id> --journal 700 --wait --allow-writes
 exactcli purchase-entry create --supplier 2001 --journal 600 --line 611000:1250 --file invoice.pdf --allow-writes
 exactcli purchase-entry create --supplier 2001 --journal 600 \
   --line 611000:1200:vat=5:from=2026-01-01:to=2026-12-31:"Annual licence" --allow-writes
@@ -297,6 +352,12 @@ hides it; `payment process` sends the selected payments to the bank export.
 `mailbox upload` sends files to the scan service of the division; `bank-statement
 upload` feeds the bank import.
 
+`sales-order invoice` queues the run (Mode 1, the only mode Exact keeps after
+October 2026) and prints the `ProcessID`. `--wait` reads
+`InvoiceSalesOrderResult` every `--interval` seconds until the run ends, prints the
+result, and exits 65 on an error status or a failed invoice; past `--wait-timeout` it
+exits 75 and names the `sales-order invoice-result <process-id>` command.
+
 `invoice create` needs a customer (`IsSales` true) and an item per line. `journal-entry
 create` checks that the lines balance before it sends anything; the amounts go to
 `AmountFC`. `document create` reads the files first and posts one attachment per file.
@@ -321,6 +382,16 @@ exactcli create salesentry/SalesEntries --body @entry.json \
 exactcli update crm/Accounts <id> --set Name="Acme NV" --allow-writes
 exactcli delete crm/Accounts <id> --allow-writes --yes
 exactcli api DELETE "crm/Accounts(guid'<id>')" --allow-writes --yes   # raw, no validation
+```
+
+`lookup` finds records by exact field values; `upsert` creates the record that
+`--match` finds nothing for, or updates the one it finds (the match fields stay out of
+the update). Several matches fail with exit 65. A numeric `Code` also matches the
+padded form Exact stores:
+
+```sh
+exactcli lookup crm/Accounts --match Code=1001 --one --jq .ID
+exactcli upsert crm/Accounts --match Code=1001 --set Name="Acme NV" --allow-writes
 ```
 
 `--set Key=value` is repeatable and merges over `--body`. Values: text, numbers,
@@ -362,6 +433,35 @@ exactcli sync timestamp --endpoint Accounts --modified 2026-01-01   # start from
 complete walk. The next timestamp also prints on stderr. `sync timestamp` turns a
 date into the timestamp to pass as `--since` for one feed (`Accounts`,
 `TransactionLines`, ...; the list is in `metadata read/sync/Sync/SyncTimestamp`).
+
+`backup` copies a division to a directory: one JSON file per sync feed, merged by
+`ID`, and a `manifest.json` with the timestamps. The next run reads only the changes,
+then removes the records of the deleted log. A feed of a module the division lacks
+answers 403 and is marked `forbidden`; a feed cut by `--max-pages` is `partial` and
+goes on at the next run; any other failure marks the feed `failed` and the run exits
+65 at the end. Exact keeps deletions for two months: after a longer pause, the run
+warns, and `--full` reads everything again.
+
+```sh
+exactcli backup --list                                  # the feed names
+exactcli backup --dir ./backup-acme                     # every feed
+exactcli backup --dir ./backup-acme --feed Financial/TransactionLines --feed CRM/Accounts
+```
+
+## Aliases
+
+An alias is a short name for a longer command. It runs with the words typed after it.
+An alias that stores `--allow-writes` or `--yes` writes or deletes without them on the
+command line: `alias set` warns about such an alias. The profile settings `read_only`
+and `write_divisions` still apply:
+
+```sh
+exactcli alias set unpaid "receivable list --all"
+exactcli alias set acme -- account list --filter "Name eq 'Acme NV'"
+exactcli unpaid --output csv
+exactcli alias list
+exactcli alias unset unpaid
+```
 
 ## Profiles and divisions
 

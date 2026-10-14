@@ -4,7 +4,12 @@ import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { resolvePath } from '../../lib/catalog.js'
 import { ApiError, CliError } from '../../lib/errors.js'
-import { assertDate, parseLine, resolveLines } from '../../lib/lines.js'
+import {
+  assertDate,
+  assertPeriod,
+  parseLine,
+  resolveLines,
+} from '../../lib/lines.js'
 import {
   autoColumns,
   divisionPath,
@@ -37,26 +42,6 @@ const LINE_OPTIONS = {
   'cost-unit': { field: 'CostUnit', type: 'text' },
 }
 const LINE_SHAPE = '<gl account>:<amount>[:option=value...][:description]'
-
-/**
- * A deferral period needs both bounds, in order: Exact spreads the amount
- * from `From` to `To`.
- * @param {object} line
- * @param {string} text the flag value, for the message
- */
-function assertPeriod(line, text) {
-  const reason =
-    'From' in line !== 'To' in line
-      ? 'needs from and to together'
-      : line.From > line.To
-        ? 'has from after to'
-        : undefined
-  if (reason) {
-    throw new CliError(`--line ${reason}, received: ${text}`, {
-      exitCode: 64,
-    })
-  }
-}
 
 /**
  * The bytes of a file to attach. Every file is read before the first

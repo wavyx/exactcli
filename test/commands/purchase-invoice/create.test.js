@@ -193,7 +193,7 @@ describe('purchase-invoice create', () => {
         '--type',
         '8034',
         '--line',
-        `${ITEM}:1:50`,
+        `${ITEM}:-1:50`,
         '--dry-run',
       ]),
     )
@@ -201,8 +201,89 @@ describe('purchase-invoice create', () => {
     expect(out.body.Supplier).toBe(SUPPLIER)
     expect(out.body.Type).toBe(8034)
     expect(out.body.PurchaseInvoiceLines).toEqual([
-      { Item: ITEM, Quantity: 1, UnitPrice: 50 },
+      { Item: ITEM, Quantity: -1, UnitPrice: 50 },
     ])
+  })
+
+  it('--dry-run sends the line options', async () => {
+    mockPeriod()
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        '--supplier',
+        SUPPLIER,
+        '--journal',
+        '600',
+        '--line',
+        `${ITEM}:12:100:vat=5:discount=0.1:from=2026-01-01:to=2026-12-31:cost-center=HQ:Licences`,
+        '--line',
+        `${ITEM}:1:40:vat-amount=8.4:cost-unit=OPS`,
+        '--dry-run',
+      ]),
+    )
+
+    expect(out.body.PurchaseInvoiceLines).toEqual([
+      {
+        Item: ITEM,
+        Quantity: 12,
+        UnitPrice: 100,
+        VATCode: '5',
+        Discount: 0.1,
+        From: '2026-01-01',
+        To: '2026-12-31',
+        CostCenter: 'HQ',
+        Description: 'Licences',
+      },
+      {
+        Item: ITEM,
+        Quantity: 1,
+        UnitPrice: 40,
+        VATAmount: 8.4,
+        CostUnit: 'OPS',
+      },
+    ])
+  })
+
+  it('fails with 64 on a credit type with a total that is not negative', async () => {
+    // Exact refuses it too, with a 500: "must be lower than 0" (verified live).
+    for (const type of ['8031', '8034']) {
+      const err = await fail([
+        ...BASE,
+        '--type',
+        type,
+        '--line',
+        'Default:1:50',
+      ])
+      expect(exit(err)).toBe(64)
+      expect(err.message).toBe(
+        `--type ${type} is a credit note: give the lines negative quantities, Exact refuses a positive total`,
+      )
+    }
+  })
+
+  it('accepts a credit type with negative quantities', async () => {
+    mockPeriod()
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        '--supplier',
+        SUPPLIER,
+        '--journal',
+        '600',
+        '--type',
+        '8034',
+        '--line',
+        `${ITEM}:-1:50`,
+        '--dry-run',
+      ]),
+    )
+
+    expect(out.body.Type).toBe(8034)
+  })
+
+  it('fails with 64 on a line period with one bound', async () => {
+    const err = await fail([...BASE, '--line', 'Default:1:50:from=2026-01-01'])
+
+    expect(exit(err)).toBe(64)
+    expect(err.message).toMatch(/needs from and to together/)
   })
 
   it('fails with 65 when no financial period covers the date', async () => {
@@ -233,7 +314,9 @@ describe('purchase-invoice create', () => {
     const err = await fail([...BASE, '--line', 'Default:two:100'])
 
     expect(exit(err)).toBe(64)
-    expect(err.message).toMatch(/item:quantity:unit price\[:description\]/)
+    expect(err.message).toMatch(
+      /item:quantity:unit price\[:option=value\.\.\.\]\[:description\]/,
+    )
   })
 
   it('fails with 64 on a bad --date, before the gate', async () => {
@@ -254,5 +337,20 @@ describe('purchase-invoice create', () => {
 
     expect(exit(err)).toBe(64)
     expect(err.message).toMatch(/Missing required flag line/)
+  })
+
+  it('refuses a negative discount with 64', async () => {
+    process.stdout.isTTY = true
+    const err = await Cmd.run([
+      '--supplier',
+      SUPPLIER,
+      '--journal',
+      '600',
+      '--line',
+      `${ITEM}:1:100:discount=-5`,
+      '--dry-run',
+    ]).catch((e) => e)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+    expect(err.message).toMatch(/option discount expects a fraction/)
   })
 })

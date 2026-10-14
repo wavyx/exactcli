@@ -1,7 +1,13 @@
 import { Flags } from '@oclif/core'
 import BaseCommand from '../../base-command.js'
 import { resolvePath } from '../../lib/catalog.js'
-import { assertDate, parseLine, resolveLines } from '../../lib/lines.js'
+import { CliError } from '../../lib/errors.js'
+import {
+  assertDate,
+  assertPeriod,
+  parseLine,
+  resolveLines,
+} from '../../lib/lines.js'
 import { autoColumns, normalize, unwrap } from '../../lib/odata.js'
 import { resolveRef } from '../../lib/refs.js'
 import { financialPeriod, today } from '../../lib/periods.js'
@@ -17,14 +23,26 @@ const RESOURCE = 'purchase/PurchaseInvoices'
 const TYPES =
   '8030 direct purchase invoice, 8031 direct purchase invoice (credit), 8033 purchase invoice, 8034 purchase invoice (credit)'
 const PURCHASE_INVOICE = 8033
+/** The credit note types: Exact refuses them with a positive total. */
+const CREDIT_TYPES = [8031, 8034]
 /**
  * One `--line` as the API wants it. A purchase invoice line needs an item
  * (or a purchase order line): there is no ledger account on it. The item
  * stays a code or a GUID here: the lookup runs after the write gate.
  */
 const LINE = {
-  shape: 'item:quantity:unit price[:description]',
+  shape: 'item:quantity:unit price[:option=value...][:description]',
   fields: { Item: 'text', Quantity: 'number', UnitPrice: 'number' },
+  options: {
+    vat: { field: 'VATCode', type: 'text' },
+    'vat-amount': { field: 'VATAmount', type: 'amount' },
+    // A fraction of the price; above 1 the line would flip its sign.
+    discount: { field: 'Discount', type: 'fraction' },
+    from: { field: 'From', type: 'date' },
+    to: { field: 'To', type: 'date' },
+    'cost-center': { field: 'CostCenter', type: 'text' },
+    'cost-unit': { field: 'CostUnit', type: 'text' },
+  },
 }
 
 export default class PurchaseInvoiceCreateCommand extends BaseCommand {
@@ -52,7 +70,11 @@ export default class PurchaseInvoiceCreateCommand extends BaseCommand {
     line: Flags.string({
       required: true,
       multiple: true,
-      description: `Invoice line as ${LINE.shape} (repeatable)`,
+      description:
+        `Invoice line as ${LINE.shape} (repeatable). Options: vat (code), ` +
+        'vat-amount, discount (a fraction: 0.1 is 10%), from and to ' +
+        '(YYYY-MM-DD, together), cost-center, cost-unit. A credit type ' +
+        'takes negative quantities',
     }),
     description: Flags.string({ description: 'Invoice description' }),
     date: Flags.string({
@@ -79,9 +101,25 @@ export default class PurchaseInvoiceCreateCommand extends BaseCommand {
       Journal: journal,
       Supplier: supplier,
       Type: type,
-      PurchaseInvoiceLines: this.flags.line.map((text) =>
-        parseLine(text, LINE),
-      ),
+      PurchaseInvoiceLines: this.flags.line.map((text) => {
+        const line = parseLine(text, LINE)
+        assertPeriod(line, text)
+        return line
+      }),
+    }
+    if (CREDIT_TYPES.includes(type)) {
+      // Exact refuses a credit note with a positive total (verified live).
+      const total = body.PurchaseInvoiceLines.reduce(
+        (sum, l) => sum + l.Quantity * l.UnitPrice * (1 - (l.Discount ?? 0)),
+        0,
+      )
+      if (!(total < 0)) {
+        throw new CliError(
+          `--type ${type} is a credit note: give the lines negative ` +
+            'quantities, Exact refuses a positive total',
+          { exitCode: 64 },
+        )
+      }
     }
     if (description) body.Description = description
     if (date) body.InvoiceDate = date

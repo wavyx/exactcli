@@ -1,6 +1,6 @@
 {
   "name": "@wavyx/exactcli",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "publishConfig": {
     "access": "public"
   },
@@ -228,6 +228,15 @@
       },
       "bank-statement": {
         "description": "Bank statement files (CODA, MT940, CAMT) sent to the bank import"
+      },
+      "mandate": {
+        "description": "Direct debit mandates (SEPA Core and B2B)"
+      },
+      "opening-balance": {
+        "description": "Opening balances of balance sheet accounts"
+      },
+      "alias": {
+        "description": "Short names for longer commands"
       }
     },
     "hooks": {

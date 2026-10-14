@@ -36,6 +36,26 @@ export function assertDate(value, flag) {
 }
 
 /**
+ * A line period needs both bounds, in order: Exact spreads an entry line from
+ * `From` to `To`, and uses them as a pair on an invoice line.
+ * @param {object} line a parsed line
+ * @param {string} text the flag value, for the message
+ */
+export function assertPeriod(line, text) {
+  const reason =
+    'From' in line !== 'To' in line
+      ? 'needs from and to together'
+      : line.From > line.To
+        ? 'has from after to'
+        : undefined
+  if (reason) {
+    throw new CliError(`--line ${reason}, received: ${text}`, {
+      exitCode: 64,
+    })
+  }
+}
+
+/**
  * @param {string} text
  * @param {string} flag the flag, for the message
  * @returns {number}
@@ -55,9 +75,8 @@ export function parseNumber(text, flag) {
  * @property {Record<string, 'text' | 'number' | 'amount'>} fields the body field of each part, in order
  * @property {string} [flag] the flag, for the message; `line` by default
  * @property {string} [description] the body field of the rest; `Description` by default
- * @property {Record<string, { field: string, type: 'text' | 'number' | 'amount' | 'date' | 'fraction', max?: number }>} [options]
- *   named `key=value` parts between the fields and the description; `max`
- *   bounds a number
+ * @property {Record<string, { field: string, type: 'text' | 'number' | 'amount' | 'date' | 'fraction' }>} [options]
+ *   named `key=value` parts between the fields and the description
  */
 
 /**
@@ -130,9 +149,6 @@ export function parseLine(
     const value = optionValue(raw, option.type)
     if (value === undefined) {
       refuse(`option ${key} expects ${EXPECTS[option.type]}`)
-    }
-    if (option.max !== undefined && value > option.max) {
-      refuse(`option ${key} expects a number up to ${option.max}`)
     }
     line[option.field] = value
   }

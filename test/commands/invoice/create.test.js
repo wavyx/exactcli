@@ -282,13 +282,24 @@ describe('invoice create', () => {
       '--credit-note',
     ])
     expect(exit(over)).toBe(64)
-    expect(over.message).toMatch(/option discount expects a number up to 1/)
+    expect(over.message).toMatch(
+      /option discount expects a fraction from 0 to 1/,
+    )
+
+    // A negative discount would turn into a markup.
+    const negative = await fail([
+      ...BASE,
+      '--line',
+      'Default:1:100:discount=-5',
+    ])
+    expect(exit(negative)).toBe(64)
+    expect(negative.message).toMatch(/option discount expects a fraction/)
   })
 
   it('fails with 64 on a bad line option, before the gate', async () => {
     const err = await fail([...BASE, '--line', 'Default:1:10:discount=ten'])
 
     expect(exit(err)).toBe(64)
-    expect(err.message).toMatch(/option discount expects a number/)
+    expect(err.message).toMatch(/option discount expects a fraction/)
   })
 })

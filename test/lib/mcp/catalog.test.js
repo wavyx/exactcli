@@ -137,6 +137,10 @@ describe('classifyKind and helpers', () => {
     expect(classifyKind('create')).toBe('write')
     expect(classifyKind('delete')).toBe('destructive')
     expect(classifyKind('config:unset')).toBe('destructive')
+    expect(classifyKind('sales-entry:line-delete')).toBe('destructive')
+    expect(classifyKind('sales-order:invoice-result')).toBe('read')
+    expect(classifyKind('lookup')).toBe('read')
+    expect(classifyKind('upsert')).toBe('write')
   })
 
   it('excludes the escape hatch, diagnostics, the server, file commands and local state', () => {
@@ -147,6 +151,9 @@ describe('classifyKind and helpers', () => {
       'document:download',
       'mailbox:upload',
       'bank-statement:upload',
+      'webhook:listen',
+      'backup',
+      'alias:set',
       'auth:login',
       'config:set',
       'profile:use',

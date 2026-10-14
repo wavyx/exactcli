@@ -9,6 +9,8 @@ const ENV_KEY_RE = /^EXACTCLI_[A-Z0-9_]+$/
 export const SHELL_ONLY = new Set([
   'EXACTCLI_ALLOW_WRITES',
   'EXACTCLI_CONFIG_DIR',
+  // A planted secret would let forged notifications pass as verified.
+  'EXACTCLI_WEBHOOK_SECRET',
 ])
 
 /**

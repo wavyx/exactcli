@@ -6,6 +6,7 @@ import {
   afterAll,
   beforeEach,
   afterEach,
+  vi,
 } from 'vitest'
 import nock from 'nock'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -17,11 +18,14 @@ const TMP_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'exactcli-so-invoice-'))
 
 const { default: Cmd } =
   await import('../../../src/commands/sales-order/invoice.js')
+const { timing } = await import('../../../src/lib/invoice-result.js')
 
 const ORDER_A = '11111111-1111-1111-1111-111111111111'
 const ORDER_B = '22222222-2222-2222-2222-222222222222'
 const PROCESS = '33333333-3333-3333-3333-333333333333'
 const INVOICE = '/api/v1/123/salesinvoice/InvoiceSalesOrders'
+const RESULT = '/api/v1/123/read/salesinvoice/InvoiceSalesOrderResult'
+const byProcess = { ProcessID: `guid'${PROCESS}'` }
 
 beforeAll(() => {
   process.env.EXACTCLI_CONFIG_DIR = TMP_CONFIG_DIR
@@ -44,6 +48,7 @@ beforeEach(() => {
 afterEach(() => {
   nock.cleanAll()
   nock.enableNetConnect()
+  vi.restoreAllMocks()
 })
 
 const fail = (argv) => {
@@ -68,6 +73,7 @@ describe('sales-order invoice', () => {
         CreateMode: 1,
         InvoiceMode: 0,
         JournalCode: '700',
+        Mode: 1,
         SalesOrderIDs: [{ ID: ORDER_A }, { ID: ORDER_B }],
       },
     })
@@ -82,24 +88,17 @@ describe('sales-order invoice', () => {
     expect(post.isDone()).toBe(false)
   })
 
-  it('POSTs with --allow-writes and prints the answer', async () => {
+  it('queues the run (Mode 1) and prints the ProcessID', async () => {
     const scope = mockApi()
       .post(INVOICE, {
         CreateMode: 0,
         InvoiceMode: 1,
         JournalCode: '700',
         UserInvoiceDate: '2026-09-03',
+        Mode: 1,
         SalesOrderIDs: [{ ID: ORDER_A }],
       })
-      .reply(201, {
-        d: {
-          __metadata: { uri: 'x' },
-          ID: PROCESS,
-          NumberOfCreatedInvoices: 1,
-          NumberOfFailedInvoices: 0,
-          Errors: null,
-        },
-      })
+      .reply(201, { d: { __metadata: { uri: 'x' }, ProcessID: PROCESS } })
 
     const out = JSON.parse(
       await runCmd(Cmd, [
@@ -117,37 +116,187 @@ describe('sales-order invoice', () => {
     )
 
     expect(scope.isDone()).toBe(true)
-    expect(out).toEqual({
-      ID: PROCESS,
-      NumberOfCreatedInvoices: 1,
-      NumberOfFailedInvoices: 0,
-      Errors: null,
-    })
+    expect(out).toEqual({ ProcessID: PROCESS })
   })
 
-  it('--async sets Mode 1 and prints the ProcessID of the queued run', async () => {
+  it('--wait polls the result until the run ends and prints it', async () => {
+    const sleep = vi.spyOn(timing, 'sleep').mockResolvedValue()
     const scope = mockApi()
-      .post(INVOICE, {
-        CreateMode: 1,
-        InvoiceMode: 0,
-        JournalCode: '700',
-        Mode: 1,
-        SalesOrderIDs: [{ ID: ORDER_A }],
+      .post(INVOICE)
+      .reply(201, { d: { ProcessID: PROCESS } })
+      .get(RESULT)
+      .query(byProcess)
+      .reply(200, { d: { results: [{ ProcessID: PROCESS, Status: '30' }] } })
+      .get(RESULT)
+      .query(byProcess)
+      .reply(200, {
+        d: {
+          results: [
+            {
+              ProcessID: PROCESS,
+              Status: 'Finished',
+              NumberOfCreatedInvoices: 1,
+              NumberOfFailedInvoices: 0,
+              Errors: null,
+            },
+          ],
+        },
       })
-      .reply(201, { d: { __metadata: { uri: 'x' }, ProcessID: PROCESS } })
 
     const out = JSON.parse(
       await runCmd(Cmd, [
         ORDER_A,
         '--journal',
         '700',
-        '--async',
+        '--wait',
+        '--interval',
+        '3',
         '--allow-writes',
       ]),
     )
 
     expect(scope.isDone()).toBe(true)
-    expect(out).toEqual({ ProcessID: PROCESS })
+    expect(sleep).toHaveBeenCalledTimes(2)
+    expect(sleep).toHaveBeenCalledWith(3000)
+    expect(out).toMatchObject({
+      Status: 'Finished',
+      StatusDescription: 'Finished',
+      NumberOfCreatedInvoices: 1,
+    })
+  })
+
+  it('--wait prints the result and fails with 65 on an error status', async () => {
+    vi.spyOn(timing, 'sleep').mockResolvedValue()
+    mockApi()
+      .post(INVOICE)
+      .reply(201, { d: { ProcessID: PROCESS } })
+      .get(RESULT)
+      .query(byProcess)
+      .reply(200, {
+        d: {
+          results: [
+            { ProcessID: PROCESS, Status: '52', Errors: 'No lines to invoice' },
+          ],
+        },
+      })
+    const lines = []
+    vi.spyOn(console, 'log').mockImplementation((t) => lines.push(t))
+    const errors = []
+    vi.spyOn(process.stderr, 'write').mockImplementation(
+      (t) => errors.push(String(t)) > 0,
+    )
+
+    const err = await Cmd.run([
+      ORDER_A,
+      '--journal',
+      '700',
+      '--wait',
+      '--allow-writes',
+    ]).catch((e) => e)
+
+    expect(exit(err)).toBe(65)
+    expect(errors.join('')).toMatch(/status 52.*No lines to invoice/)
+    expect(JSON.parse(lines.join('\n'))).toMatchObject({ Status: '52' })
+  })
+
+  it('--wait fails with 65 when the run finished but left invoices out', async () => {
+    vi.spyOn(timing, 'sleep').mockResolvedValue()
+    mockApi()
+      .post(INVOICE)
+      .reply(201, { d: { ProcessID: PROCESS } })
+      .get(RESULT)
+      .query(byProcess)
+      .reply(200, {
+        d: {
+          results: [
+            {
+              ProcessID: PROCESS,
+              Status: 'Finished',
+              NumberOfCreatedInvoices: 1,
+              NumberOfFailedInvoices: 1,
+              Errors: '',
+            },
+          ],
+        },
+      })
+    const errors = []
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(process.stderr, 'write').mockImplementation(
+      (t) => errors.push(String(t)) > 0,
+    )
+
+    const err = await Cmd.run([
+      ORDER_A,
+      '--journal',
+      '700',
+      '--wait',
+      '--allow-writes',
+    ]).catch((e) => e)
+
+    expect(exit(err)).toBe(65)
+    expect(errors.join('')).toMatch(/1 failed invoices\): no detail/)
+  })
+
+  it('--wait fails with 75 and names the ProcessID when the run outlasts --wait-timeout', async () => {
+    let now = 0
+    vi.spyOn(Date, 'now').mockImplementation(() => now)
+    vi.spyOn(timing, 'sleep').mockImplementation(async (ms) => {
+      now += ms
+    })
+    const errors = []
+    vi.spyOn(process.stderr, 'write').mockImplementation(
+      (t) => errors.push(String(t)) > 0,
+    )
+    mockApi()
+      .post(INVOICE)
+      .reply(201, { d: { ProcessID: PROCESS } })
+      .get(RESULT)
+      .query(byProcess)
+      .reply(200, { d: { results: [{ ProcessID: PROCESS, Status: '20' }] } })
+      .get(RESULT)
+      .query(byProcess)
+      .times(2)
+      .reply(200, {
+        d: { results: [{ ProcessID: PROCESS, Status: 'Paused' }] },
+      })
+
+    const err = await fail([
+      ORDER_A,
+      '--journal',
+      '700',
+      '--wait',
+      '--interval',
+      '5',
+      '--wait-timeout',
+      '15',
+      '--allow-writes',
+    ])
+
+    expect(exit(err)).toBe(75)
+    expect(err.message).toMatch(/is still Paused/)
+    expect(errors.join('')).toContain(`ProcessID: ${PROCESS}\n`)
+    // Two reads of the same unknown status give one note.
+    expect(
+      errors.filter((t) => t.startsWith('Unknown status Paused')),
+    ).toHaveLength(1)
+    expect(err.message).toContain(
+      `exactcli sales-order invoice-result ${PROCESS}`,
+    )
+  })
+
+  it('--wait fails with 65 when the answer carries no ProcessID', async () => {
+    mockApi().post(INVOICE).reply(201, { d: {} })
+
+    const err = await fail([
+      ORDER_A,
+      '--journal',
+      '700',
+      '--wait',
+      '--allow-writes',
+    ])
+
+    expect(exit(err)).toBe(65)
+    expect(err.message).toMatch(/no ProcessID/)
   })
 
   it('fails with 64 when an argument is not a GUID', async () => {

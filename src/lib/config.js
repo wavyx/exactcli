@@ -25,6 +25,10 @@ const schema = {
     type: 'object',
     default: {},
   },
+  aliases: {
+    type: 'object',
+    default: {},
+  },
 }
 
 /** @type {Conf | undefined} */

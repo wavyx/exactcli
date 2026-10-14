@@ -202,10 +202,12 @@ describe('variants and families', () => {
         real,
       ).uri,
     ).toBe('/api/v1/{division}/bulk/Financial/TransactionLines')
-    // A name clash under another service is another resource.
+    // The reference of 2026-10-14 added sync/CRM/BankAccounts: the direct
+    // variant wins over sync/Payroll/BankAccounts, a name clash under
+    // another service.
     expect(
-      variantOf(findResource('crm/BankAccounts', real), 'sync', real),
-    ).toBeUndefined()
+      variantOf(findResource('crm/BankAccounts', real), 'sync', real).uri,
+    ).toBe('/api/v1/{division}/sync/CRM/BankAccounts')
     expect(
       variantOf(findResource('documents/Documents', real), 'read', real),
     ).toBeUndefined()

@@ -4,6 +4,58 @@ All notable changes to this project are documented in this file. The format foll
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [0.12.0] - 2026-10-14
+
+### Added
+
+- `<topic> delete <ref...>` for the ten headers of `lines` and `<topic> update
+<ref>` where Exact accepts a PUT (sales invoices, sales and purchase entries,
+  sales and purchase orders, purchase invoices), by GUID or number. A number
+  that names several headers fails with 65; a failed delete names the headers
+  already deleted.
+- `webhook listen --topic ...`: a loopback receiver behind the ngrok domain of
+  the profile, subscriptions on start, HMAC-SHA256 check of every notification
+  with the webhook secret of the app, one JSON line per verified notification,
+  unsubscribe on exit. An empty secret is refused. `EXACTCLI_WEBHOOK_SECRET` is shell only; the MCP server
+  does not expose the command.
+- `sales-order invoice-result <process-id>` reads a queued invoicing run
+  (`read/salesinvoice/InvoiceSalesOrderResult`); `sales-order invoice --wait`
+  polls it until the run ends (exit 65 on an error status or a failed invoice,
+  75 past `--wait-timeout`). The status comes as text (verified live).
+- `mandate list|create|update|delete` for direct debit mandates; `create`
+  finds the bank account of the debtor by IBAN (verified live).
+- `<entry> line-add` on sales, purchase, general journal, bank and cash
+  entries, and `line-update`, `line-delete` on sales and purchase entry lines
+  (verified live on sales entries).
+- `opening-balance list` (`--year current|previous`, `--processed`) and
+  `division list --scope license|accessible|all|recent`.
+- `lookup <resource> --match Field=value` and `upsert <resource> --match ...
+--set ...`: create or update by business key, exit 65 on several matches;
+  a numeric Code matches its padded form (verified live).
+- `backup --dir`: one JSON file per sync feed, incremental runs from the
+  stored timestamps, deletions from `sync/Deleted`, `forbidden`, `partial`
+  and `failed` feeds in the manifest, `--full`, `--list`.
+- `alias set|list|unset`: an unknown command runs the alias of that name with
+  the words typed after it; cycles and chains past 10 stop with 64.
+- The catalogue follows the reference of 2026-10-14: `sync/CRM/BankAccounts`
+  and new fields on items, documents and purchase entry lines.
+- `purchase-invoice create` lines take options: `vat`, `vat-amount`,
+  `discount`, `from`/`to`, `cost-center`, `cost-unit`. A credit type (8031, 8034) needs a negative total: Exact refuses a positive one (verified live).
+
+### Changed
+
+- `sales-order invoice` always queues the run (Mode 1): Exact switched the
+  synchronous mode off in October 2026. The `--async` flag is gone.
+
+### Fixed
+
+- `invoice create` and `purchase-invoice create` refuse a negative `discount`
+  (a fraction from 0 to 1): a negative value turned the discount into a markup.
+- `payment process` fails with 65 when Exact answers 201 with an ErrorMessage,
+  after it prints the answer: Exact processes nothing then (verified live).
+
 ## [0.11.1] - 2026-09-25
 
 ### Fixed

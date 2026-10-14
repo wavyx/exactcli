@@ -10,16 +10,48 @@ import { GUID_RE } from '../refs.js'
 const NUMBER_RE = /^\d{1,10}$/
 
 /**
- * The header GUIDs of the references. A GUID passes through; the numbers are
+ * The references of a header command: GUIDs and numbers, checked and without
+ * duplicates. A reference lands in $filter or in a path, so anything else
+ * could close the literal and append its own clause.
+ * @param {string[]} argv
+ * @returns {string[]}
+ */
+export function headerRefs(argv) {
+  const bad = argv.find((ref) => !GUID_RE.test(ref) && !NUMBER_RE.test(ref))
+  if (bad !== undefined) {
+    throw new CliError(`Expected a GUID or a number, received ${bad}`, {
+      exitCode: 64,
+    })
+  }
+  return [
+    ...new Set(
+      argv.map((ref) =>
+        GUID_RE.test(ref) ? ref.toLowerCase() : String(Number(ref)),
+      ),
+    ),
+  ]
+}
+
+/**
+ * The header GUIDs of the references, lower case and without duplicates. A
+ * GUID passes through; the numbers are
  * looked up on the header resource in one request. A number that matches
- * nothing fails with 65.
+ * nothing fails with 65; with `unique`, so does a number that names several
+ * headers (the versions of a quotation), because a write needs one.
  * @param {{ apiClient: object }} cmd
  * @param {import('./line-descriptors.js').LineDescriptor} d
  * @param {number} division
- * @param {string[]} refs validated GUIDs and digit strings
+ * @param {string[]} refs checked by headerRefs
+ * @param {{ unique?: boolean }} [options]
  * @returns {Promise<string[]>}
  */
-async function headerKeys(cmd, d, division, refs) {
+export async function headerKeys(
+  cmd,
+  d,
+  division,
+  refs,
+  { unique = false } = {},
+) {
   const guids = refs.filter((ref) => GUID_RE.test(ref))
   const numbers = refs.filter((ref) => !GUID_RE.test(ref))
   if (numbers.length === 0) return guids
@@ -30,15 +62,32 @@ async function headerKeys(cmd, d, division, refs) {
       $filter: numbers.map((n) => `${d.number} eq ${n}`).join(' or '),
     }),
   )
-  const found = new Set(rows.map((row) => String(row[d.number])))
-  const missing = numbers.filter((n) => !found.has(n))
+  const count = new Map()
+  for (const row of rows) {
+    const n = String(row[d.number])
+    count.set(n, (count.get(n) ?? 0) + 1)
+  }
+  const missing = numbers.filter((n) => !count.has(n))
   if (missing.length > 0) {
     throw new CliError(
       `No ${d.parent} with ${d.number} ${missing.join(', ')}`,
       { exitCode: 65 },
     )
   }
-  return [...guids, ...rows.map((row) => row[d.parentKey])]
+  const several = unique && numbers.find((n) => count.get(n) > 1)
+  if (several) {
+    throw new CliError(
+      `${d.number} ${several} names ${count.get(several)} ${d.plural}: use the GUID of one`,
+      { exitCode: 65 },
+    )
+  }
+  // A number and the GUID of the same header name it once: one DELETE.
+  return [
+    ...new Set([
+      ...guids,
+      ...rows.map((row) => String(row[d.parentKey]).toLowerCase()),
+    ]),
+  ]
 }
 
 /**
@@ -72,20 +121,8 @@ export function defineLinesCommand(d) {
 
     async run() {
       const { argv } = await this.parse(LinesCommand)
-      // A reference lands in $filter, so anything but a GUID or digits could
-      // close the literal and append its own clause.
-      const bad = argv.find((ref) => !GUID_RE.test(ref) && !NUMBER_RE.test(ref))
-      if (bad !== undefined) {
-        throw new CliError(`Expected a GUID or a number, received ${bad}`, {
-          exitCode: 64,
-        })
-      }
+      const refs = headerRefs(argv)
       const division = this.resolveDivision()
-      const refs = [
-        ...new Set(
-          argv.map((ref) => (GUID_RE.test(ref) ? ref : String(Number(ref)))),
-        ),
-      ]
       const keys = [...new Set(await headerKeys(this, d, division, refs))]
 
       const byHeader = keys.map((k) => `${d.link} eq guid'${k}'`).join(' or ')

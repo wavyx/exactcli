@@ -30,5 +30,14 @@
   "DELETE documents/Documents",
   "PUT cashflow/Payments",
   "POST purchase/PurchaseInvoices",
-  "DELETE purchase/PurchaseInvoices"
+  "DELETE purchase/PurchaseInvoices",
+  "PUT salesentry/SalesEntries",
+  "POST crm/BankAccounts",
+  "PUT crm/BankAccounts",
+  "POST cashflow/DirectDebitMandates",
+  "PUT cashflow/DirectDebitMandates",
+  "DELETE cashflow/DirectDebitMandates",
+  "POST salesentry/SalesEntryLines",
+  "PUT salesentry/SalesEntryLines",
+  "DELETE salesentry/SalesEntryLines"
 ]

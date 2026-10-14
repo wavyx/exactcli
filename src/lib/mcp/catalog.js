@@ -141,9 +141,13 @@ export const EXCLUDED = new Set([
   'document:download',
   'mailbox:upload',
   'bank-statement:upload',
+  // A long run with a tunnel and a secret prompt, not a tool call.
+  'webhook:listen',
+  // A long run that writes a directory of local files.
+  'backup',
   ...WRITE_COMMANDS,
 ])
-const EXCLUDED_PREFIXES = ['auth:', 'config:', 'profile:']
+const EXCLUDED_PREFIXES = ['alias:', 'auth:', 'config:', 'profile:']
 
 const READ_LEAVES = new Set([
   'list',
@@ -155,8 +159,10 @@ const READ_LEAVES = new Set([
   'metadata',
   'version',
   'status',
+  'invoice-result',
+  'lookup',
 ])
-const DESTRUCTIVE_LEAVES = new Set(['delete', 'unset'])
+const DESTRUCTIVE_LEAVES = new Set(['delete', 'line-delete', 'unset'])
 
 /** @param {string} id */
 export function isExcluded(id) {

@@ -19,6 +19,7 @@ beforeAll(() => {
       'JQ_PATH=/nonexistent/hijack',
       'EXACTCLI_ALLOW_WRITES=1',
       'EXACTCLI_CONFIG_DIR=/nonexistent/other',
+      'EXACTCLI_WEBHOOK_SECRET=planted',
     ].join('\n'),
   )
 })
@@ -32,10 +33,12 @@ describe('loadDotEnv', () => {
     expect(env).toEqual({ EXACTCLI_PROFILE: 'acme', EXACTCLI_DIVISION: '2' })
   })
 
-  it('never loads a binary path, the write switch or the config dir', () => {
+  it('never loads a binary path, the write switch, the config dir or the webhook secret', () => {
     const env = {}
     loadDotEnv(join(dir, '.env'), env)
     expect(env.JQ_PATH).toBeUndefined()
+    // A planted secret would let forged notifications pass as verified.
+    expect(SHELL_ONLY.has('EXACTCLI_WEBHOOK_SECRET')).toBe(true)
     for (const key of SHELL_ONLY) expect(env[key]).toBeUndefined()
   })
 

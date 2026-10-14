@@ -260,4 +260,53 @@ describe('division list', () => {
     expect(rows[0]).toMatch(/Acme BE.*yes/)
     expect(rows[1]).not.toMatch(/yes/)
   })
+
+  it('names every call it can make', () => {
+    for (const call of [
+      'GET hrm/Divisions',
+      'GET system/Divisions',
+      'GET system/AllDivisions',
+      'GET system/GetMostRecentlyUsedDivisions',
+    ]) {
+      expect(List.description).toContain(call)
+    }
+  })
+
+  it('--scope reads the system resource and shows its columns', async () => {
+    for (const [scopeName, resource] of [
+      ['accessible', 'Divisions'],
+      ['all', 'AllDivisions'],
+      ['recent', 'GetMostRecentlyUsedDivisions'],
+    ]) {
+      const scope = mockApi()
+        .get(`/api/v1/123/system/${resource}`)
+        .reply(200, {
+          d: {
+            results: [
+              {
+                Code: 124,
+                Description: 'Acme NL',
+                CustomerName: 'Acme',
+                Country: 'NL',
+                Currency: 'EUR',
+                Status: 1,
+              },
+            ],
+          },
+        })
+      process.stdout.isTTY = true
+
+      const stdout = await runCmd(List, [
+        '--division',
+        '123',
+        '--scope',
+        scopeName,
+      ])
+
+      expect(scope.isDone()).toBe(true)
+      expect(stdout).toMatch(/CustomerName/)
+      expect(stdout).not.toMatch(/HID/)
+      expect(stdout).toMatch(/124.*Acme NL/)
+    }
+  })
 })

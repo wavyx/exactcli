@@ -100,6 +100,31 @@ describe('payment process', () => {
     })
   })
 
+  it('prints the answer, then fails with 65 when Exact returns an ErrorMessage', async () => {
+    // Exact answers 201 even when it processes nothing (verified live): the
+    // error lives in the body, and a script must not read it as a success.
+    mockApi()
+      .post(PROCESS)
+      .reply(201, {
+        d: {
+          __metadata: { uri: 'x' },
+          SuccessMessage: null,
+          ErrorMessage: 'General setup error: Invalid: My bank account;',
+          BankExportDocumentsUrl: null,
+        },
+      })
+
+    process.stdout.isTTY = true
+    // runCmd keeps what the command printed before it failed.
+    const err = await runCmd(Cmd, [PAYMENT_A, '--allow-writes']).catch((e) => e)
+
+    expect(exit(err)).toBe(65)
+    expect(err.message).toBe(
+      'Exact did not process every payment: General setup error: Invalid: My bank account;',
+    )
+    expect(err.stdout).toContain('General setup error')
+  })
+
   it('fails with 64 when an argument is not a GUID', async () => {
     for (const argv of [['42'], [PAYMENT_A, 'not-a-guid']]) {
       const err = await fail([...argv, '--allow-writes'])

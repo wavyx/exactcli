@@ -22,9 +22,9 @@ const LINE = {
   fields: { Item: 'text', Quantity: 'number', UnitPrice: 'number' },
   options: {
     vat: { field: 'VATCode', type: 'text' },
-    // A fraction of the price, negative for a surcharge; above 1 the line
-    // would flip its sign.
-    discount: { field: 'Discount', type: 'number', max: 1 },
+    // A fraction of the price from 0 to 1: a negative one would be a
+    // surcharge, above 1 the line would flip its sign.
+    discount: { field: 'Discount', type: 'fraction' },
     'gl-account': { field: 'GLAccount', type: 'text' },
     'cost-center': { field: 'CostCenter', type: 'text' },
     'cost-unit': { field: 'CostUnit', type: 'text' },

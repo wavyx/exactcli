@@ -1,6 +1,9 @@
 /**
  * @typedef {object} LineDescriptor
  * @property {string} topic command topic, the `lines` subcommand hangs under it
+ * @property {string} plural the headers, for descriptions and messages
+ * @property {string} singular one header with its article
+ * @property {string} ref what a reference is, for descriptions
  * @property {string} parent `service/Resource` of the header
  * @property {string} parentKey GUID key of the header
  * @property {string} number readable number of the header, an integer
@@ -14,6 +17,9 @@
 export const lineDescriptors = {
   salesInvoice: {
     topic: 'sales-invoice',
+    plural: 'sales invoices',
+    singular: 'a sales invoice',
+    ref: 'invoice GUID or number',
     parent: 'salesinvoice/SalesInvoices',
     parentKey: 'InvoiceID',
     number: 'InvoiceNumber',
@@ -38,6 +44,9 @@ export const lineDescriptors = {
   },
   salesEntry: {
     topic: 'sales-entry',
+    plural: 'sales entries',
+    singular: 'a sales entry',
+    ref: 'entry GUID or number',
     parent: 'salesentry/SalesEntries',
     parentKey: 'EntryID',
     number: 'EntryNumber',
@@ -60,6 +69,9 @@ export const lineDescriptors = {
   },
   purchaseEntry: {
     topic: 'purchase-entry',
+    plural: 'purchase entries',
+    singular: 'a purchase entry',
+    ref: 'entry GUID or number',
     parent: 'purchaseentry/PurchaseEntries',
     parentKey: 'EntryID',
     number: 'EntryNumber',
@@ -82,6 +94,9 @@ export const lineDescriptors = {
   },
   journalEntry: {
     topic: 'journal-entry',
+    plural: 'general journal entries',
+    singular: 'a general journal entry',
+    ref: 'entry GUID or number',
     parent: 'generaljournalentry/GeneralJournalEntries',
     parentKey: 'EntryID',
     number: 'EntryNumber',
@@ -102,6 +117,9 @@ export const lineDescriptors = {
   },
   bankEntry: {
     topic: 'bank-entry',
+    plural: 'bank entries',
+    singular: 'a bank entry',
+    ref: 'entry GUID or number',
     parent: 'financialtransaction/BankEntries',
     parentKey: 'EntryID',
     number: 'EntryNumber',
@@ -122,6 +140,9 @@ export const lineDescriptors = {
   },
   cashEntry: {
     topic: 'cash-entry',
+    plural: 'cash entries',
+    singular: 'a cash entry',
+    ref: 'entry GUID or number',
     parent: 'financialtransaction/CashEntries',
     parentKey: 'EntryID',
     number: 'EntryNumber',
@@ -142,6 +163,9 @@ export const lineDescriptors = {
   },
   salesOrder: {
     topic: 'sales-order',
+    plural: 'sales orders',
+    singular: 'a sales order',
+    ref: 'order GUID or number',
     parent: 'salesorder/SalesOrders',
     parentKey: 'OrderID',
     number: 'OrderNumber',
@@ -164,6 +188,9 @@ export const lineDescriptors = {
   },
   purchaseOrder: {
     topic: 'purchase-order',
+    plural: 'purchase orders',
+    singular: 'a purchase order',
+    ref: 'order GUID or number',
     parent: 'purchaseorder/PurchaseOrders',
     parentKey: 'PurchaseOrderID',
     number: 'OrderNumber',
@@ -185,6 +212,9 @@ export const lineDescriptors = {
   },
   quotation: {
     topic: 'quotation',
+    plural: 'quotations',
+    singular: 'a quotation',
+    ref: 'quotation GUID or number',
     parent: 'crm/Quotations',
     parentKey: 'QuotationID',
     number: 'QuotationNumber',
@@ -205,6 +235,9 @@ export const lineDescriptors = {
   },
   purchaseInvoice: {
     topic: 'purchase-invoice',
+    plural: 'purchase invoices',
+    singular: 'a purchase invoice',
+    ref: 'invoice GUID or entry number',
     parent: 'purchase/PurchaseInvoices',
     parentKey: 'ID',
     number: 'EntryNumber',

@@ -322,13 +322,15 @@ exactcli create salesorder/GoodsDeliveries \
 ```
 
 Invoice the order. `CreateMode` 0 makes one invoice per customer, 1 one per order.
-`InvoiceMode` 0 invoices the delivered quantities, 1 the ordered quantities. The
-documentation says that only the asynchronous `Mode` (1) survives after October 2026;
-the answer then carries a `ProcessID` for the result endpoint.
+`InvoiceMode` 0 invoices the delivered quantities, 1 the ordered quantities. Exact
+queues the run (`Mode` 1, the only mode after October 2026) and answers a `ProcessID`;
+`--wait` reads the result until the run ends. The result endpoint answers the status
+as text (`Finished`), not as the code the reference documents (verified live).
 
 ```sh
 exactcli sales-order invoice <order guid> --journal 700 --invoice-mode 1 --dry-run
-exactcli sales-order invoice <order guid> --journal 700 --invoice-mode 1 --allow-writes
+exactcli sales-order invoice <order guid> --journal 700 --invoice-mode 1 --wait --allow-writes
+exactcli sales-order invoice-result <process id>
 exactcli sales-invoice list --customer <customer code> --status 20
 exactcli sales-invoice print <invoice guid> --allow-writes
 ```
