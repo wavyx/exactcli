@@ -44,6 +44,8 @@ end
 `
 }
 
+const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 /**
  * GET a URL and fail with a clear message on a non-2xx answer.
  * @param {typeof fetch} fetchFn
@@ -57,15 +59,30 @@ async function get(fetchFn, url) {
 
 /**
  * The tarball URL and its sha256 for a published version. The tarball must
- * match the sha512 integrity that the registry gives for it.
+ * match the sha512 integrity that the registry gives for it. A fresh publish
+ * can answer 404 for a few minutes, so the metadata is fetched again until
+ * the last attempt.
  * @param {string} version
  * @param {typeof fetch} [fetchFn]
+ * @param {{ attempts?: number, delayMs?: number, sleep?: (ms: number) => Promise<void> }} [options]
  * @returns {Promise<{ version: string, url: string, sha256: string }>}
  */
-export async function fetchDist(version, fetchFn = fetch) {
-  const meta = await (
-    await get(fetchFn, `https://registry.npmjs.org/${PKG}/${version}`)
-  ).json()
+export async function fetchDist(
+  version,
+  fetchFn = fetch,
+  { attempts = 20, delayMs = 30_000, sleep = defaultSleep } = {},
+) {
+  const metaUrl = `https://registry.npmjs.org/${PKG}/${version}`
+  let meta
+  for (let attempt = 1; ; attempt++) {
+    try {
+      meta = await (await get(fetchFn, metaUrl)).json()
+      break
+    } catch (error) {
+      if (attempt >= attempts) throw error
+      await sleep(delayMs)
+    }
+  }
   const { tarball: url, integrity } = meta.dist
   const buf = Buffer.from(await (await get(fetchFn, url)).arrayBuffer())
   const sri = 'sha512-' + createHash('sha512').update(buf).digest('base64')

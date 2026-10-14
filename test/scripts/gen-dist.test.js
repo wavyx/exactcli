@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createHash } from 'node:crypto'
 import { fetchDist, renderHomebrewFormula } from '../../scripts/gen-dist.mjs'
 
@@ -58,7 +58,7 @@ describe('fetchDist', () => {
   it('fails clearly when the registry does not have the version yet', async () => {
     const fetchFn = async () => ({ ok: false, status: 404 })
 
-    await expect(fetchDist('9.9.9', fetchFn)).rejects.toThrow(
+    await expect(fetchDist('9.9.9', fetchFn, { attempts: 1 })).rejects.toThrow(
       'GET https://registry.npmjs.org/@wavyx/exactcli/9.9.9 answered 404',
     )
   })
@@ -96,5 +96,40 @@ describe('fetchDist', () => {
     await expect(fetchDist('1.0.0', fetchFn)).rejects.toThrow(
       'does not match the registry integrity',
     )
+  })
+
+  it('waits while the registry does not show a fresh publish yet', async () => {
+    const tarball = Buffer.from('tarball bytes')
+    let metaCalls = 0
+    const fetchFn = async (url) => {
+      if (url.endsWith('.tgz'))
+        return { ok: true, arrayBuffer: async () => tarball }
+      metaCalls++
+      return metaCalls < 3
+        ? { ok: false, status: 404 }
+        : {
+            ok: true,
+            json: async () => ({
+              dist: { tarball: 'https://x/a.tgz', integrity: sri(tarball) },
+            }),
+          }
+    }
+    const sleep = vi.fn(async () => {})
+
+    const dist = await fetchDist('1.0.0', fetchFn, { sleep, delayMs: 5 })
+
+    expect(dist.url).toBe('https://x/a.tgz')
+    expect(sleep).toHaveBeenCalledTimes(2)
+    expect(sleep).toHaveBeenCalledWith(5)
+  })
+
+  it('gives up after the last attempt', async () => {
+    const fetchFn = async () => ({ ok: false, status: 404 })
+    const sleep = vi.fn(async () => {})
+
+    await expect(
+      fetchDist('9.9.9', fetchFn, { sleep, attempts: 3 }),
+    ).rejects.toThrow('answered 404')
+    expect(sleep).toHaveBeenCalledTimes(2)
   })
 })
