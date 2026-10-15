@@ -127,7 +127,7 @@ describe('startWebhookServer', () => {
       onEvent: vi.fn(),
       onInvalid,
     })
-    const app = '0c2060c5-2cff-407a-8d86-3fc4c5cb669c'
+    const app = '33333333-3333-4333-8333-333333333333'
     const withApp = (id) => CONTENT.replace('{', `{"ClientId":"${id}",`)
 
     await send(server.port, { data: body(withApp(app), sign('x')) })
