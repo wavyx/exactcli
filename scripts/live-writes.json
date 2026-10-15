@@ -265,5 +265,11 @@
   "DELETE documents/DocumentAttachments",
   "POST salesorder/DropShipments",
   "PUT salesorder/DropShipments",
-  "PUT salesorder/DropShipmentLines"
+  "PUT salesorder/DropShipmentLines",
+  "POST manufacturing/ByProductReceipts",
+  "POST manufacturing/ByProductReversals",
+  "PUT financial/GLAccountClassificationMappings",
+  "PUT project/ProjectRestrictionEmployees",
+  "PUT project/ProjectRestrictionItems",
+  "PUT project/ProjectRestrictionRebillings"
 ]

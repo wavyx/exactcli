@@ -15,8 +15,8 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 110 |
-| regular | PUT | 103 | 42 | 77 |
+| regular | POST | 151 | 70 | 112 |
+| regular | PUT | 103 | 42 | 81 |
 | regular | DELETE | 97 | 41 | 77 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 1 |
@@ -120,7 +120,7 @@ administration (`scripts/live-writes.json`).
 | PUT financial/ExchangeRates | `exchange-rate update` | yes |
 | DELETE financial/ExchangeRates | `exchange-rate delete` | yes |
 | POST financial/GLAccountClassificationMappings | - | yes |
-| PUT financial/GLAccountClassificationMappings | - | no |
+| PUT financial/GLAccountClassificationMappings | - | yes |
 | DELETE financial/GLAccountClassificationMappings | - | yes |
 | POST financial/GLAccounts | `gl-account create` | yes |
 | PUT financial/GLAccounts | `gl-account update` | yes |
@@ -204,8 +204,8 @@ administration (`scripts/live-writes.json`).
 | POST manufacturing/BillOfMaterialVersions | - | yes |
 | PUT manufacturing/BillOfMaterialVersions | - | yes |
 | DELETE manufacturing/BillOfMaterialVersions | - | yes |
-| POST manufacturing/ByProductReceipts | - | no |
-| POST manufacturing/ByProductReversals | - | no |
+| POST manufacturing/ByProductReceipts | - | yes |
+| POST manufacturing/ByProductReversals | - | yes |
 | POST manufacturing/MaterialIssues | - | yes |
 | POST manufacturing/MaterialReversals | - | yes |
 | POST manufacturing/OperationResources | - | yes |
@@ -272,13 +272,13 @@ administration (`scripts/live-writes.json`).
 | PUT project/ProjectRestrictionEmployeeItems | - | no |
 | DELETE project/ProjectRestrictionEmployeeItems | - | no |
 | POST project/ProjectRestrictionEmployees | - | yes |
-| PUT project/ProjectRestrictionEmployees | - | no |
+| PUT project/ProjectRestrictionEmployees | - | yes |
 | DELETE project/ProjectRestrictionEmployees | - | yes |
 | POST project/ProjectRestrictionItems | - | yes |
-| PUT project/ProjectRestrictionItems | - | no |
+| PUT project/ProjectRestrictionItems | - | yes |
 | DELETE project/ProjectRestrictionItems | - | yes |
 | POST project/ProjectRestrictionRebillings | - | yes |
-| PUT project/ProjectRestrictionRebillings | - | no |
+| PUT project/ProjectRestrictionRebillings | - | yes |
 | DELETE project/ProjectRestrictionRebillings | - | yes |
 | POST project/Projects | `project create` | yes |
 | PUT project/Projects | `project update` | yes |
