@@ -131,5 +131,21 @@
   "POST crm/ReopenQuotation",
   "POST crm/RejectQuotation",
   "POST crm/AcceptQuotation",
-  "POST cashflow/ProcessPayments"
+  "POST cashflow/ProcessPayments",
+  "POST inventory/ProcessWarehouseTransfer",
+  "POST inventory/ProcessStockCount",
+  "POST inventory/FinishAssemblyOrder",
+  "POST project/TimeTransactions",
+  "PUT project/TimeTransactions",
+  "DELETE project/TimeTransactions",
+  "POST project/CostTransactions",
+  "PUT project/CostTransactions",
+  "DELETE project/CostTransactions",
+  "POST subscription/Subscriptions",
+  "PUT subscription/Subscriptions",
+  "DELETE subscription/Subscriptions",
+  "POST inventory/ItemWarehouses",
+  "POST inventory/WarehouseTransfers",
+  "POST inventory/StockCounts",
+  "POST inventory/AssemblyBillOfMaterialHeader"
 ]

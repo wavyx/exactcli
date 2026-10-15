@@ -15,9 +15,9 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 58 |
-| regular | PUT | 103 | 42 | 38 |
-| regular | DELETE | 97 | 41 | 37 |
+| regular | POST | 151 | 70 | 68 |
+| regular | PUT | 103 | 42 | 41 |
+| regular | DELETE | 97 | 41 | 40 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 0 |
 | beta | PUT | 1 | 0 | 0 |
@@ -145,25 +145,25 @@ administration (`scripts/live-writes.json`).
 | POST hrm/Costunits | `cost-unit create` | yes |
 | PUT hrm/Costunits | `cost-unit update` | yes |
 | DELETE hrm/Costunits | `cost-unit delete` | yes |
-| POST inventory/AssemblyBillOfMaterialHeader | - | no |
+| POST inventory/AssemblyBillOfMaterialHeader | - | yes |
 | PUT inventory/AssemblyBillOfMaterialHeader | - | no |
 | DELETE inventory/AssemblyBillOfMaterialHeader | - | no |
 | POST inventory/AssemblyBillOfMaterialMaterials | - | no |
 | PUT inventory/AssemblyBillOfMaterialMaterials | - | no |
 | DELETE inventory/AssemblyBillOfMaterialMaterials | - | no |
-| POST inventory/FinishAssemblyOrder | `assembly-order finish` | no |
-| POST inventory/ItemWarehouses | - | no |
+| POST inventory/FinishAssemblyOrder | `assembly-order finish` | yes |
+| POST inventory/ItemWarehouses | - | yes |
 | PUT inventory/ItemWarehouses | - | no |
 | DELETE inventory/ItemWarehouses | - | no |
-| POST inventory/ProcessStockCount | `stock-count process` | no |
-| POST inventory/ProcessWarehouseTransfer | `warehouse-transfer process` | no |
+| POST inventory/ProcessStockCount | `stock-count process` | yes |
+| POST inventory/ProcessWarehouseTransfer | `warehouse-transfer process` | yes |
 | POST inventory/StockBatchNumbers | - | no |
 | PUT inventory/StockBatchNumbers | - | no |
 | DELETE inventory/StockBatchNumbers | - | no |
 | POST inventory/StockCountLines | - | no |
 | PUT inventory/StockCountLines | - | no |
 | DELETE inventory/StockCountLines | - | no |
-| POST inventory/StockCounts | - | no |
+| POST inventory/StockCounts | - | yes |
 | PUT inventory/StockCounts | - | no |
 | DELETE inventory/StockCounts | - | no |
 | POST inventory/StockSerialNumbers | - | no |
@@ -172,7 +172,7 @@ administration (`scripts/live-writes.json`).
 | POST inventory/WarehouseTransferLines | - | no |
 | PUT inventory/WarehouseTransferLines | - | no |
 | DELETE inventory/WarehouseTransferLines | - | no |
-| POST inventory/WarehouseTransfers | - | no |
+| POST inventory/WarehouseTransfers | - | yes |
 | PUT inventory/WarehouseTransfers | - | no |
 | DELETE inventory/WarehouseTransfers | - | no |
 | POST inventory/Warehouses | `warehouse create` | yes |
@@ -244,9 +244,9 @@ administration (`scripts/live-writes.json`).
 | DELETE manufacturing/Workcenters | - | no |
 | POST payroll/VariableMutations | - | no |
 | PUT payroll/VariableMutations | - | no |
-| POST project/CostTransactions | `cost-entry create` | no |
-| PUT project/CostTransactions | `cost-entry update` | no |
-| DELETE project/CostTransactions | `cost-entry delete` | no |
+| POST project/CostTransactions | `cost-entry create` | yes |
+| PUT project/CostTransactions | `cost-entry update` | yes |
+| DELETE project/CostTransactions | `cost-entry delete` | yes |
 | POST project/EmployeeRestrictionItems | - | no |
 | PUT project/EmployeeRestrictionItems | - | no |
 | DELETE project/EmployeeRestrictionItems | - | no |
@@ -286,9 +286,9 @@ administration (`scripts/live-writes.json`).
 | POST project/TimeCorrections | - | no |
 | PUT project/TimeCorrections | - | no |
 | DELETE project/TimeCorrections | - | no |
-| POST project/TimeTransactions | `time-entry create` | no |
-| PUT project/TimeTransactions | `time-entry update` | no |
-| DELETE project/TimeTransactions | `time-entry delete` | no |
+| POST project/TimeTransactions | `time-entry create` | yes |
+| PUT project/TimeTransactions | `time-entry update` | yes |
+| DELETE project/TimeTransactions | `time-entry delete` | yes |
 | POST project/WBSActivities | - | no |
 | PUT project/WBSActivities | - | no |
 | DELETE project/WBSActivities | - | no |
@@ -375,9 +375,9 @@ administration (`scripts/live-writes.json`).
 | DELETE subscription/SubscriptionRestrictionEmployees | - | no |
 | POST subscription/SubscriptionRestrictionItems | - | no |
 | DELETE subscription/SubscriptionRestrictionItems | - | no |
-| POST subscription/Subscriptions | `subscription create` | no |
-| PUT subscription/Subscriptions | `subscription update` | no |
-| DELETE subscription/Subscriptions | `subscription delete` | no |
+| POST subscription/Subscriptions | `subscription create` | yes |
+| PUT subscription/Subscriptions | `subscription update` | yes |
+| DELETE subscription/Subscriptions | `subscription delete` | yes |
 | DELETE system/Divisions | - | no |
 | POST vat/VATCodes | `vat-code create` | yes |
 | PUT vat/VATCodes | `vat-code update` | yes |
