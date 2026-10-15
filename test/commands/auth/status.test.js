@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { runCmd } from '../../helpers.js'
 
 const DAY_MS = 86_400_000
@@ -61,12 +61,19 @@ function blob(ageMs, overrides = {}) {
 }
 
 beforeEach(() => {
+  // Freeze the clock: the command reads the token age a moment after blob()
+  // stamps it, and a slow start (Windows CI) would round 10 s up to 11 s.
+  vi.useFakeTimers({ toFake: ['Date'] })
   vi.resetAllMocks()
   mocks.loadConfig.mockReturnValue({ activeProfile: 'default' })
   mocks.isKeychainAvailable.mockReturnValue(true)
   mocks.fetchMe.mockResolvedValue(ME)
   profile({})
   mocks.getOAuthTokens.mockResolvedValue(null)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('auth status', () => {
