@@ -16,6 +16,7 @@ import {
   CliError,
   ConfigError,
   ServiceUnavailableError,
+  networkReason,
 } from './errors.js'
 
 const debug = createDebug('exact:auth')
@@ -117,7 +118,7 @@ export async function tokenRequest(host, params) {
       )
     }
     throw new ServiceUnavailableError(
-      `Cannot reach the Exact Online token endpoint on ${host}: ${err.message}`,
+      `Cannot reach the Exact Online token endpoint on ${host}: ${networkReason(err)}`,
       { cause: err },
     )
   }

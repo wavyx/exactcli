@@ -623,6 +623,7 @@ describe('5xx and network failures', () => {
     expect(err).toBeInstanceOf(ServiceUnavailableError)
     expect(err.exitCode).toBe(69)
     expect(err.message).toContain(`Cannot reach ${BASE}`)
+    expect(err.message).toContain('connect ECONNREFUSED')
     expect(err.cause).toBeInstanceOf(Error)
     expect(slept).toEqual([2000, 4000])
     expect(scope.isDone()).toBe(true)

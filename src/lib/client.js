@@ -5,6 +5,7 @@ import {
   ConfigError,
   RateLimitError,
   ServiceUnavailableError,
+  networkReason,
 } from './errors.js'
 
 const debug = createDebug('exact:client')
@@ -347,8 +348,8 @@ export function createClient({
         }
         throw new ServiceUnavailableError(
           idempotent
-            ? `Cannot reach ${baseOrigin}: ${cause.message}`
-            : `${method} ${path} got no answer: it may have landed. Check before you send it again (${cause.message})`,
+            ? `Cannot reach ${baseOrigin}: ${networkReason(cause)}`
+            : `${method} ${path} got no answer: it may have landed. Check before you send it again (${networkReason(cause)})`,
           { cause },
         )
       }
@@ -516,10 +517,13 @@ export function createClient({
         signal: AbortSignal.timeout(timeout),
       })
     } catch (cause) {
-      throw new CliError(`Cannot reach ${baseOrigin}: ${cause.message}`, {
-        exitCode: 69,
-        cause,
-      })
+      throw new CliError(
+        `Cannot reach ${baseOrigin}: ${networkReason(cause)}`,
+        {
+          exitCode: 69,
+          cause,
+        },
+      )
     }
     if (res.status >= 300 && res.status < 400) {
       throw new CliError(`Refusing to follow a redirect off ${baseOrigin}`, {

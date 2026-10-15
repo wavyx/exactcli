@@ -7,6 +7,7 @@ import {
   ServiceUnavailableError,
   ApiError,
   handleError,
+  networkReason,
 } from '../../src/lib/errors.js'
 
 describe('CliError', () => {
@@ -207,6 +208,23 @@ describe('ApiError', () => {
       expect(ApiError.fromResponse(429, '{}', '/x').exitCode).toBe(75)
       expect(ApiError.fromResponse(500, '{}', '/x').exitCode).toBe(69)
     })
+  })
+})
+
+describe('networkReason', () => {
+  it('names the cause behind a bare "fetch failed"', () => {
+    const cause = new Error('getaddrinfo ENOTFOUND start.exactonline.be')
+    const err = new TypeError('fetch failed', { cause })
+    expect(networkReason(err)).toBe(
+      'fetch failed: getaddrinfo ENOTFOUND start.exactonline.be',
+    )
+  })
+
+  it('keeps a message that has no cause, or the same text', () => {
+    expect(networkReason(new Error('socket hang up'))).toBe('socket hang up')
+    const same = new Error('boom', { cause: new Error('boom') })
+    expect(networkReason(same)).toBe('boom')
+    expect(networkReason(new Error('x', { cause: 'text' }))).toBe('x')
   })
 })
 

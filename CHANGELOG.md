@@ -6,6 +6,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+
+- A network failure names its cause, for example "Cannot reach
+  https://start.exactonline.be: fetch failed: getaddrinfo ENOTFOUND ...",
+  instead of a bare "fetch failed".
+
 ## [0.15.0] - 2026-10-15
 
 ### Changed

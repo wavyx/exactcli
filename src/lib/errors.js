@@ -35,6 +35,19 @@ export class RateLimitError extends CliError {
   }
 }
 
+/**
+ * The reason of a network failure. fetch rejects with a bare "fetch failed"
+ * and keeps the real reason (DNS, refused, reset) in `cause`.
+ * @param {Error} err
+ * @returns {string}
+ */
+export function networkReason(err) {
+  const inner = err.cause instanceof Error ? err.cause.message : ''
+  return inner && inner !== err.message
+    ? `${err.message}: ${inner}`
+    : err.message
+}
+
 export class ServiceUnavailableError extends CliError {
   /** @param {string} [message] @param {{cause?: Error}} [options] */
   constructor(message = 'Exact Online API is unavailable', { cause } = {}) {
