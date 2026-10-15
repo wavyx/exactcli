@@ -91,8 +91,6 @@ const refWord = (spec) => (spec.byCode ? 'GUID or code' : 'GUID')
  * @returns {typeof BaseCommand}
  */
 export function defineRecordCreateCommand(spec) {
-  // Decided here, not in the static initializers: Node 20 does not count
-  // branches inside class field initializers for coverage.
   const examples = spec.codeFlags
     ? [
         `<%= config.bin %> ${spec.topic} create --code X1 --description "New one" --dry-run`,

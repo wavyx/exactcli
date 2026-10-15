@@ -134,8 +134,6 @@ export function defineListCommand(descriptor) {
     ]),
   )
   const columns = columnsOf(descriptor)
-  // Outside the static initializers: Node 20 does not count branches inside
-  // class field initializers for coverage.
   const examples = descriptor.examples ?? [
     `<%= config.bin %> ${descriptor.topic} list`,
     `<%= config.bin %> ${descriptor.topic} list --limit 200 --output json`,
