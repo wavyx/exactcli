@@ -14,7 +14,7 @@ argument only, so a body cannot move a line to another document.
 
 ```sh
 exactcli sales-entry line-add 26700002 --set GLAccount=@ref:financial/GLAccounts:700000 \
-  --set AmountFC=100 --set VATCode=F --allow-writes
+  --set AmountFC=100 --set VATCode=5 --allow-writes
 exactcli sales-entry line-update <line-id> --set Description="Fee" --allow-writes
 exactcli purchase-entry line-delete <line-id> --allow-writes --yes
 exactcli sales-order line-add 12 --set Item=@ref:logistics/Items:WIDGET --set Quantity=2 \

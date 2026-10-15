@@ -5,7 +5,7 @@ description: Full command reference for the exactcli command-line interface.
 
 <!-- AUTO-GENERATED from the oclif manifest by scripts/gen-commands.mjs - do not edit by hand. -->
 
-Reference for `exactcli` v0.14.2 (250 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
+Reference for `exactcli` v0.14.3 (250 commands). Every command also accepts the global flags `--output table|json|yaml|csv`, `--jq`, `--fields`, `--profile`, `--division`, `--no-color`, `--verbose`, `--no-retry`, `--timeout`, and `--limit`.
 
 ## Top-level
 
@@ -184,6 +184,7 @@ exactcli list <resource> [flags]
 - `--all-divisions` - Read every division the user can access, one after the other; every row carries its Division (replaces --division). --limit and --all apply per division
 - `--beta` - Use the beta API namespace
 - `--bulk` - Read the bulk variant: 1000 rows per page, $select required
+- `--param <value>` - Function parameter as name=value, sent as is (repeatable), for example linkId='<guid>'
 
 Examples:
 
@@ -194,6 +195,7 @@ exactcli list financial/GLAccounts --all --output json
 exactcli list logistics/Items --select Code,Description --limit 200
 exactcli list crm/Accounts --bulk --all --output csv
 exactcli list crm/Accounts --filter "Status eq 'C'" --count
+exactcli list customfield/CustomFields --param "linkId='<guid>'" --param "bcName='Account'"
 ```
 
 ### `exactcli lookup`

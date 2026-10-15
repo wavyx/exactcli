@@ -257,7 +257,7 @@ DELETE:
 
 ```sh
 exactcli sales-entry line-add 26700002 --set GLAccount=@ref:financial/GLAccounts:700000 \
-  --set AmountFC=100 --set VATCode=F --allow-writes
+  --set AmountFC=100 --set VATCode=5 --allow-writes
 exactcli sales-entry line-update <line-id> --set Description="Fee" --allow-writes
 exactcli purchase-entry line-delete <line-id> --allow-writes --yes
 ```

@@ -42,6 +42,16 @@ exactcli lookup crm/Accounts --match Code=1001 --one --jq .ID
 exactcli api GET /api/v1/current/Me
 ```
 
+`--fields` that all name properties of the resource travel as `$select`. Some
+endpoints, such as `financialtransaction/TransactionLines`, refuse a query without one.
+
+A function takes its arguments in the query string: pass each one with `--param`, as
+is.
+
+```sh
+exactcli list customfield/CustomFields --param "linkId='<guid>'" --param "bcName='Account'"
+```
+
 ## The catalogue
 
 ```sh
