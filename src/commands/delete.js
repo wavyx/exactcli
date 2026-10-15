@@ -1,6 +1,6 @@
 import { Args, Flags } from '@oclif/core'
 import BaseCommand from '../base-command.js'
-import { resolvePath } from '../lib/catalog.js'
+import { betaRef, resolvePath } from '../lib/catalog.js'
 import { renderKey } from '../lib/refs.js'
 import {
   assertWritesAllowed,
@@ -54,7 +54,7 @@ export default class DeleteCommand extends BaseCommand {
     const path = `${basePath}${key}`
 
     validateWrite({
-      resource: args.resource,
+      resource: betaRef(args.resource, beta),
       body: {},
       method: 'DELETE',
       force,

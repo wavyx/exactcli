@@ -82,6 +82,20 @@ describe('delete', () => {
     expect(exit(off)).toBe(77)
   })
 
+  it('validates a beta-only resource with --beta', async () => {
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        'cashflow/AllocationRule',
+        GUID,
+        '--beta',
+        '--dry-run',
+      ]),
+    )
+    expect(out.path).toBe(
+      `/api/v1/beta/123/cashflow/AllocationRule(guid'${GUID}')`,
+    )
+  })
+
   it('--dry-run prints the request and needs no flag', async () => {
     const out = JSON.parse(
       await runCmd(Cmd, ['crm/Accounts', GUID, '--dry-run']),

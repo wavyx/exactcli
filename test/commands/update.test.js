@@ -106,6 +106,22 @@ describe('update', () => {
     expect(scope.isDone()).toBe(true)
   })
 
+  it('validates a beta-only resource with --beta', async () => {
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        'cashflow/AllocationRule',
+        GUID,
+        '--set',
+        'Words=ACME',
+        '--beta',
+        '--dry-run',
+      ]),
+    )
+    expect(out.path).toBe(
+      `/api/v1/beta/123/cashflow/AllocationRule(guid'${GUID}')`,
+    )
+  })
+
   it('--dry-run prints the request and resolves references without the gate', async () => {
     const scope = mockApi()
       .get(ACCOUNTS)

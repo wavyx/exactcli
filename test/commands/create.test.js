@@ -158,6 +158,19 @@ describe('create', () => {
     expect(out).toEqual({ A: 1 })
   })
 
+  it('validates a beta-only resource against its beta record', async () => {
+    const out = JSON.parse(
+      await runCmd(Cmd, [
+        'cashflow/AllocationRule',
+        '--set',
+        'Words=ACME',
+        '--beta',
+        '--dry-run',
+      ]),
+    )
+    expect(out.path).toBe('/api/v1/beta/123/cashflow/AllocationRule')
+  })
+
   it('reads the beta namespace with --beta', async () => {
     const scope = mockApi()
       .post('/api/v1/beta/123/crm/Accounts', { Name: 'A' })

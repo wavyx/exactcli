@@ -95,6 +95,22 @@ function splitRef(ref) {
 }
 
 /**
+ * The reference to look up in the catalogue. With `--beta`, the beta record
+ * comes first (`cashflow/AllocationRule` exists only there); a resource
+ * without one keeps its regular record.
+ * @param {string} ref
+ * @param {boolean} beta
+ * @param {object} [catalog]
+ * @returns {string}
+ */
+export function betaRef(ref, beta, catalog = loadCatalog()) {
+  if (!beta) return ref
+  const { beta: isBeta, rest } = splitRef(ref)
+  if (isBeta) return ref
+  return findResource(`beta/${rest}`, catalog) ? `beta/${rest}` : ref
+}
+
+/**
  * Normalise any accepted reference to the lookup key of the catalogue:
  * lowercase, no /api/v1 prefix, the division replaced by `{division}`, no
  * key suffix, no query string.
@@ -299,7 +315,7 @@ export function resolvePath(
   { beta = false } = {},
   catalog = loadCatalog(),
 ) {
-  const resource = findResource(ref, catalog)
+  const resource = findResource(betaRef(ref, beta, catalog), catalog)
   const { beta: isBeta, rest } = splitRef(ref)
   if (/^current\//i.test(rest)) return { path: `/api/v1/${rest}`, resource }
   if (!rest.includes('/')) {

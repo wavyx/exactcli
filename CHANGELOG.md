@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Fixed
 
+- `create`, `update` and `delete` with `--beta` validate against the beta
+  record of the catalogue. A beta-only resource such as
+  `cashflow/AllocationRule` was refused as unknown.
 - A network failure names its cause, for example "Cannot reach
   https://start.exactonline.be: fetch failed: getaddrinfo ENOTFOUND ...",
   instead of a bare "fetch failed".

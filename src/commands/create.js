@@ -1,6 +1,6 @@
 import { Args, Flags } from '@oclif/core'
 import BaseCommand from '../base-command.js'
-import { resolvePath } from '../lib/catalog.js'
+import { betaRef, resolvePath } from '../lib/catalog.js'
 import { autoColumns, normalize, unwrap } from '../lib/odata.js'
 import {
   applyRefs,
@@ -65,7 +65,12 @@ export default class CreateCommand extends BaseCommand {
       ...(await readBody(this.flags)),
       ...parseSet(this.flags.set),
     }
-    validateWrite({ resource: args.resource, body, method: 'POST', force })
+    validateWrite({
+      resource: betaRef(args.resource, beta),
+      body,
+      method: 'POST',
+      force,
+    })
     // The gate comes before the reference lookups: a refused write costs no
     // call at all. A dry run needs no permission.
     if (!dryRun) assertWritesAllowed(this.flags, 'POST')

@@ -1,6 +1,6 @@
 import { Args } from '@oclif/core'
 import BaseCommand from '../base-command.js'
-import { resolvePath } from '../lib/catalog.js'
+import { betaRef, resolvePath } from '../lib/catalog.js'
 import { renderKey } from '../lib/refs.js'
 import {
   applyRefs,
@@ -50,7 +50,12 @@ export default class UpdateCommand extends BaseCommand {
       ...(await readBody(this.flags)),
       ...parseSet(this.flags.set),
     }
-    validateWrite({ resource: args.resource, body, method: 'PUT', force })
+    validateWrite({
+      resource: betaRef(args.resource, beta),
+      body,
+      method: 'PUT',
+      force,
+    })
     if (!dryRun) assertWritesAllowed(this.flags, 'PUT')
     const resolved = await applyRefs(this, body)
 

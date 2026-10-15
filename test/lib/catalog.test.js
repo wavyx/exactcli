@@ -15,6 +15,7 @@ import {
   propertyNames,
   resetCatalog,
   resolvePath,
+  betaRef,
   searchResources,
   shortName,
   validateDescriptor,
@@ -186,6 +187,7 @@ describe('variants and families', () => {
   })
 
   it('falls back to a unique resource name when the sync service differs', () => {
+    resetCatalog()
     resetCatalog()
     const real = loadCatalog(REAL)
     const entries = findResource('salesentry/SalesEntries', real)
@@ -363,6 +365,22 @@ describe('resolvePath', () => {
     )
   })
 
+  it('finds a beta-only record with the beta option', () => {
+    resetCatalog()
+    const real = loadCatalog(REAL)
+    const { resource } = resolvePath(
+      123,
+      'cashflow/AllocationRule',
+      { beta: true },
+      real,
+    )
+    expect(resource.uri).toBe('/api/v1/beta/{division}/cashflow/AllocationRule')
+    expect(betaRef('beta/crm/Accounts', true, real)).toBe('beta/crm/Accounts')
+    expect(betaRef('crm/Accounts', false, real)).toBe('crm/Accounts')
+    // No beta record: the regular one stays.
+    expect(betaRef('crm/Accounts', true, real)).toBe('crm/Accounts')
+  })
+
   it('strips an api prefix so the path and the lookup agree', () => {
     const full = resolvePath(123, '/api/v1/123/crm/Accounts', {}, catalog)
     expect(full.path).toBe('/api/v1/123/crm/Accounts')
@@ -446,6 +464,7 @@ describe('the extras file', () => {
 
 describe('the shipped catalogue', () => {
   it('loads, has at least 400 resources with unique uris and a generatedAt', () => {
+    resetCatalog()
     resetCatalog()
     const real = loadCatalog(REAL)
     expect(real.resources.length).toBeGreaterThan(400)
