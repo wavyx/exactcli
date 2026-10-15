@@ -15,9 +15,9 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 69 |
-| regular | PUT | 103 | 42 | 42 |
-| regular | DELETE | 97 | 41 | 41 |
+| regular | POST | 151 | 70 | 101 |
+| regular | PUT | 103 | 42 | 71 |
+| regular | DELETE | 97 | 41 | 71 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 0 |
 | beta | PUT | 1 | 0 | 0 |
@@ -146,15 +146,15 @@ administration (`scripts/live-writes.json`).
 | PUT hrm/Costunits | `cost-unit update` | yes |
 | DELETE hrm/Costunits | `cost-unit delete` | yes |
 | POST inventory/AssemblyBillOfMaterialHeader | - | yes |
-| PUT inventory/AssemblyBillOfMaterialHeader | - | no |
-| DELETE inventory/AssemblyBillOfMaterialHeader | - | no |
-| POST inventory/AssemblyBillOfMaterialMaterials | - | no |
-| PUT inventory/AssemblyBillOfMaterialMaterials | - | no |
-| DELETE inventory/AssemblyBillOfMaterialMaterials | - | no |
+| PUT inventory/AssemblyBillOfMaterialHeader | - | yes |
+| DELETE inventory/AssemblyBillOfMaterialHeader | - | yes |
+| POST inventory/AssemblyBillOfMaterialMaterials | - | yes |
+| PUT inventory/AssemblyBillOfMaterialMaterials | - | yes |
+| DELETE inventory/AssemblyBillOfMaterialMaterials | - | yes |
 | POST inventory/FinishAssemblyOrder | `assembly-order finish` | yes |
 | POST inventory/ItemWarehouses | - | yes |
-| PUT inventory/ItemWarehouses | - | no |
-| DELETE inventory/ItemWarehouses | - | no |
+| PUT inventory/ItemWarehouses | - | yes |
+| DELETE inventory/ItemWarehouses | - | yes |
 | POST inventory/ProcessStockCount | `stock-count process` | yes |
 | POST inventory/ProcessWarehouseTransfer | `warehouse-transfer process` | yes |
 | POST inventory/StockBatchNumbers | - | no |
@@ -164,17 +164,17 @@ administration (`scripts/live-writes.json`).
 | PUT inventory/StockCountLines | - | no |
 | DELETE inventory/StockCountLines | - | no |
 | POST inventory/StockCounts | - | yes |
-| PUT inventory/StockCounts | - | no |
-| DELETE inventory/StockCounts | - | no |
+| PUT inventory/StockCounts | - | yes |
+| DELETE inventory/StockCounts | - | yes |
 | POST inventory/StockSerialNumbers | - | no |
 | PUT inventory/StockSerialNumbers | - | no |
 | DELETE inventory/StockSerialNumbers | - | no |
-| POST inventory/WarehouseTransferLines | - | no |
-| PUT inventory/WarehouseTransferLines | - | no |
-| DELETE inventory/WarehouseTransferLines | - | no |
+| POST inventory/WarehouseTransferLines | - | yes |
+| PUT inventory/WarehouseTransferLines | - | yes |
+| DELETE inventory/WarehouseTransferLines | - | yes |
 | POST inventory/WarehouseTransfers | - | yes |
-| PUT inventory/WarehouseTransfers | - | no |
-| DELETE inventory/WarehouseTransfers | - | no |
+| PUT inventory/WarehouseTransfers | - | yes |
+| DELETE inventory/WarehouseTransfers | - | yes |
 | POST inventory/Warehouses | `warehouse create` | yes |
 | PUT inventory/Warehouses | `warehouse update` | yes |
 | DELETE inventory/Warehouses | `warehouse delete` | yes |
@@ -195,53 +195,53 @@ administration (`scripts/live-writes.json`).
 | POST mailbox/Mailboxes | - | no |
 | PUT mailbox/Mailboxes | - | no |
 | DELETE mailbox/Mailboxes | - | no |
-| POST manufacturing/BillOfMaterialMaterials | - | no |
-| PUT manufacturing/BillOfMaterialMaterials | - | no |
-| DELETE manufacturing/BillOfMaterialMaterials | - | no |
-| POST manufacturing/BillOfMaterialRoutings | - | no |
-| PUT manufacturing/BillOfMaterialRoutings | - | no |
-| DELETE manufacturing/BillOfMaterialRoutings | - | no |
-| POST manufacturing/BillOfMaterialVersions | - | no |
-| PUT manufacturing/BillOfMaterialVersions | - | no |
-| DELETE manufacturing/BillOfMaterialVersions | - | no |
+| POST manufacturing/BillOfMaterialMaterials | - | yes |
+| PUT manufacturing/BillOfMaterialMaterials | - | yes |
+| DELETE manufacturing/BillOfMaterialMaterials | - | yes |
+| POST manufacturing/BillOfMaterialRoutings | - | yes |
+| PUT manufacturing/BillOfMaterialRoutings | - | yes |
+| DELETE manufacturing/BillOfMaterialRoutings | - | yes |
+| POST manufacturing/BillOfMaterialVersions | - | yes |
+| PUT manufacturing/BillOfMaterialVersions | - | yes |
+| DELETE manufacturing/BillOfMaterialVersions | - | yes |
 | POST manufacturing/ByProductReceipts | - | no |
 | POST manufacturing/ByProductReversals | - | no |
-| POST manufacturing/MaterialIssues | - | no |
-| POST manufacturing/MaterialReversals | - | no |
-| POST manufacturing/OperationResources | - | no |
-| PUT manufacturing/OperationResources | - | no |
-| DELETE manufacturing/OperationResources | - | no |
-| POST manufacturing/Operations | - | no |
-| PUT manufacturing/Operations | - | no |
-| DELETE manufacturing/Operations | - | no |
-| POST manufacturing/ProductionAreas | - | no |
-| PUT manufacturing/ProductionAreas | - | no |
-| DELETE manufacturing/ProductionAreas | - | no |
-| POST manufacturing/ShopOrderMaterialPlans | - | no |
-| PUT manufacturing/ShopOrderMaterialPlans | - | no |
-| DELETE manufacturing/ShopOrderMaterialPlans | - | no |
+| POST manufacturing/MaterialIssues | - | yes |
+| POST manufacturing/MaterialReversals | - | yes |
+| POST manufacturing/OperationResources | - | yes |
+| PUT manufacturing/OperationResources | - | yes |
+| DELETE manufacturing/OperationResources | - | yes |
+| POST manufacturing/Operations | - | yes |
+| PUT manufacturing/Operations | - | yes |
+| DELETE manufacturing/Operations | - | yes |
+| POST manufacturing/ProductionAreas | - | yes |
+| PUT manufacturing/ProductionAreas | - | yes |
+| DELETE manufacturing/ProductionAreas | - | yes |
+| POST manufacturing/ShopOrderMaterialPlans | - | yes |
+| PUT manufacturing/ShopOrderMaterialPlans | - | yes |
+| DELETE manufacturing/ShopOrderMaterialPlans | - | yes |
 | PUT manufacturing/ShopOrderPriorities | - | no |
-| POST manufacturing/ShopOrderReceipts | - | no |
-| POST manufacturing/ShopOrderReversals | - | no |
-| POST manufacturing/ShopOrderRoutingStepPlans | - | no |
-| PUT manufacturing/ShopOrderRoutingStepPlans | - | no |
-| DELETE manufacturing/ShopOrderRoutingStepPlans | - | no |
+| POST manufacturing/ShopOrderReceipts | - | yes |
+| POST manufacturing/ShopOrderReversals | - | yes |
+| POST manufacturing/ShopOrderRoutingStepPlans | - | yes |
+| PUT manufacturing/ShopOrderRoutingStepPlans | - | yes |
+| DELETE manufacturing/ShopOrderRoutingStepPlans | - | yes |
 | POST manufacturing/ShopOrders | - | yes |
 | PUT manufacturing/ShopOrders | - | yes |
 | DELETE manufacturing/ShopOrders | - | yes |
-| POST manufacturing/StageForDeliveryReceipts | - | no |
-| POST manufacturing/StageForDeliveryReversals | - | no |
+| POST manufacturing/StageForDeliveryReceipts | - | yes |
+| POST manufacturing/StageForDeliveryReversals | - | yes |
 | POST manufacturing/SubOrderReceipts | - | no |
 | POST manufacturing/SubOrderReversals | - | no |
-| POST manufacturing/TimeTransactions | - | no |
-| PUT manufacturing/TimeTransactions | - | no |
-| DELETE manufacturing/TimeTransactions | - | no |
-| POST manufacturing/TimedTimeTransactions | - | no |
-| PUT manufacturing/TimedTimeTransactions | - | no |
-| DELETE manufacturing/TimedTimeTransactions | - | no |
-| POST manufacturing/Workcenters | - | no |
-| PUT manufacturing/Workcenters | - | no |
-| DELETE manufacturing/Workcenters | - | no |
+| POST manufacturing/TimeTransactions | - | yes |
+| PUT manufacturing/TimeTransactions | - | yes |
+| DELETE manufacturing/TimeTransactions | - | yes |
+| POST manufacturing/TimedTimeTransactions | - | yes |
+| PUT manufacturing/TimedTimeTransactions | - | yes |
+| DELETE manufacturing/TimedTimeTransactions | - | yes |
+| POST manufacturing/Workcenters | - | yes |
+| PUT manufacturing/Workcenters | - | yes |
+| DELETE manufacturing/Workcenters | - | yes |
 | POST payroll/VariableMutations | - | no |
 | PUT payroll/VariableMutations | - | no |
 | POST project/CostTransactions | `cost-entry create` | yes |
@@ -250,36 +250,36 @@ administration (`scripts/live-writes.json`).
 | POST project/EmployeeRestrictionItems | - | no |
 | PUT project/EmployeeRestrictionItems | - | no |
 | DELETE project/EmployeeRestrictionItems | - | no |
-| POST project/InvoiceTerms | - | no |
-| PUT project/InvoiceTerms | - | no |
-| DELETE project/InvoiceTerms | - | no |
-| POST project/ProjectAccountMutations | - | no |
-| PUT project/ProjectAccountMutations | - | no |
-| DELETE project/ProjectAccountMutations | - | no |
-| POST project/ProjectClassifications | - | no |
-| PUT project/ProjectClassifications | - | no |
-| DELETE project/ProjectClassifications | - | no |
-| POST project/ProjectHourBudgets | - | no |
-| PUT project/ProjectHourBudgets | - | no |
-| DELETE project/ProjectHourBudgets | - | no |
-| POST project/ProjectPlanning | - | no |
-| PUT project/ProjectPlanning | - | no |
-| DELETE project/ProjectPlanning | - | no |
-| POST project/ProjectPlanningRecurring | - | no |
-| PUT project/ProjectPlanningRecurring | - | no |
-| DELETE project/ProjectPlanningRecurring | - | no |
+| POST project/InvoiceTerms | - | yes |
+| PUT project/InvoiceTerms | - | yes |
+| DELETE project/InvoiceTerms | - | yes |
+| POST project/ProjectAccountMutations | - | yes |
+| PUT project/ProjectAccountMutations | - | yes |
+| DELETE project/ProjectAccountMutations | - | yes |
+| POST project/ProjectClassifications | - | yes |
+| PUT project/ProjectClassifications | - | yes |
+| DELETE project/ProjectClassifications | - | yes |
+| POST project/ProjectHourBudgets | - | yes |
+| PUT project/ProjectHourBudgets | - | yes |
+| DELETE project/ProjectHourBudgets | - | yes |
+| POST project/ProjectPlanning | - | yes |
+| PUT project/ProjectPlanning | - | yes |
+| DELETE project/ProjectPlanning | - | yes |
+| POST project/ProjectPlanningRecurring | - | yes |
+| PUT project/ProjectPlanningRecurring | - | yes |
+| DELETE project/ProjectPlanningRecurring | - | yes |
 | POST project/ProjectRestrictionEmployeeItems | - | no |
 | PUT project/ProjectRestrictionEmployeeItems | - | no |
 | DELETE project/ProjectRestrictionEmployeeItems | - | no |
-| POST project/ProjectRestrictionEmployees | - | no |
+| POST project/ProjectRestrictionEmployees | - | yes |
 | PUT project/ProjectRestrictionEmployees | - | no |
-| DELETE project/ProjectRestrictionEmployees | - | no |
-| POST project/ProjectRestrictionItems | - | no |
+| DELETE project/ProjectRestrictionEmployees | - | yes |
+| POST project/ProjectRestrictionItems | - | yes |
 | PUT project/ProjectRestrictionItems | - | no |
-| DELETE project/ProjectRestrictionItems | - | no |
-| POST project/ProjectRestrictionRebillings | - | no |
+| DELETE project/ProjectRestrictionItems | - | yes |
+| POST project/ProjectRestrictionRebillings | - | yes |
 | PUT project/ProjectRestrictionRebillings | - | no |
-| DELETE project/ProjectRestrictionRebillings | - | no |
+| DELETE project/ProjectRestrictionRebillings | - | yes |
 | POST project/Projects | `project create` | yes |
 | PUT project/Projects | `project update` | yes |
 | DELETE project/Projects | `project delete` | yes |
@@ -289,15 +289,15 @@ administration (`scripts/live-writes.json`).
 | POST project/TimeTransactions | `time-entry create` | yes |
 | PUT project/TimeTransactions | `time-entry update` | yes |
 | DELETE project/TimeTransactions | `time-entry delete` | yes |
-| POST project/WBSActivities | - | no |
-| PUT project/WBSActivities | - | no |
-| DELETE project/WBSActivities | - | no |
-| POST project/WBSDeliverables | - | no |
-| PUT project/WBSDeliverables | - | no |
-| DELETE project/WBSDeliverables | - | no |
-| POST project/WBSExpenses | - | no |
-| PUT project/WBSExpenses | - | no |
-| DELETE project/WBSExpenses | - | no |
+| POST project/WBSActivities | - | yes |
+| PUT project/WBSActivities | - | yes |
+| DELETE project/WBSActivities | - | yes |
+| POST project/WBSDeliverables | - | yes |
+| PUT project/WBSDeliverables | - | yes |
+| DELETE project/WBSDeliverables | - | yes |
+| POST project/WBSExpenses | - | yes |
+| PUT project/WBSExpenses | - | yes |
+| DELETE project/WBSExpenses | - | yes |
 | POST purchase/PurchaseInvoiceLines | - | no |
 | POST purchase/PurchaseInvoices | `purchase-invoice create` | yes |
 | PUT purchase/PurchaseInvoices | `purchase-invoice update` | yes |
@@ -351,13 +351,13 @@ administration (`scripts/live-writes.json`).
 | POST salesorder/GoodsDeliveries | `goods-delivery create` | yes |
 | PUT salesorder/GoodsDeliveries | `goods-delivery update` | yes |
 | POST salesorder/GoodsDeliveryLines | - | no |
-| PUT salesorder/GoodsDeliveryLines | - | no |
+| PUT salesorder/GoodsDeliveryLines | - | yes |
 | POST salesorder/PlannedSalesReturnLines | - | no |
-| PUT salesorder/PlannedSalesReturnLines | - | no |
+| PUT salesorder/PlannedSalesReturnLines | - | yes |
 | DELETE salesorder/PlannedSalesReturnLines | - | no |
-| POST salesorder/PlannedSalesReturns | - | no |
-| PUT salesorder/PlannedSalesReturns | - | no |
-| DELETE salesorder/PlannedSalesReturns | - | no |
+| POST salesorder/PlannedSalesReturns | - | yes |
+| PUT salesorder/PlannedSalesReturns | - | yes |
+| DELETE salesorder/PlannedSalesReturns | - | yes |
 | POST salesorder/PrintedSalesOrders | `sales-order print` | yes |
 | POST salesorder/SalesOrderLines | `sales-order line-add` | yes |
 | PUT salesorder/SalesOrderLines | `sales-order line-update` | yes |
