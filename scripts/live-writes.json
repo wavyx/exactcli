@@ -271,5 +271,9 @@
   "PUT financial/GLAccountClassificationMappings",
   "PUT project/ProjectRestrictionEmployees",
   "PUT project/ProjectRestrictionItems",
-  "PUT project/ProjectRestrictionRebillings"
+  "PUT project/ProjectRestrictionRebillings",
+  "POST inventory/StockSerialNumbers",
+  "DELETE inventory/StockSerialNumbers",
+  "POST inventory/StockBatchNumbers",
+  "DELETE inventory/StockBatchNumbers"
 ]

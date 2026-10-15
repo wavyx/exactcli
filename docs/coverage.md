@@ -15,9 +15,9 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 112 |
+| regular | POST | 151 | 70 | 114 |
 | regular | PUT | 103 | 42 | 81 |
-| regular | DELETE | 97 | 41 | 77 |
+| regular | DELETE | 97 | 41 | 79 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 1 |
 | beta | PUT | 1 | 0 | 1 |
@@ -157,18 +157,18 @@ administration (`scripts/live-writes.json`).
 | DELETE inventory/ItemWarehouses | - | yes |
 | POST inventory/ProcessStockCount | `stock-count process` | yes |
 | POST inventory/ProcessWarehouseTransfer | `warehouse-transfer process` | yes |
-| POST inventory/StockBatchNumbers | - | no |
+| POST inventory/StockBatchNumbers | - | yes |
 | PUT inventory/StockBatchNumbers | - | no |
-| DELETE inventory/StockBatchNumbers | - | no |
+| DELETE inventory/StockBatchNumbers | - | yes |
 | POST inventory/StockCountLines | - | no |
 | PUT inventory/StockCountLines | - | no |
 | DELETE inventory/StockCountLines | - | no |
 | POST inventory/StockCounts | - | yes |
 | PUT inventory/StockCounts | - | yes |
 | DELETE inventory/StockCounts | - | yes |
-| POST inventory/StockSerialNumbers | - | no |
+| POST inventory/StockSerialNumbers | - | yes |
 | PUT inventory/StockSerialNumbers | - | no |
-| DELETE inventory/StockSerialNumbers | - | no |
+| DELETE inventory/StockSerialNumbers | - | yes |
 | POST inventory/WarehouseTransferLines | - | yes |
 | PUT inventory/WarehouseTransferLines | - | yes |
 | DELETE inventory/WarehouseTransferLines | - | yes |
