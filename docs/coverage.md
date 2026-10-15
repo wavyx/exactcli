@@ -15,13 +15,13 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 101 |
-| regular | PUT | 103 | 42 | 71 |
-| regular | DELETE | 97 | 41 | 71 |
+| regular | POST | 151 | 70 | 109 |
+| regular | PUT | 103 | 42 | 74 |
+| regular | DELETE | 97 | 41 | 76 |
 | beta | GET | 6 | 0 | - |
-| beta | POST | 1 | 0 | 0 |
-| beta | PUT | 1 | 0 | 0 |
-| beta | DELETE | 1 | 0 | 0 |
+| beta | POST | 1 | 0 | 1 |
+| beta | PUT | 1 | 0 | 1 |
+| beta | DELETE | 1 | 0 | 1 |
 | current | GET | 1 | 1 | - |
 | read | GET | 98 | 8 | - |
 | sync | GET | 61 | 1 | - |
@@ -31,9 +31,9 @@ administration (`scripts/live-writes.json`).
 
 | Call | Typed command | Verified live |
 | --- | --- | --- |
-| POST cashflow/AllocationRule | - | no |
-| PUT cashflow/AllocationRule | - | no |
-| DELETE cashflow/AllocationRule | - | no |
+| POST cashflow/AllocationRule | - | yes |
+| PUT cashflow/AllocationRule | - | yes |
+| DELETE cashflow/AllocationRule | - | yes |
 | POST accountancy/AccountInvolvedAccounts | - | no |
 | PUT accountancy/AccountInvolvedAccounts | - | no |
 | DELETE accountancy/AccountInvolvedAccounts | - | no |
@@ -55,11 +55,11 @@ administration (`scripts/live-writes.json`).
 | POST activities/AnnualStatements | - | no |
 | PUT activities/AnnualStatements | - | no |
 | POST activities/CommunicationNotes | `communication-note create` | yes |
-| POST activities/Complaints | - | no |
+| POST activities/Complaints | - | yes |
 | POST activities/Events | `event create` | yes |
 | POST activities/Fiscals | - | no |
 | PUT activities/Fiscals | - | no |
-| POST activities/ServiceRequests | - | no |
+| POST activities/ServiceRequests | - | yes |
 | POST activities/Tasks | `task create` | yes |
 | POST assets/DepreciationMethods | `depreciation-method create` | yes |
 | PUT assets/DepreciationMethods | `depreciation-method update` | yes |
@@ -119,9 +119,9 @@ administration (`scripts/live-writes.json`).
 | POST financial/ExchangeRates | `exchange-rate create` | yes |
 | PUT financial/ExchangeRates | `exchange-rate update` | yes |
 | DELETE financial/ExchangeRates | `exchange-rate delete` | yes |
-| POST financial/GLAccountClassificationMappings | - | no |
+| POST financial/GLAccountClassificationMappings | - | yes |
 | PUT financial/GLAccountClassificationMappings | - | no |
-| DELETE financial/GLAccountClassificationMappings | - | no |
+| DELETE financial/GLAccountClassificationMappings | - | yes |
 | POST financial/GLAccounts | `gl-account create` | yes |
 | PUT financial/GLAccounts | `gl-account update` | yes |
 | DELETE financial/GLAccounts | `gl-account delete` | yes |
@@ -192,9 +192,9 @@ administration (`scripts/live-writes.json`).
 | DELETE logistics/SupplierItem | `supplier-item delete` | yes |
 | POST mailbox/MailMessageAttachments | `mailbox upload` | yes |
 | POST mailbox/MailMessagesSent | `mailbox upload` | yes |
-| POST mailbox/Mailboxes | - | no |
-| PUT mailbox/Mailboxes | - | no |
-| DELETE mailbox/Mailboxes | - | no |
+| POST mailbox/Mailboxes | - | yes |
+| PUT mailbox/Mailboxes | - | yes |
+| DELETE mailbox/Mailboxes | - | yes |
 | POST manufacturing/BillOfMaterialMaterials | - | yes |
 | PUT manufacturing/BillOfMaterialMaterials | - | yes |
 | DELETE manufacturing/BillOfMaterialMaterials | - | yes |
@@ -319,8 +319,8 @@ administration (`scripts/live-writes.json`).
 | DELETE purchaseorder/PurchaseOrders | `purchase-order delete` | yes |
 | POST purchaseorder/PurchaseReturnLines | - | no |
 | PUT purchaseorder/PurchaseReturnLines | - | no |
-| POST purchaseorder/PurchaseReturns | - | no |
-| PUT purchaseorder/PurchaseReturns | - | no |
+| POST purchaseorder/PurchaseReturns | - | yes |
+| PUT purchaseorder/PurchaseReturns | - | yes |
 | POST sales/SalesChannels | `sales-channel create` | yes |
 | PUT sales/SalesChannels | `sales-channel update` | yes |
 | DELETE sales/SalesChannels | `sales-channel delete` | yes |
@@ -368,13 +368,13 @@ administration (`scripts/live-writes.json`).
 | POST salesorder/SalesOrders | `sales-order create` | yes |
 | PUT salesorder/SalesOrders | `sales-order update` | yes |
 | DELETE salesorder/SalesOrders | `sales-order delete` | yes |
-| POST subscription/SubscriptionLines | - | no |
-| PUT subscription/SubscriptionLines | - | no |
-| DELETE subscription/SubscriptionLines | - | no |
-| POST subscription/SubscriptionRestrictionEmployees | - | no |
-| DELETE subscription/SubscriptionRestrictionEmployees | - | no |
-| POST subscription/SubscriptionRestrictionItems | - | no |
-| DELETE subscription/SubscriptionRestrictionItems | - | no |
+| POST subscription/SubscriptionLines | - | yes |
+| PUT subscription/SubscriptionLines | - | yes |
+| DELETE subscription/SubscriptionLines | - | yes |
+| POST subscription/SubscriptionRestrictionEmployees | - | yes |
+| DELETE subscription/SubscriptionRestrictionEmployees | - | yes |
+| POST subscription/SubscriptionRestrictionItems | - | yes |
+| DELETE subscription/SubscriptionRestrictionItems | - | yes |
 | POST subscription/Subscriptions | `subscription create` | yes |
 | PUT subscription/Subscriptions | `subscription update` | yes |
 | DELETE subscription/Subscriptions | `subscription delete` | yes |
