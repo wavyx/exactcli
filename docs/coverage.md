@@ -16,8 +16,8 @@ administration (`scripts/live-writes.json`).
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
 | regular | POST | 151 | 70 | 114 |
-| regular | PUT | 103 | 42 | 81 |
-| regular | DELETE | 97 | 41 | 79 |
+| regular | PUT | 103 | 42 | 83 |
+| regular | DELETE | 97 | 41 | 80 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 1 |
 | beta | PUT | 1 | 0 | 1 |
@@ -158,11 +158,11 @@ administration (`scripts/live-writes.json`).
 | POST inventory/ProcessStockCount | `stock-count process` | yes |
 | POST inventory/ProcessWarehouseTransfer | `warehouse-transfer process` | yes |
 | POST inventory/StockBatchNumbers | - | yes |
-| PUT inventory/StockBatchNumbers | - | no |
+| PUT inventory/StockBatchNumbers | - | yes |
 | DELETE inventory/StockBatchNumbers | - | yes |
 | POST inventory/StockCountLines | - | no |
-| PUT inventory/StockCountLines | - | no |
-| DELETE inventory/StockCountLines | - | no |
+| PUT inventory/StockCountLines | - | yes |
+| DELETE inventory/StockCountLines | - | yes |
 | POST inventory/StockCounts | - | yes |
 | PUT inventory/StockCounts | - | yes |
 | DELETE inventory/StockCounts | - | yes |

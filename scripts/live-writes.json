@@ -275,5 +275,8 @@
   "POST inventory/StockSerialNumbers",
   "DELETE inventory/StockSerialNumbers",
   "POST inventory/StockBatchNumbers",
-  "DELETE inventory/StockBatchNumbers"
+  "DELETE inventory/StockBatchNumbers",
+  "PUT inventory/StockCountLines",
+  "DELETE inventory/StockCountLines",
+  "PUT inventory/StockBatchNumbers"
 ]
