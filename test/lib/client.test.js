@@ -428,9 +428,8 @@ describe('headers', () => {
   })
 
   it('omits content-type when no body is sent', async () => {
-    const scope = mockApi()
+    const scope = nock(BASE, { badheaders: ['content-type'] })
       .get('/api/v1/current/Me')
-      .matchHeader('content-type', (v) => v === undefined)
       .reply(200, { d: {} })
 
     await client().get('/api/v1/current/Me')
