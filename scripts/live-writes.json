@@ -262,5 +262,8 @@
   "PUT purchaseorder/PurchaseReturns",
   "PUT subscription/SubscriptionLines",
   "PUT purchaseorder/PurchaseReturnLines",
-  "DELETE documents/DocumentAttachments"
+  "DELETE documents/DocumentAttachments",
+  "POST salesorder/DropShipments",
+  "PUT salesorder/DropShipments",
+  "PUT salesorder/DropShipmentLines"
 ]

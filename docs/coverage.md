@@ -15,8 +15,8 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 109 |
-| regular | PUT | 103 | 42 | 75 |
+| regular | POST | 151 | 70 | 110 |
+| regular | PUT | 103 | 42 | 77 |
 | regular | DELETE | 97 | 41 | 77 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 1 |
@@ -345,9 +345,9 @@ administration (`scripts/live-writes.json`).
 | POST salesorder/CompleteSalesOrder | `sales-order complete` | yes |
 | POST salesorder/CompleteSalesOrderLine | `sales-order complete-line` | yes |
 | POST salesorder/DropShipmentLines | - | no |
-| PUT salesorder/DropShipmentLines | - | no |
-| POST salesorder/DropShipments | - | no |
-| PUT salesorder/DropShipments | - | no |
+| PUT salesorder/DropShipmentLines | - | yes |
+| POST salesorder/DropShipments | - | yes |
+| PUT salesorder/DropShipments | - | yes |
 | POST salesorder/GoodsDeliveries | `goods-delivery create` | yes |
 | PUT salesorder/GoodsDeliveries | `goods-delivery update` | yes |
 | POST salesorder/GoodsDeliveryLines | - | no |
