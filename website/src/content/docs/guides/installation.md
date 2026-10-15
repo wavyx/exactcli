@@ -3,7 +3,7 @@ title: Installation
 description: Install exactcli with npm or Homebrew, and the optional jq binary.
 ---
 
-exactcli needs Node.js 20 or newer.
+exactcli needs Node.js 22 or newer.
 
 ## npm
 

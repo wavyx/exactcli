@@ -11,7 +11,7 @@ npm install
 ./bin/dev.js --help      # run from source, no build
 ```
 
-Node.js 20 or newer. `exactcli` is JavaScript ESM on oclif v4. No TypeScript; JSDoc
+Node.js 22 or newer. `exactcli` is JavaScript ESM on oclif v4. No TypeScript; JSDoc
 types where they help.
 
 ## Workflow
@@ -24,7 +24,7 @@ types where they help.
    formats for you.
 5. Use Conventional Commits with a scope when useful: `feat(auth): ...`,
    `fix(client): ...`, `docs: ...`. Keep the subject under 55 characters.
-6. Open a pull request. CI runs lint, tests on Node 20/22/24 across three operating
+6. Open a pull request. CI runs lint, tests on Node 22/24 across three operating
    systems, and a smoke build.
 
 ## Rules that keep the CLI safe

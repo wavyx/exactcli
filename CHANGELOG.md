@@ -6,6 +6,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- exactcli needs Node.js 22 or newer. Node.js 20 reached its end of life on
+  2026-04-30, and oclif 5, chalk 6 and vitest 5 require Node.js 22.
+
 ## [0.14.4] - 2026-10-15
 
 ### Added
