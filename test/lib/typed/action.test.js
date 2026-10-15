@@ -16,6 +16,7 @@ import {
   buildActionBody,
   coerceField,
   defineActionCommand,
+  resolveTarget,
   targetValue,
   validateAction,
 } from '../../../src/lib/typed/action.js'
@@ -29,6 +30,8 @@ const PATH = '/api/v1/123/crm/ReviewQuotation'
 
 const Cmd = defineActionCommand(actions['quotation:review'])
 const Finish = defineActionCommand(actions['assembly-order:finish'])
+const Transfer = defineActionCommand(actions['warehouse-transfer:process'])
+const TRANSFERS = '/api/v1/123/inventory/WarehouseTransfers'
 
 beforeAll(() => {
   process.env.EXACTCLI_CONFIG_DIR = TMP_CONFIG_DIR
@@ -96,6 +99,53 @@ describe('targetValue', () => {
       'Expected a GUID, received: 2026001',
     )
   })
+
+  it('takes a number when the target names its number field', () => {
+    const target = actions['warehouse-transfer:process'].target
+    expect(targetValue(target, '12')).toBe('12')
+    expect(targetValue(target, ID)).toBe(ID)
+    expect(() => targetValue(target, '1 or 1')).toThrow(
+      'Expected a GUID or a number, received: 1 or 1',
+    )
+  })
+})
+
+describe('resolveTarget', () => {
+  const target = actions['warehouse-transfer:process'].target
+  const cmd = async () => {
+    const { createClient } = await import('../../../src/lib/client.js')
+    return { apiClient: createClient({ token: 't' }) }
+  }
+
+  it('passes a GUID through without a request', async () => {
+    expect(await resolveTarget(await cmd(), target, 123, ID)).toBe(ID)
+  })
+
+  it('looks a number up on the header resource', async () => {
+    const lookup = mockApi()
+      .get(TRANSFERS)
+      .query({
+        $select: 'TransferID,TransferNumber',
+        $filter: 'TransferNumber eq 7',
+      })
+      .reply(200, { d: { results: [{ TransferID: ID, TransferNumber: 7 }] } })
+    expect(await resolveTarget(await cmd(), target, 123, '007')).toBe(ID)
+    expect(lookup.isDone()).toBe(true)
+  })
+
+  it('fails with 65 when the number matches nothing', async () => {
+    mockApi()
+      .get(TRANSFERS)
+      .query(true)
+      .reply(200, { d: { results: [] } })
+    const err = await resolveTarget(await cmd(), target, 123, '7').catch(
+      (e) => e,
+    )
+    expect(err.exitCode).toBe(65)
+    expect(err.message).toBe(
+      'No inventory/WarehouseTransfers with TransferNumber 7',
+    )
+  })
 })
 
 describe('validateAction', () => {
@@ -131,6 +181,16 @@ describe('validateAction', () => {
     expect(() =>
       validateAction({ ...base, resource: noPost.uri, target: { field: 'X' } }),
     ).toThrow('no POST')
+    const transfer = actions['warehouse-transfer:process']
+    expect(() =>
+      validateAction({
+        ...transfer,
+        target: {
+          ...transfer.target,
+          number: { resource: 'crm/Nope', key: 'ID', field: 'Number' },
+        },
+      }),
+    ).toThrow('no crm/Nope.ID; no crm/Nope.Number')
   })
 })
 
@@ -235,6 +295,15 @@ describe('an action command', () => {
     const err = await fail(Finish, [ID, '--dry-run'])
     expect(err.message).toMatch(/Missing required flag/)
     expect(err.message).toMatch(/quantity/)
+  })
+
+  it('resolves a number target before the dry run', async () => {
+    mockApi()
+      .get(TRANSFERS)
+      .query(true)
+      .reply(200, { d: { results: [{ TransferID: ID, TransferNumber: 1 }] } })
+    const out = JSON.parse(await runCmd(Transfer, ['1', '--dry-run']))
+    expect(out.body).toEqual({ TransferID: ID })
   })
 
   it('coerces a number flag into the body', async () => {

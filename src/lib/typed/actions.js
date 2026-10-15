@@ -336,7 +336,12 @@ export const actions = {
     description: 'Process a stock count',
     target: {
       field: 'StockCountID',
-      description: 'Stock count to process (a GUID)',
+      description: 'Stock count to process (a GUID or its number)',
+      number: {
+        resource: 'inventory/StockCounts',
+        key: 'StockCountID',
+        field: 'StockCountNumber',
+      },
     },
     fields: {},
   },
@@ -347,7 +352,12 @@ export const actions = {
     description: 'Process a warehouse transfer',
     target: {
       field: 'TransferID',
-      description: 'Warehouse transfer to process (a GUID)',
+      description: 'Warehouse transfer to process (a GUID or its number)',
+      number: {
+        resource: 'inventory/WarehouseTransfers',
+        key: 'TransferID',
+        field: 'TransferNumber',
+      },
     },
     fields: {
       date: {
@@ -404,7 +414,9 @@ export const actions = {
     target: {
       field: 'Request',
       description:
-        'Request to process (a GUID; list read/financial/Returns shows it)',
+        'Request to process (a GUID: the Request field of ' +
+        'read/financial/Returns, not the DocumentID; Exact creates one ' +
+        'only when an accountant sends the return for approval)',
     },
     fields: {
       status: {

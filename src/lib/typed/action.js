@@ -4,6 +4,7 @@ import { findResource, loadCatalog, mandatoryFields } from '../catalog.js'
 import { CliError } from '../errors.js'
 import { assertDate, parseNumber } from '../lines.js'
 import { autoColumns, divisionPath, normalize, unwrap } from '../odata.js'
+import { collectPages } from '../pagination.js'
 import { GUID_RE, resolveRef } from '../refs.js'
 import {
   assertWritesAllowed,
@@ -22,17 +23,26 @@ import {
  * @property {boolean} [required]
  * @property {string} [resolve] a resource whose code resolves to the GUID
  *
+ * @typedef ActionTarget
+ * @property {string} field the property name in the request body
+ * @property {'guid'|'string'} [type]
+ * @property {string} description
+ * @property {{resource: string, key: string, field: string}} [number] the
+ *   header resource where a number resolves to the GUID in `key`
+ *
  * @typedef Action
  * @property {string} topic
  * @property {string} verb
  * @property {string} resource the POST-only resource, for example crm/AcceptQuotation
  * @property {string} description
- * @property {{field: string, type?: 'guid'|'string', description: string}} target the positional argument
+ * @property {ActionTarget} target the positional argument
  * @property {Record<string, ActionField>} fields flag name to field
  * @property {string[]} [examples]
  */
 
 const INT_RE = /^-?\d+$/
+/** A document number is an Int32: ten digits at most. */
+const NUMBER_RE = /^\d{1,10}$/
 
 /**
  * A flag value as the request body carries it.
@@ -70,10 +80,38 @@ export function coerceField(type, value, flag) {
  * @returns {string}
  */
 export function targetValue(target, value) {
-  if (target.type !== 'string' && !GUID_RE.test(value)) {
-    throw new CliError(`Expected a GUID, received: ${value}`, { exitCode: 64 })
+  if (target.type === 'string' || GUID_RE.test(value)) return value
+  if (target.number && NUMBER_RE.test(value)) return value
+  const expected = target.number ? 'a GUID or a number' : 'a GUID'
+  throw new CliError(`Expected ${expected}, received: ${value}`, {
+    exitCode: 64,
+  })
+}
+
+/**
+ * The GUID of a target checked by targetValue: a number is looked up on the
+ * header resource of the target, and a number that matches nothing fails
+ * with 65.
+ * @param {{ apiClient: object }} cmd
+ * @param {Action['target']} target
+ * @param {number} division
+ * @param {string} value
+ * @returns {Promise<string>}
+ */
+export async function resolveTarget(cmd, target, division, value) {
+  if (!target.number || !NUMBER_RE.test(value)) return value
+  const { resource, key, field } = target.number
+  const n = Number(value)
+  const rows = await collectPages(
+    cmd.apiClient.pageOData(divisionPath(division, resource), {
+      $select: `${key},${field}`,
+      $filter: `${field} eq ${n}`,
+    }),
+  )
+  if (rows.length === 0) {
+    throw new CliError(`No ${resource} with ${field} ${n}`, { exitCode: 65 })
   }
-  return value
+  return rows[0][key]
 }
 
 /**
@@ -128,6 +166,14 @@ export function validateAction(action, catalog = loadCatalog()) {
   const missing = mandatoryFields(res).filter((f) => !covered.has(f))
   if (missing.length)
     problems.push(`mandatory not covered: ${missing.join(',')}`)
+  const number = action.target.number
+  if (number) {
+    const header = findResource(number.resource, catalog)
+    const names = new Set(header?.properties.map((p) => p.name))
+    for (const field of [number.key, number.field]) {
+      if (!names.has(field)) problems.push(`no ${number.resource}.${field}`)
+    }
+  }
   if (problems.length) {
     throw new Error(`${action.resource}: ${problems.join('; ')}`)
   }
@@ -176,9 +222,15 @@ export function defineActionCommand(action) {
       const dryRun = this.flags['dry-run']
       // A refused write costs nothing: refuse before any lookup.
       if (!dryRun) assertWritesAllowed(this.flags, 'POST')
-      const target = targetValue(action.target, args.id)
+      const division = this.resolveDivision()
+      const target = await resolveTarget(
+        this,
+        action.target,
+        division,
+        targetValue(action.target, args.id),
+      )
       const body = await buildActionBody(this, action, this.flags, target)
-      const path = divisionPath(this.resolveDivision(), action.resource)
+      const path = divisionPath(division, action.resource)
       validateWrite({ resource: action.resource, body, method: 'POST' })
 
       if (dryRun) {
