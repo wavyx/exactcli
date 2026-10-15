@@ -6,6 +6,34 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.14.4] - 2026-10-15
+
+### Added
+
+- `warehouse-transfer process` and `stock-count process` take the transfer
+  or count number as well as the GUID. A number that matches nothing exits 65.
+- `list --param name=value` passes function parameters as is, for example
+  `--param "linkId='<guid>'" --param "bcName='Account'"` for
+  `customfield/CustomFields`.
+
+### Changed
+
+- 19 more write calls are verified live on a test administration: time and
+  cost entries, subscriptions, shop orders, stock count, warehouse transfer
+  and assembly order finish (152 in all).
+- `list --fields` sends the names as `$select` when all of them are
+  properties of the resource.
+- The `return process` help names the `Request` field of
+  `read/financial/Returns`. Exact creates a request only when an accountant
+  sends the return for approval.
+
+### Fixed
+
+- `list financialtransaction/TransactionLines --fields ...` no longer gets
+  400 "Please add a $select".
+- The `line-add` example uses the national VAT code `5` instead of the
+  intra-EU code `F`.
+
 ## [0.14.3] - 2026-10-14
 
 ### Changed
