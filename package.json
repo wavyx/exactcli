@@ -28,7 +28,7 @@
     "docs/coverage.md"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "keywords": [
     "exact-online",

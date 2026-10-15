@@ -18,12 +18,12 @@ Documentation: [wavyx.github.io/exactcli](https://wavyx.github.io/exactcli/).
 ## Install
 
 ```sh
-npm install -g @wavyx/exactcli      # Node.js 20+
+npm install -g @wavyx/exactcli      # Node.js 22+
 brew install wavyx/tap/exactcli     # macOS and Linux
 exactcli --help
 ```
 
-Node.js 20 or newer. Tokens go to the OS keychain (macOS Keychain, Windows Credential
+Node.js 22 or newer. Tokens go to the OS keychain (macOS Keychain, Windows Credential
 Manager, libsecret on Linux); `exactcli` refuses to write them to disk.
 
 `--jq` needs the jq binary. `npm install -g @wavyx/exactcli` may skip the download of
