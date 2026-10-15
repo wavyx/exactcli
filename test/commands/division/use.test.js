@@ -119,8 +119,11 @@ describe('division use', () => {
 
     const err = await Cmd.run(['456', '--no-retry']).catch((e) => e)
 
+    // fetch wraps the socket error in TypeError('fetch failed'), and the
+    // client reports it as a reachability problem.
     expect(err.message).not.toMatch(/not accessible/)
-    expect(err.message).toMatch(/socket hang up/)
+    expect(err.message).toMatch(/Cannot reach https:\/\/start\.exactonline\.be/)
+    expect(err.exitCode ?? err.oclif?.exit).toBe(69)
   })
 
   it('rejects a code that is not a positive integer with 64', async () => {
