@@ -6,6 +6,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-10-15
+
+### Changed
+
+- 19 more write calls are verified live on a test administration:
+  subscription lines and restrictions, bank allocation rules (beta), G/L
+  account classification mappings, mailboxes, complaints, service requests
+  and purchase returns (262 in all).
+
 ### Fixed
 
 - `create`, `update` and `delete` with `--beta` validate against the beta
