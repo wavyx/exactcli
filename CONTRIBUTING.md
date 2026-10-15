@@ -11,7 +11,7 @@ npm install
 ./bin/dev.js --help      # run from source, no build
 ```
 
-Node.js 22 or newer. `exactcli` is JavaScript ESM on oclif v4. No TypeScript; JSDoc
+Node.js 22 or newer. `exactcli` is JavaScript ESM on oclif v5. No TypeScript; JSDoc
 types where they help.
 
 ## Workflow
