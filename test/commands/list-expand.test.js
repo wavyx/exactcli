@@ -94,6 +94,24 @@ describe('list --expand', () => {
       'crm/Accounts',
       '--bulk',
       '--fields',
+      'Nope',
+      '--expand',
+      'Contacts',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('names the --expand properties next to the --fields $select', async () => {
+    const scope = mockApi()
+      .get(BULK_PATH)
+      .query({ $select: 'Code,Contacts', $expand: 'Contacts' })
+      .reply(200, { d: { results: [] } })
+
+    await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--bulk',
+      '--fields',
       'Code',
       '--expand',
       'Contacts',

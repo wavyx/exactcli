@@ -21,6 +21,30 @@ import {
 } from '../lib/listing.js'
 import { expandedSelect } from '../lib/typed/factory.js'
 
+const PARAM_RE = /^([A-Za-z]\w*)=(.*)$/s
+
+/**
+ * The --param pairs as query parameters. A function such as
+ * customfield/CustomFields takes its arguments in the query string; a plain
+ * name keeps them apart from the $ options of OData.
+ * @param {string[]} [pairs]
+ * @returns {Record<string, string>}
+ */
+export function functionParams(pairs = []) {
+  const params = {}
+  for (const pair of pairs) {
+    const match = PARAM_RE.exec(pair)
+    if (!match) {
+      throw new CliError(
+        `--param expects name=value with a plain name, received: ${pair}`,
+        { exitCode: 64 },
+      )
+    }
+    params[match[1]] = match[2]
+  }
+  return params
+}
+
 export default class ListCommand extends BaseCommand {
   static description = 'List the records of any Exact Online resource'
 
@@ -31,6 +55,7 @@ export default class ListCommand extends BaseCommand {
     '<%= config.bin %> list logistics/Items --select Code,Description --limit 200',
     '<%= config.bin %> list crm/Accounts --bulk --all --output csv',
     '<%= config.bin %> list crm/Accounts --filter "Status eq \'C\'" --count',
+    '<%= config.bin %> list customfield/CustomFields --param "linkId=\'<guid>\'" --param "bcName=\'Account\'"',
   ]
 
   static args = {
@@ -49,6 +74,11 @@ export default class ListCommand extends BaseCommand {
       description:
         'Read the bulk variant: 1000 rows per page, $select required',
     }),
+    param: Flags.string({
+      description:
+        "Function parameter as name=value, sent as is (repeatable), for example linkId='<guid>'",
+      multiple: true,
+    }),
   }
 
   async run() {
@@ -57,6 +87,7 @@ export default class ListCommand extends BaseCommand {
     // Check the request once, before the first call of any division.
     const { resource } = this.#target(args)
     warnUnknown(args.resource, resource)
+    const params = functionParams(this.flags.param)
     if (this.flags.bulk && !this.flags.count) {
       this.bulkPath(this.resolveDivision(), args.resource, resource)
       // The bulk endpoints demand a $select; --raw has no columns to offer.
@@ -68,7 +99,10 @@ export default class ListCommand extends BaseCommand {
       // The bulk variant holds the same records, so a count never needs it.
       const result = await eachDivision(this, () => {
         const { path } = this.#target(args)
-        return countListing(this, path, buildQuery(this.flags))
+        return countListing(this, path, {
+          ...params,
+          ...buildQuery(this.flags),
+        })
       })
       if (all) await this.outputResults(result, autoColumns(result))
       else await this.outputAction(result, String(result.count))
@@ -77,7 +111,7 @@ export default class ListCommand extends BaseCommand {
 
     let columns
     const data = await eachDivision(this, async () => {
-      const read = await this.#collect(args)
+      const read = await this.#collect(args, params)
       columns = read.columns
       return read.data
     })
@@ -105,9 +139,10 @@ export default class ListCommand extends BaseCommand {
   /**
    * Read one division: the regular or the bulk variant.
    * @param {{ resource: string }} args
+   * @param {Record<string, string>} params the --param pairs
    * @returns {Promise<{ data: object[], columns?: Record<string, object> }>}
    */
-  async #collect(args) {
+  async #collect(args, params) {
     const division = this.resolveDivision()
     const { path, resource } = this.#target(args)
 
@@ -115,12 +150,22 @@ export default class ListCommand extends BaseCommand {
     // columns as $select: lighter answers and a readable table. --raw keeps
     // the envelope, --fields and --select already say what to fetch.
     const { select, fields, raw, bulk, expand } = this.flags
-    const query = buildQuery(this.flags)
+    const query = { ...params, ...buildQuery(this.flags) }
     let columns
     const defaults = resource ? defaultColumns(resource) : []
     if (defaults.length > 0 && !select && !fields && !raw) {
       query.$select = expandedSelect(defaults, expand)
       columns = Object.fromEntries(defaults.map((c) => [c, { header: c }]))
+    }
+    // --fields that all name properties travel as $select too: lighter
+    // answers, and some endpoints (TransactionLines) refuse a query without
+    // one. An unknown name keeps the full record, so the output can show it.
+    if (fields && !select && !raw && resource) {
+      const wanted = fields.split(',').map((f) => f.trim())
+      const known = new Set(resource.properties.map((p) => p.name))
+      if (wanted.every((f) => known.has(f))) {
+        query.$select = expandedSelect(wanted, expand)
+      }
     }
 
     if (bulk) {

@@ -509,9 +509,10 @@ describe('list', () => {
     expect(stdout).toMatch(/Acme BE/)
   })
 
-  it('keeps every field when --fields is given', async () => {
+  it('sends --fields as $select when every name is a property', async () => {
     const scope = mockApi()
       .get(ACCOUNTS_PATH)
+      .query({ $select: 'Code' })
       .reply(200, { d: { results: [account()] } })
 
     const stdout = await runCmd(ListCommand, [
@@ -526,6 +527,85 @@ describe('list', () => {
 
     expect(scope.isDone()).toBe(true)
     expect(JSON.parse(stdout)).toEqual([{ Code: '1001' }])
+  })
+
+  it('selects nothing when --fields names an unknown property', async () => {
+    const scope = mockApi()
+      .get(ACCOUNTS_PATH)
+      .query((q) => !('$select' in q))
+      .reply(200, { d: { results: [account()] } })
+
+    await runCmd(ListCommand, [
+      'crm/Accounts',
+      '--division',
+      '123',
+      '--fields',
+      'Code,Nope',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('reads TransactionLines with --fields: the endpoint demands $select', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/financialtransaction/TransactionLines')
+      .query({ $select: 'EntryNumber,Status' })
+      .reply(200, { d: { results: [{ EntryNumber: 1, Status: 20 }] } })
+
+    const stdout = await runCmd(ListCommand, [
+      'financialtransaction/TransactionLines',
+      '--division',
+      '123',
+      '--fields',
+      'EntryNumber, Status',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(JSON.parse(stdout)).toEqual([{ EntryNumber: 1, Status: 20 }])
+  })
+
+  it('passes --param pairs as function parameters', async () => {
+    const scope = mockApi()
+      .get('/api/v1/123/customfield/CustomFields')
+      .query({ linkId: "'abc'", bcName: "'Account'" })
+      .reply(200, { d: { results: [{ PropertyName: 'Segment' }] } })
+
+    const stdout = await runCmd(ListCommand, [
+      'customfield/CustomFields',
+      '--division',
+      '123',
+      '--param',
+      "linkId='abc'",
+      '--param',
+      "bcName='Account'",
+      '--raw',
+      '--output',
+      'json',
+    ])
+
+    expect(scope.isDone()).toBe(true)
+    expect(stdout).toMatch(/Segment/)
+  })
+
+  it('refuses a --param that is not name=value', async () => {
+    for (const bad of ['linkId', '$top=1', '=x', 'a b=1']) {
+      process.stdout.isTTY = true
+      const err = await ListCommand.run([
+        'crm/Accounts',
+        '--division',
+        '123',
+        '--param',
+        bad,
+      ]).catch((e) => e)
+      expect(err.exitCode ?? err.oclif?.exit).toBe(64)
+      expect(err.message).toBe(
+        `--param expects name=value with a plain name, received: ${bad}`,
+      )
+    }
   })
 
   it('warns on stderr for an unknown resource and still sends the request', async () => {
@@ -721,10 +801,10 @@ describe('list', () => {
     expect(JSON.parse(stdout)).toHaveLength(1)
   })
 
-  it('--bulk falls back to the catalogue $select when --fields projects the output', async () => {
+  it('--bulk selects the --fields names', async () => {
     const scope = mockApi()
       .get('/api/v1/123/bulk/CRM/Accounts')
-      .query({ $select: SELECT })
+      .query({ $select: 'Code' })
       .reply(200, { d: { results: [account()] } })
 
     const stdout = await runCmd(ListCommand, [
