@@ -260,5 +260,7 @@
   "PUT cashflow/AllocationRule",
   "PUT mailbox/Mailboxes",
   "PUT purchaseorder/PurchaseReturns",
-  "PUT subscription/SubscriptionLines"
+  "PUT subscription/SubscriptionLines",
+  "PUT purchaseorder/PurchaseReturnLines",
+  "DELETE documents/DocumentAttachments"
 ]

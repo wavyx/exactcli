@@ -16,8 +16,8 @@ administration (`scripts/live-writes.json`).
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
 | regular | POST | 151 | 70 | 109 |
-| regular | PUT | 103 | 42 | 74 |
-| regular | DELETE | 97 | 41 | 76 |
+| regular | PUT | 103 | 42 | 75 |
+| regular | DELETE | 97 | 41 | 77 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 1 |
 | beta | PUT | 1 | 0 | 1 |
@@ -106,7 +106,7 @@ administration (`scripts/live-writes.json`).
 | POST crm/ReviewQuotation | `quotation review` | yes |
 | POST customfield/UpdateCustomField | `custom-field set` | no |
 | POST documents/DocumentAttachments | `document create` | yes |
-| DELETE documents/DocumentAttachments | - | no |
+| DELETE documents/DocumentAttachments | - | yes |
 | POST documents/DocumentFolders | `document-folder create` | no |
 | PUT documents/DocumentFolders | `document-folder update` | no |
 | DELETE documents/DocumentFolders | `document-folder delete` | no |
@@ -318,7 +318,7 @@ administration (`scripts/live-writes.json`).
 | PUT purchaseorder/PurchaseOrders | `purchase-order update` | yes |
 | DELETE purchaseorder/PurchaseOrders | `purchase-order delete` | yes |
 | POST purchaseorder/PurchaseReturnLines | - | no |
-| PUT purchaseorder/PurchaseReturnLines | - | no |
+| PUT purchaseorder/PurchaseReturnLines | - | yes |
 | POST purchaseorder/PurchaseReturns | - | yes |
 | PUT purchaseorder/PurchaseReturns | - | yes |
 | POST sales/SalesChannels | `sales-channel create` | yes |
