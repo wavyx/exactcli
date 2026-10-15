@@ -43,10 +43,15 @@ server and exposes it through an [ngrok](https://ngrok.com/) static domain.
 3. Register an app with the printed redirect URI. Copy the Client ID and the Client
    Secret. The route depends on your subscription:
    - A customer subscription registers an internal app in Exact Online: Company name >
-     Import/Export > App registrations. It needs the Manage apps role and serves only
-     the users of that subscription.
+     Import/Export > Other: App registrations > New. It needs the Manage apps role and
+     serves only the users of that subscription.
    - A developer subscription has no such menu. Register the app in the App Store:
-     Manage my apps. A test app serves only the users of the developer subscription.
+     Manage my apps > Demo apps. A demo app serves only the users of the developer
+     subscription.
+
+   The [authentication guide](https://wavyx.github.io/exactcli/guides/authentication/)
+   shows every step.
+
 4. Run `exactcli auth login` again, paste the Client ID and the Client Secret, and sign
    in in the browser that opens. The command stores the tokens in the keychain and
    remembers your division.
