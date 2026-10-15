@@ -6,10 +6,23 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-15
+
 ### Changed
 
-- exactcli needs Node.js 22 or newer. Node.js 20 reached its end of life on
-  2026-04-30, and oclif 5, chalk 6 and vitest 5 require Node.js 22.
+- **Breaking:** exactcli needs Node.js 22 or newer. Node.js 20 reached its
+  end of life on 2026-04-30, and oclif 5, chalk 6 and vitest 5 require
+  Node.js 22.
+- Dependencies: @oclif/core 5, @oclif/plugin-help 7,
+  @oclif/plugin-autocomplete 4, @oclif/plugin-plugins 7 (no more installs of
+  legacy oclif v1 plugins), chalk 6, js-yaml 5. YAML output now quotes a
+  string made only of spaces.
+- 91 more write calls are verified live on a test administration: project
+  classifications, WBS, budgets, invoice terms, planning and restrictions,
+  the manufacturing chain (production areas, work centers, operations, bill
+  of material versions, shop order plans, time, material issues, receipts
+  and reversals), inventory counts, transfers, item warehouses and assembly
+  bills of material, and planned sales returns (243 in all).
 
 ## [0.14.4] - 2026-10-15
 
