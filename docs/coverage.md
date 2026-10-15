@@ -15,9 +15,9 @@ administration (`scripts/live-writes.json`).
 | Family | Method | Calls | Typed command | Verified live |
 | --- | --- | ---: | ---: | ---: |
 | regular | GET | 230 | 59 | - |
-| regular | POST | 151 | 70 | 68 |
-| regular | PUT | 103 | 42 | 41 |
-| regular | DELETE | 97 | 41 | 40 |
+| regular | POST | 151 | 70 | 69 |
+| regular | PUT | 103 | 42 | 42 |
+| regular | DELETE | 97 | 41 | 41 |
 | beta | GET | 6 | 0 | - |
 | beta | POST | 1 | 0 | 0 |
 | beta | PUT | 1 | 0 | 0 |
@@ -226,9 +226,9 @@ administration (`scripts/live-writes.json`).
 | POST manufacturing/ShopOrderRoutingStepPlans | - | no |
 | PUT manufacturing/ShopOrderRoutingStepPlans | - | no |
 | DELETE manufacturing/ShopOrderRoutingStepPlans | - | no |
-| POST manufacturing/ShopOrders | - | no |
-| PUT manufacturing/ShopOrders | - | no |
-| DELETE manufacturing/ShopOrders | - | no |
+| POST manufacturing/ShopOrders | - | yes |
+| PUT manufacturing/ShopOrders | - | yes |
+| DELETE manufacturing/ShopOrders | - | yes |
 | POST manufacturing/StageForDeliveryReceipts | - | no |
 | POST manufacturing/StageForDeliveryReversals | - | no |
 | POST manufacturing/SubOrderReceipts | - | no |

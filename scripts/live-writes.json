@@ -147,5 +147,8 @@
   "POST inventory/ItemWarehouses",
   "POST inventory/WarehouseTransfers",
   "POST inventory/StockCounts",
-  "POST inventory/AssemblyBillOfMaterialHeader"
+  "POST inventory/AssemblyBillOfMaterialHeader",
+  "POST manufacturing/ShopOrders",
+  "PUT manufacturing/ShopOrders",
+  "DELETE manufacturing/ShopOrders"
 ]
