@@ -297,7 +297,7 @@
     "@oclif/plugin-plugins": "7.0.8",
     "chalk": "6.0.1",
     "cli-table3": "0.6.5",
-    "conf": "15.1.0",
+    "conf": "16.0.0",
     "debug": "4.4.3",
     "js-yaml": "5.4.3",
     "node-jq": "6.3.1",
